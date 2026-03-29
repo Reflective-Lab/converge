@@ -42,7 +42,7 @@ jobs:
           format: cyclonedx-json
           output-file: converge.cdx.json
       - name: Upload SBOM artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sbom
           path: converge.cdx.json
