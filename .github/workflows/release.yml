@@ -15,7 +15,7 @@ jobs:
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Create GitHub Release
         id: create_release
         uses: actions/create-release@v1
@@ -38,7 +38,7 @@ jobs:
           - x86_64-apple-darwin
           - x86_64-pc-windows-msvc
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install Rust
         run: rustup override set 1.90.0 && rustup target add ${{ matrix.target }}
       - name: Build
@@ -62,7 +62,7 @@ jobs:
     needs: create-release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install Rust
         run: rustup override set 1.90.0
       - name: Login to crates.io
