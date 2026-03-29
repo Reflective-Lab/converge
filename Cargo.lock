@@ -2687,7 +2687,7 @@ dependencies = [
  "criterion",
  "indexmap 2.13.0",
  "num-traits",
- "ordered-float 4.6.0",
+ "ordered-float 5.1.0",
  "ortools-sys",
  "petgraph 0.7.1",
  "proptest",
