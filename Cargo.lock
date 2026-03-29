@@ -2652,7 +2652,7 @@ dependencies = [
  "sha2",
  "tempfile",
  "thiserror 2.0.18",
- "tiktoken-rs",
+ "tiktoken-rs 0.9.1",
  "tokio",
  "tokio-stream",
  "toml 0.8.23",
@@ -5201,6 +5201,17 @@ checksum = "7493d4c459da9f84325ad297371a6b2b8a162800873a22e3b6b6512e61d18c05"
 dependencies = [
  "bit-set 0.5.3",
  "regex",
+]
+
+[[package]]
+name = "fancy-regex"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "531e46835a22af56d1e3b66f04844bed63158bc094a628bec1d321d9b4c44bf2"
+dependencies = [
+ "bit-set 0.5.3",
+ "regex-automata",
+ "regex-syntax",
 ]
 
 [[package]]
@@ -8192,7 +8203,7 @@ dependencies = [
  "rand 0.8.5",
  "rustc-hash 1.1.0",
  "serde",
- "tiktoken-rs",
+ "tiktoken-rs 0.5.9",
  "tokenizers 0.19.1",
 ]
 
@@ -13806,9 +13817,24 @@ dependencies = [
  "anyhow",
  "base64 0.21.7",
  "bstr",
- "fancy-regex",
+ "fancy-regex 0.12.0",
  "lazy_static",
  "parking_lot",
+ "rustc-hash 1.1.0",
+]
+
+[[package]]
+name = "tiktoken-rs"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3a19830747d9034cd9da43a60eaa8e552dfda7712424aebf187b7a60126bae0d"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "bstr",
+ "fancy-regex 0.13.0",
+ "lazy_static",
+ "regex",
  "rustc-hash 1.1.0",
 ]
 

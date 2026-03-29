@@ -142,7 +142,7 @@ strum = { version = "0.26", features = ["derive"] }
 surrealdb = "1"
 tempfile = "3"
 thiserror = "2"
-tiktoken-rs = "0.5"
+tiktoken-rs = "0.9"
 tokio = { version = "1.48", features = ["full", "macros", "sync"] }
 tokio-stream = { version = "0.1", features = ["net", "sync"] }
 toml = "0.8"
