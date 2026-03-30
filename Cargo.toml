@@ -122,7 +122,7 @@ petgraph = "0.7"
 polars = { version = "0.51.0", features = ["csv", "lazy", "log", "ndarray", "parquet", "rows"] }
 proptest = "1.5"
 prost = "0.13"
-prost-types = "0.13"
+prost-types = "0.14"
 pulldown-cmark = "0.12"
 rand = "0.8"
 ratatui = "0.29"
