@@ -73,7 +73,7 @@ converge-application = { path = "crates/application", version = "2.1.0" }
 anyhow = "1"
 arrow-array = "57"
 arrow-schema = "57"
-async-nats = "0.40"
+async-nats = "0.46"
 async-stream = "0.3"
 async-trait = "0.1"
 axum = { version = "0.8", features = ["macros"] }
