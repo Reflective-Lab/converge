@@ -20,7 +20,7 @@ converge-core.workspace = true
 converge-experience.workspace = true
 converge-protocol = { workspace = true, optional = true }
 converge-provider.workspace = true
-converge-axiom.workspace = true
+# converge-axiom.workspace = true
 
 # Async runtime
 tokio.workspace = true

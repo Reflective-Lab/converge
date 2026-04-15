@@ -19,7 +19,7 @@ path = "src/main.rs"
 converge-core.workspace = true
 converge-experience.workspace = true
 converge-provider.workspace = true
-converge-axiom.workspace = true
+# converge-axiom.workspace = true
 async-trait.workspace = true
 
 # Optional subsystems
