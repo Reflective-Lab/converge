@@ -4,8 +4,8 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 repository.workspace = true
-license = "LicenseRef-Proprietary"
-publish = false
+license.workspace = true
+publish = true
 description = "Analytics and ML pipeline for Converge agents"
 
 [dependencies]

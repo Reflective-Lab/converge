@@ -44,7 +44,7 @@ clean:
 	cargo clean
 
 # Publish dry run — validates crates.io readiness in dependency order
-PUBLISHABLE_CRATES = converge-traits converge-core converge-provider converge-experience converge-knowledge ortools-sys converge-optimization converge-domain converge-axiom
+PUBLISHABLE_CRATES = converge-traits converge-core converge-provider converge-experience converge-knowledge ortools-sys converge-optimization converge-domain converge-analytics converge-axiom
 .PHONY: publish-dry-run
 publish-dry-run:
 	@for crate in $(PUBLISHABLE_CRATES); do \
