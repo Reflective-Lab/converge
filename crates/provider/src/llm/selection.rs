@@ -9,6 +9,8 @@ use thiserror::Error;
 use crate::llm::AnthropicBackend;
 #[cfg(feature = "gemini")]
 use crate::llm::GeminiBackend;
+#[cfg(feature = "kong")]
+use crate::llm::KongBackend;
 #[cfg(feature = "mistral")]
 use crate::llm::MistralBackend;
 #[cfg(feature = "openai")]
@@ -168,7 +170,7 @@ pub fn select_chat_backend_with_secret_provider(
     let registry = if let Some(provider) = config.provider_override.as_deref() {
         let provider = normalize_provider_name(provider).ok_or_else(|| LlmError::InvalidRequest {
             message: format!(
-                "Unsupported CONVERGE_LLM_FORCE_PROVIDER={provider}. Expected one of: anthropic, openai, gemini, mistral, openrouter."
+                "Unsupported CONVERGE_LLM_FORCE_PROVIDER={provider}. Expected one of: anthropic, openai, gemini, mistral, openrouter, kong."
             ),
         })?;
 
@@ -191,10 +193,17 @@ pub fn select_chat_backend_with_secret_provider(
 }
 
 fn chat_provider_registry(secrets: &dyn SecretProvider) -> ProviderRegistry {
-    let supported: Vec<&str> = ["anthropic", "openai", "gemini", "mistral", "openrouter"]
-        .into_iter()
-        .filter(|provider| is_chat_provider_available(provider, secrets))
-        .collect();
+    let supported: Vec<&str> = [
+        "anthropic",
+        "openai",
+        "gemini",
+        "mistral",
+        "openrouter",
+        "kong",
+    ]
+    .into_iter()
+    .filter(|provider| is_chat_provider_available(provider, secrets))
+    .collect();
     ProviderRegistry::with_providers(&supported)
 }
 
@@ -241,6 +250,13 @@ fn instantiate_selected_backend(
                 .with_model(model);
             Ok(Arc::new(backend))
         }
+        #[cfg(feature = "kong")]
+        "kong" => {
+            let backend = KongBackend::from_secret_provider(secrets)
+                .map_err(backend_error)?
+                .with_model(model);
+            Ok(Arc::new(backend))
+        }
         _ => Err(LlmError::ProviderError {
             message: format!("Selected provider {provider} does not have a chat backend"),
             code: None,
@@ -267,6 +283,10 @@ fn is_chat_provider_available(provider: &str, secrets: &dyn SecretProvider) -> b
         "mistral" => secrets.has_secret("MISTRAL_API_KEY"),
         #[cfg(feature = "openrouter")]
         "openrouter" => secrets.has_secret("OPENROUTER_API_KEY"),
+        #[cfg(feature = "kong")]
+        "kong" => {
+            secrets.has_secret("KONG_API_KEY") && std::env::var("KONG_AI_GATEWAY_URL").is_ok()
+        }
         _ => false,
     }
 }
@@ -278,6 +298,7 @@ fn normalize_provider_name(value: &str) -> Option<&'static str> {
         "gemini" | "google" => Some("gemini"),
         "mistral" | "mixtral" => Some("mistral"),
         "openrouter" | "router" => Some("openrouter"),
+        "kong" | "kong_gateway" | "kong_ai" => Some("kong"),
         _ => None,
     }
 }
@@ -387,7 +408,7 @@ fn parse_bool(key: &'static str, value: &str) -> Result<bool, ChatBackendSelecti
 
 #[cfg(test)]
 mod tests {
-    use super::{ChatBackendSelectionConfig, select_chat_backend_with_secret_provider};
+    use super::{select_chat_backend_with_secret_provider, ChatBackendSelectionConfig};
     use crate::secret::{SecretError, SecretProvider, StaticSecretProvider};
     use converge_core::model_selection::{RequiredCapabilities, SelectionCriteria};
 

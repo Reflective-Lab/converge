@@ -30,6 +30,8 @@
 mod anthropic;
 mod error_classification;
 mod format_contract;
+#[cfg(feature = "kong")]
+mod kong;
 #[cfg(feature = "mistral")]
 mod mistral;
 #[cfg(feature = "openai")]
@@ -41,6 +43,8 @@ mod selection;
 
 #[cfg(feature = "anthropic")]
 pub use anthropic::AnthropicBackend;
+#[cfg(feature = "kong")]
+pub use kong::KongBackend;
 #[cfg(feature = "gemini")]
 mod gemini;
 #[cfg(feature = "mistral")]

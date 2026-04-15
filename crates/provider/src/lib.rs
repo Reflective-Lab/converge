@@ -117,6 +117,8 @@ pub use secret::{
 pub use llm::AnthropicBackend;
 #[cfg(feature = "gemini")]
 pub use llm::GeminiBackend;
+#[cfg(feature = "kong")]
+pub use llm::KongBackend;
 #[cfg(feature = "mistral")]
 pub use llm::MistralBackend;
 #[cfg(feature = "openai")]

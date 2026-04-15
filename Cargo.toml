@@ -84,7 +84,6 @@ converge-llm = { path = "crates/llm", version = "3.2.1" }
 converge-policy = { path = "crates/policy", version = "3.2.1" }
 converge-runtime = { path = "crates/runtime", version = "3.2.1" }
 converge-remote = { path = "crates/remote", version = "3.2.1" }
-# converge-axiom = { git = "https://github.com/Reflective-Lab/axiom", version = "3.2.1" }
 converge-mcp = { path = "crates/mcp", version = "3.2.1", default-features = false }
 converge-application = { path = "crates/application", version = "3.2.1" }
 converge-storage = { path = "crates/storage", version = "3.2.1", default-features = false }
