@@ -13,6 +13,7 @@
 
 pub mod batch;
 pub mod engine;
+pub mod ingest;
 pub mod model;
 #[cfg(feature = "storage")]
 pub mod storage;

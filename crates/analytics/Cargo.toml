@@ -10,6 +10,7 @@ description = "Analytics and ML pipeline for Converge agents"
 
 [dependencies]
 polars.workspace = true
+calamine = { workspace = true, optional = true }
 burn.workspace = true
 ndarray.workspace = true
 anyhow.workspace = true
@@ -37,6 +38,7 @@ tempfile.workspace = true
 [features]
 default = []
 storage = ["dep:converge-storage"]
+excel = ["dep:calamine"]
 
 [lints]
 workspace = true
