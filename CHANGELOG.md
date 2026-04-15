@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.1] - 2026-04-15
+
+### Changed
+- Removed `converge-tool` crate from workspace (moved to separate repository)
+- Added file ingest module to `converge-analytics` (CSV, Parquet, Excel)
+
 ## [3.2.0] - 2026-04-15
 
 ### Added
@@ -143,7 +149,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic agent runtime
 - Core traits and abstractions
 
-[Unreleased]: https://github.com/Reflective-Lab/converge/compare/v3.2.0...HEAD
+[Unreleased]: https://github.com/Reflective-Lab/converge/compare/v3.2.1...HEAD
+[3.2.1]: https://github.com/Reflective-Lab/converge/compare/v3.2.0...v3.2.1
 [3.2.0]: https://github.com/Reflective-Lab/converge/compare/v3.0.4...v3.2.0
 [3.0.4]: https://github.com/Reflective-Lab/converge/compare/v3.0.3...v3.0.4
 [3.0.3]: https://github.com/Reflective-Lab/converge/compare/v3.0.2...v3.0.3
