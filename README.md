@@ -129,7 +129,7 @@ RUST_LOG=info
 
 MIT — see [LICENSE](LICENSE).
 
-Copyright 2024-2026 Reflective Labs
+Copyright 2024–2026 Reflective Group AB
 
 Kenneth Pernyer — [kenneth@reflective.se](mailto:kenneth@reflective.se)
 
