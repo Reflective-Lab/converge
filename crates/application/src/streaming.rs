@@ -165,14 +165,13 @@ mod tests {
     fn promoted_fact(key: ContextKey, id: &str, content: &str) -> Fact {
         let mut ctx = Context::new();
         let _ = ctx.add_input(key, id, content);
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-                Engine::new()
-                    .run(ctx)
-                    .await
-                    .expect("should promote test input")
-                    .context
-            })
+        let rt = tokio::runtime::Runtime::new().expect("create runtime");
+        rt.block_on(async {
+            Engine::new()
+                .run(ctx)
+                .await
+                .expect("should promote test input")
+                .context
         })
         .get(key)
         .first()

@@ -503,25 +503,19 @@ mod tests {
     use super::*;
     use converge_core::{Context, Engine, ProposedFact};
 
-    fn promoted_context(entries: &[(ContextKey, &str, &str)]) -> Context {
+    async fn promoted_context(entries: &[(ContextKey, &str, &str)]) -> Context {
         let mut ctx = Context::new();
         for (key, id, content) in entries {
             ctx.add_input(*key, *id, *content).unwrap();
         }
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current()
-                .block_on(async { Engine::new().run(ctx).await.unwrap().context })
-        })
+        Engine::new().run(ctx).await.unwrap().context
     }
 
-    fn promote_proposals(mut ctx: Context, proposals: Vec<ProposedFact>) -> Context {
+    async fn promote_proposals(mut ctx: Context, proposals: Vec<ProposedFact>) -> Context {
         for proposal in proposals {
             ctx.add_proposal(proposal).unwrap();
         }
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current()
-                .block_on(async { Engine::new().run(ctx).await.unwrap().context })
-        })
+        Engine::new().run(ctx).await.unwrap().context
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -530,7 +524,8 @@ mod tests {
         let agent = StrategicInsightAgent::new(provider);
 
         // Create a context with evaluations
-        let ctx = promoted_context(&[(ContextKey::Evaluations, "eval:test", "Score: 80/100")]);
+        let ctx =
+            promoted_context(&[(ContextKey::Evaluations, "eval:test", "Score: 80/100")]).await;
 
         assert!(agent.accepts(&ctx));
 
@@ -545,15 +540,16 @@ mod tests {
         );
     }
 
-    #[test]
-    fn strategic_insight_agent_runs_once() {
+    #[tokio::test(flavor = "multi_thread")]
+    async fn strategic_insight_agent_runs_once() {
         let provider = Arc::new(MockInsightProvider::default_insights());
         let agent = StrategicInsightAgent::new(provider);
 
         let ctx = promoted_context(&[
             (ContextKey::Evaluations, "eval:test", "Score: 80/100"),
             (ContextKey::Hypotheses, "insight:1", "Existing insight"),
-        ]);
+        ])
+        .await;
 
         // Should not accept because Hypotheses already exist
         assert!(!agent.accepts(&ctx));
@@ -568,7 +564,8 @@ mod tests {
         let ctx = promoted_context(&[
             (ContextKey::Strategies, "strategy:test", "Test strategy"),
             (ContextKey::Evaluations, "eval:test", "Score: 75/100"),
-        ]);
+        ])
+        .await;
 
         assert!(agent.accepts(&ctx));
 
@@ -584,8 +581,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn risk_assessment_agent_runs_once() {
+    #[tokio::test(flavor = "multi_thread")]
+    async fn risk_assessment_agent_runs_once() {
         let provider = Arc::new(MockRiskProvider::default_risks());
         let agent = RiskAssessmentAgent::new(provider);
 
@@ -593,7 +590,8 @@ mod tests {
             (ContextKey::Strategies, "strategy:test", "Test strategy"),
             (ContextKey::Evaluations, "eval:test", "Score: 75/100"),
             (ContextKey::Constraints, "risk:1", "Existing risk"),
-        ]);
+        ])
+        .await;
 
         // Should not accept because Constraints (risks) already exist
         assert!(!agent.accepts(&ctx));

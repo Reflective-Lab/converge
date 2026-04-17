@@ -220,12 +220,12 @@ mod tests {
     use super::*;
     use converge_core::{Context, ContextKey, Engine};
 
-    fn promoted_fact(key: ContextKey, id: &str, content: &str) -> Fact {
+    async fn promoted_fact(key: ContextKey, id: &str, content: &str) -> Fact {
         let mut ctx = Context::new();
         let _ = ctx.add_input(key, id, content);
-        let runtime = tokio::runtime::Runtime::new().unwrap();
-        runtime
-            .block_on(Engine::new().run(ctx))
+        Engine::new()
+            .run(ctx)
+            .await
             .expect("should promote test input")
             .context
             .get(key)
@@ -238,7 +238,7 @@ mod tests {
     async fn test_streaming_callback_emits_facts() {
         let (callback, mut receiver) = RuntimeStreamingCallback::channel(100);
 
-        let fact = promoted_fact(ContextKey::Seeds, "test-fact", "Test content");
+        let fact = promoted_fact(ContextKey::Seeds, "test-fact", "Test content").await;
 
         callback.on_fact(1, &fact);
 
