@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`/experiment` skill**: Hypothesis-driven development workflow with evidence logging (`experiments/LOG.md`).
 - **Kong live test**: End-to-end test through Konnect gateway in `live_endpoints.rs`.
 - **Property tests**: Metadata store roundtrip and serde roundtrip for `OutcomeRecorded` with arbitrary metadata maps.
+- **Stability Testing Framework**: Production-grade continuous validation pipeline
+  - 4 Criterion benchmarks (Engine latency: single-cycle, multi-suggestor cascades 1/5/20, budget pressure, 1000-fact context)
+  - 9 chaos tests (panic injection, malformed proposals, latency variance, determinism)
+  - 4 soak tests (high-cycle convergence, concurrent runs, throughput latencies, memory stability)
+  - 9 property tests documenting Context ID validation gaps (evidence for typed-ID ADR)
+  - Automated weekly stability workflow with regression detection (`stability.yml`)
+  - Performance baseline tracking and trend analysis (`kb/Baselines/`)
+  - Hypothesis-driven experiment framework (EXP-001 through EXP-005)
+  - Baseline extraction script (`ops/scripts/extract-criterion-baseline.py`)
 
 ### Changed
 - `OutcomeRecorded` experience event now carries optional `metadata: HashMap<String, String>` for provider/gateway telemetry.
