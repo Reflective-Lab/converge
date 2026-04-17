@@ -2546,7 +2546,6 @@ dependencies = [
  "converge-experience",
  "converge-knowledge",
  "converge-llm",
- "converge-mcp",
  "converge-optimization",
  "converge-provider",
  "crossterm 0.28.1",
@@ -2647,7 +2646,6 @@ dependencies = [
  "bincode 1.3.3",
  "chrono",
  "clap",
- "converge-mcp",
  "criterion",
  "dashmap",
  "parking_lot",
@@ -2713,21 +2711,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "tracing-test",
-]
-
-[[package]]
-name = "converge-mcp"
-version = "3.2.1"
-dependencies = [
- "async-trait",
- "axum 0.8.8",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tower 0.5.3",
- "tower-http",
- "tracing",
 ]
 
 [[package]]
@@ -2811,7 +2794,6 @@ dependencies = [
  "arrow-schema",
  "base64 0.22.1",
  "converge-core",
- "converge-mcp",
  "converge-pack",
  "converge-provider-api",
  "dotenv",

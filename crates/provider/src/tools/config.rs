@@ -30,67 +30,11 @@ pub enum ToolsConfigError {
 #[serde(deny_unknown_fields)]
 pub struct ToolsConfig {
     #[serde(default)]
-    pub mcp_servers: HashMap<String, McpServerConfig>,
-    #[serde(default)]
     pub openapi_specs: HashMap<String, OpenApiConfig>,
     #[serde(default)]
     pub graphql_endpoints: HashMap<String, GraphQlConfig>,
     #[serde(default)]
     pub inline_tools: Vec<InlineToolConfig>,
-}
-
-/// MCP server configuration.
-#[derive(Debug, Deserialize, Serialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct McpServerConfig {
-    pub transport: McpTransportType,
-    #[serde(default)]
-    pub command: Option<String>,
-    #[serde(default)]
-    pub args: Vec<String>,
-    #[serde(default)]
-    pub env: HashMap<String, String>,
-    #[serde(default)]
-    pub url: Option<String>,
-    #[serde(default)]
-    pub auth_header: Option<String>,
-    #[serde(default)]
-    pub description: Option<String>,
-    #[serde(default = "default_enabled")]
-    pub enabled: bool,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = "lowercase")]
-pub enum McpTransportType {
-    Stdio,
-    Http,
-}
-
-impl McpServerConfig {
-    pub fn to_mcp_client(&self, name: &str) -> Result<McpClient, ToolsConfigError> {
-        let transport = match self.transport {
-            McpTransportType::Stdio => {
-                let command = self.command.clone().ok_or_else(|| {
-                    ToolsConfigError::ValidationError(format!("'{name}' requires 'command'"))
-                })?;
-                let args: Vec<&str> = self.args.iter().map(String::as_str).collect();
-                McpTransport::stdio_with_env(command, &args, self.env.clone())
-            }
-            McpTransportType::Http => {
-                let url = self.url.clone().ok_or_else(|| {
-                    ToolsConfigError::ValidationError(format!("'{name}' requires 'url'"))
-                })?;
-                if let Some(ref auth) = self.auth_header {
-                    let expanded = expand_env_vars(auth);
-                    McpTransport::http_with_auth(url, expanded)
-                } else {
-                    McpTransport::http(url)
-                }
-            }
-        };
-        Ok(McpClient::new(name, transport))
-    }
 }
 
 /// `OpenAPI` specification configuration.
@@ -227,16 +171,8 @@ pub fn parse_tools_config(yaml: &str) -> Result<ToolsConfig, ToolsConfigError> {
 pub fn build_registry_from_config(
     config: &ToolsConfig,
     base_path: &Path,
-) -> Result<(ToolRegistry, Vec<McpClient>), ToolsConfigError> {
+) -> Result<ToolRegistry, ToolsConfigError> {
     let mut registry = ToolRegistry::new();
-    let mut mcp_clients = Vec::new();
-
-    for (name, server_config) in &config.mcp_servers {
-        if server_config.enabled {
-            let client = server_config.to_mcp_client(name)?;
-            mcp_clients.push(client);
-        }
-    }
 
     for (name, openapi_config) in &config.openapi_specs {
         if openapi_config.enabled {
@@ -253,7 +189,7 @@ pub fn build_registry_from_config(
         }
     }
 
-    Ok((registry, mcp_clients))
+    Ok(registry)
 }
 
 #[cfg(test)]
@@ -263,35 +199,11 @@ mod tests {
     #[test]
     fn test_parse_config() {
         let yaml = r#"
-mcp_servers:
-  test:
-    transport: stdio
-    command: echo
-    args: ["hello"]
 inline_tools:
   - name: echo
     description: Echo input
 "#;
         let config = parse_tools_config(yaml).unwrap();
-        assert_eq!(config.mcp_servers.len(), 1);
         assert_eq!(config.inline_tools.len(), 1);
-    }
-
-    #[test]
-    fn test_mcp_client_creation() {
-        let yaml = r"
-mcp_servers:
-  test:
-    transport: stdio
-    command: echo
-";
-        let config = parse_tools_config(yaml).unwrap();
-        let client = config
-            .mcp_servers
-            .get("test")
-            .unwrap()
-            .to_mcp_client("test")
-            .unwrap();
-        assert_eq!(client.name(), "test");
     }
 }
