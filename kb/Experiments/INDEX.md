@@ -21,6 +21,8 @@ Use `/experiment` skill:
 | ID | Date | Hypothesis | Status |
 |----|------|-----------|--------|
 | [EXP-001](EXP-001.md) | 2026-04-17 | Engine single-cycle p99 < 1ms with 1 suggestor | Running |
+| [EXP-002](EXP-002.md) | 2026-04-17 | Context IDs should be validated; typed-ID newtype improves type safety | Running |
+| [EXP-004](EXP-004.md) | 2026-04-17 | Memory stability: no unbounded heap growth under 1000+ concurrent engine runs | Pending |
 | [EXP-005](EXP-005.md) | 2026-04-17 | Engine gracefully handles chaos: panics, malformed proposals, latency variance | Running |
 
 ## Completed Experiments
