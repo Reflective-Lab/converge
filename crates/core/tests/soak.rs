@@ -134,7 +134,7 @@ async fn soak_concurrent_engine_runs() {
     println!(
         "✓ Concurrent soak test completed: {} parallel runs, each produced {} facts",
         concurrency,
-        fact_counts.get(0).copied().unwrap_or(0)
+        fact_counts.first().copied().unwrap_or(0)
     );
 }
 

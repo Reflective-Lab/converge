@@ -20,6 +20,8 @@ Use `/experiment` skill:
 
 | ID | Date | Hypothesis | Status |
 |----|------|-----------|--------|
+| [EXP-001](EXP-001.md) | 2026-04-17 | Engine single-cycle p99 < 1ms with 1 suggestor | Running |
+| [EXP-005](EXP-005.md) | 2026-04-17 | Engine gracefully handles chaos: panics, malformed proposals, latency variance | Running |
 
 ## Completed Experiments
 

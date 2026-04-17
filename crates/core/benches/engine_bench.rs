@@ -57,9 +57,9 @@ fn bench_engine_multi_suggestor(c: &mut Criterion) {
         async fn execute(&self, _ctx: &dyn converge_core::ContextView) -> AgentEffect {
             AgentEffect::with_proposal(ProposedFact::new(
                 self.key,
-                &format!("{}-proposal", self.name),
-                &format!("proposal from {}", self.name),
-                &self.name,
+                format!("{}-proposal", self.name),
+                format!("proposal from {}", self.name),
+                self.name.as_str(),
             ))
         }
     }
@@ -154,8 +154,8 @@ fn bench_engine_large_context(c: &mut Criterion) {
                 for i in 0..1000 {
                     let _ = ctx.add_input(
                         ContextKey::Seeds,
-                        &format!("seed-{}", i),
-                        &format!("seed content {}", i),
+                        format!("seed-{}", i),
+                        format!("seed content {}", i),
                     );
                 }
 

@@ -73,12 +73,57 @@ jobs:
       - name: Run core engine benchmarks
         run: |
           cargo bench -p converge-core --
+      - name: Extract baseline data
+        if: always()
+        run: |
+          python3 ops/scripts/extract-criterion-baseline.py || echo "⚠ Baseline extraction failed (benches may not have run)"
+      - name: Check for regressions
+        if: always()
+        run: |
+          # Simple regression check: p99 should not exceed 10% over mean * 11 (conservative)
+          python3 - << 'EOF'
+          import json
+          from pathlib import Path
+
+          baseline_file = Path("kb/Baselines/latest-baseline.json")
+          if not baseline_file.exists():
+              print("⚠ No baseline data available for regression check")
+              exit(0)
+
+          with open(baseline_file) as f:
+              data = json.load(f)
+
+          print("\nRegression Check (p99 latency):")
+          print("─" * 50)
+
+          regressions = []
+          for bench_name, stats in data.get("benchmarks", {}).items():
+              p99 = stats.get("p99_us", 0)
+              mean = stats.get("mean_us", 0)
+              # Alert if p99 > mean * 2 or > 1100µs (conservative thresholds)
+              if p99 > max(mean * 2, 1100):
+                  regressions.append(f"{bench_name}: p99={p99:.2f}µs (alert threshold: {max(mean * 2, 1100):.2f}µs)")
+
+          if regressions:
+              print("⚠ Potential regressions detected:")
+              for r in regressions:
+                  print(f"  - {r}")
+              print("\nReview: kb/Baselines/latest-summary.md")
+          else:
+              print("✓ No regressions detected")
+          EOF
       - name: Upload benchmark results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: bench-reports
           path: target/criterion/
+      - name: Upload baseline data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baseline-data
+          path: kb/Baselines/
 
   # ── Soak tests: long-running stability validation ──────────────────────
 
