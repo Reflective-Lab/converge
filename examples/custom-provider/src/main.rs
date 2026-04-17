@@ -44,6 +44,7 @@ impl ChatBackend for EchoBackend {
                 total_tokens: len * 2,
             }),
             finish_reason: Some(FinishReason::Stop),
+            metadata: Default::default(),
         }))
     }
 }

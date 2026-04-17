@@ -9,33 +9,8 @@ use axum::{
     extract::{Json, Path, State},
     routing::{get, post},
 };
-use converge_axiom::gherkin::{GherkinValidator, IssueCategory, Severity, ValidationConfig};
-use converge_core::traits::{ChatBackend, ChatRequest, ChatResponse, LlmError};
 use converge_core::{Context, ContextKey, Engine};
-
-/// Stub chat backend that returns empty responses.
-/// Real LLM validation should be configured via organism-application.
-struct StubChatBackend;
-
-impl ChatBackend for StubChatBackend {
-    type ChatFut<'a> = std::pin::Pin<
-        Box<dyn std::future::Future<Output = Result<ChatResponse, LlmError>> + Send + 'a>,
-    >;
-
-    fn chat<'a>(&'a self, _req: ChatRequest) -> Self::ChatFut<'a> {
-        Box::pin(async {
-            Ok(ChatResponse {
-                content: String::new(),
-                tool_calls: Vec::new(),
-                model: Some("stub".to_string()),
-                usage: None,
-                finish_reason: None,
-            })
-        })
-    }
-}
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use strum::IntoEnumIterator;
 use tracing::{info, info_span};
 use utoipa::ToSchema;
@@ -433,74 +408,13 @@ pub struct ValidateRulesResponse {
 )]
 #[axum::debug_handler]
 pub async fn validate_rules(
-    Json(request): Json<ValidateRulesRequest>,
+    Json(_request): Json<ValidateRulesRequest>,
 ) -> Result<Json<ValidateRulesResponse>, RuntimeError> {
-    let _span = info_span!("validate_rules");
-    let _guard = _span.enter();
-    info!(use_llm = request.use_llm, "Validating Converge Rules");
-
-    let content = request.content.clone();
-    let file_name = request
-        .file_name
-        .clone()
-        .unwrap_or_else(|| "rules.feature".to_string());
-    let use_llm = request.use_llm;
-
-    // Drop the span guard before await
-    drop(_guard);
-
-    let config = ValidationConfig {
-        check_business_sense: use_llm,
-        check_compilability: use_llm,
-        check_conventions: true,
-        min_confidence: 0.7,
-    };
-
-    // Real LLM validation requires domain-specific setup in organism-application.
-    let provider: Arc<dyn converge_core::traits::DynChatBackend> = Arc::new(StubChatBackend);
-    let validator = GherkinValidator::new(provider, config);
-
-    let result = validator
-        .validate(&content, &file_name)
-        .await
-        .map_err(|e| RuntimeError::Config(format!("Validation error: {e}")))?;
-
-    let issues: Vec<ValidationIssueResponse> = result
-        .issues
-        .into_iter()
-        .map(|i| ValidationIssueResponse {
-            location: i.location,
-            category: match i.category {
-                IssueCategory::BusinessSense => "business_sense",
-                IssueCategory::Compilability => "compilability",
-                IssueCategory::Convention => "convention",
-                IssueCategory::Syntax => "syntax",
-                IssueCategory::NotRelatedError => "internal_error",
-            }
-            .to_string(),
-            severity: match i.severity {
-                Severity::Info => "info",
-                Severity::Warning => "warning",
-                Severity::Error => "error",
-            }
-            .to_string(),
-            message: i.message,
-            suggestion: i.suggestion,
-        })
-        .collect();
-
-    info!(
-        is_valid = result.is_valid,
-        issue_count = issues.len(),
-        "Validation completed"
-    );
-
-    Ok(Json(ValidateRulesResponse {
-        is_valid: result.is_valid,
-        scenario_count: result.scenario_count,
-        issues,
-        confidence: result.confidence,
-    }))
+    // Gherkin validation moved to organism-application; this endpoint is a
+    // placeholder until the axiom crate is restored or replaced.
+    Err(RuntimeError::Config(
+        "Rule validation is not yet available in converge-runtime".to_string(),
+    ))
 }
 
 // =============================================================================

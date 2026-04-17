@@ -42,7 +42,9 @@ impl IngestFormat {
             "tsv" => Ok(Self::Tsv),
             "parquet" | "pq" => Ok(Self::Parquet),
             "xlsx" | "xls" => Ok(Self::Excel),
-            _ => Err(anyhow!("unsupported file format: .{ext} (expected csv, tsv, parquet, xlsx, or xls)")),
+            _ => Err(anyhow!(
+                "unsupported file format: .{ext} (expected csv, tsv, parquet, xlsx, or xls)"
+            )),
         }
     }
 }
@@ -65,7 +67,9 @@ pub fn read_file(path: &Path) -> Result<DataFrame> {
             }
             #[cfg(not(feature = "excel"))]
             {
-                Err(anyhow!("Excel support requires the 'excel' feature. Rebuild with: cargo build --features excel"))
+                Err(anyhow!(
+                    "Excel support requires the 'excel' feature. Rebuild with: cargo build --features excel"
+                ))
             }
         }
     }
@@ -114,8 +118,7 @@ pub fn read_parquet(path: &Path) -> Result<DataFrame> {
         .to_str()
         .ok_or_else(|| anyhow!("path is not valid UTF-8: {:?}", path))?;
 
-    let df = LazyFrame::scan_parquet(PlPath::from_str(path_str), Default::default())?
-        .collect()?;
+    let df = LazyFrame::scan_parquet(PlPath::from_str(path_str), Default::default())?.collect()?;
 
     tracing::info!(
         path = %path.display(),
@@ -134,8 +137,8 @@ pub fn read_parquet(path: &Path) -> Result<DataFrame> {
 pub fn read_excel(path: &Path, sheet: Option<&str>) -> Result<DataFrame> {
     use calamine::{Reader, open_workbook_auto};
 
-    let mut workbook = open_workbook_auto(path)
-        .map_err(|e| anyhow!("failed to open Excel file: {e}"))?;
+    let mut workbook =
+        open_workbook_auto(path).map_err(|e| anyhow!("failed to open Excel file: {e}"))?;
 
     let sheet_name = match sheet {
         Some(name) => name.to_string(),
@@ -154,7 +157,9 @@ pub fn read_excel(path: &Path, sheet: Option<&str>) -> Result<DataFrame> {
 
     let (rows, cols) = range.get_size();
     if rows < 2 || cols == 0 {
-        return Err(anyhow!("sheet '{sheet_name}' has no data (rows={rows}, cols={cols})"));
+        return Err(anyhow!(
+            "sheet '{sheet_name}' has no data (rows={rows}, cols={cols})"
+        ));
     }
 
     // First row is headers
@@ -235,8 +240,8 @@ pub fn read_excel(path: &Path, sheet: Option<&str>) -> Result<DataFrame> {
 pub fn list_excel_sheets(path: &Path) -> Result<Vec<String>> {
     use calamine::{Reader, open_workbook_auto};
 
-    let workbook = open_workbook_auto(path)
-        .map_err(|e| anyhow!("failed to open Excel file: {e}"))?;
+    let workbook =
+        open_workbook_auto(path).map_err(|e| anyhow!("failed to open Excel file: {e}"))?;
 
     Ok(workbook.sheet_names().to_vec())
 }

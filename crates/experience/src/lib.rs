@@ -187,6 +187,7 @@ pub fn event_kind_label(kind: ExperienceEventKind) -> &'static str {
         ExperienceEventKind::OutcomeRecorded => "outcome_recorded",
         ExperienceEventKind::BudgetExceeded => "budget_exceeded",
         ExperienceEventKind::PolicySnapshotCaptured => "policy_snapshot_captured",
+        ExperienceEventKind::HypothesisResolved => "hypothesis_resolved",
     }
 }
 
@@ -206,6 +207,7 @@ pub struct ExperienceEventSummary {
     pub outcome_recorded: usize,
     pub budget_exceeded: usize,
     pub policy_snapshot_captured: usize,
+    pub hypothesis_resolved: usize,
     pub by_kind: BTreeMap<String, usize>,
 }
 
@@ -241,6 +243,7 @@ pub fn summarize_events(events: &[ExperienceEventEnvelope]) -> ExperienceEventSu
             ExperienceEventKind::OutcomeRecorded => summary.outcome_recorded += 1,
             ExperienceEventKind::BudgetExceeded => summary.budget_exceeded += 1,
             ExperienceEventKind::PolicySnapshotCaptured => summary.policy_snapshot_captured += 1,
+            ExperienceEventKind::HypothesisResolved => summary.hypothesis_resolved += 1,
         }
     }
 
@@ -316,6 +319,7 @@ mod tests {
             tokens: None,
             cost_microdollars: None,
             backend: None,
+            metadata: Default::default(),
         };
         let envelope = ExperienceEventEnvelope::new("evt-1", event).with_tenant("tenant-a");
         store.append_event(envelope).expect("append event");
@@ -361,6 +365,7 @@ mod tests {
                     tokens: None,
                     cost_microdollars: None,
                     backend: Some("converge-engine".into()),
+                    metadata: Default::default(),
                 },
             ),
             ExperienceEventEnvelope::new(
@@ -426,6 +431,7 @@ mod tests {
             tokens: None,
             cost_microdollars: None,
             backend: None,
+            metadata: Default::default(),
         };
         // SurrealDB record ID injection attempt
         let envelope = ExperienceEventEnvelope::new("../../admin:hack", event);
@@ -451,6 +457,7 @@ mod tests {
             tokens: None,
             cost_microdollars: None,
             backend: None,
+            metadata: Default::default(),
         };
         let envelope = ExperienceEventEnvelope::new("evt-1", event)
             .with_tenant("tenant'; DROP TABLE event;--");
@@ -470,6 +477,7 @@ mod tests {
             tokens: None,
             cost_microdollars: None,
             backend: None,
+            metadata: Default::default(),
         };
         let envelope = ExperienceEventEnvelope::new("evt-valid-123", event)
             .with_tenant("tenant-a")
@@ -503,10 +511,18 @@ mod proptest_tests {
         ]
     }
 
+    fn arb_metadata_key() -> impl Strategy<Value = String> {
+        proptest::string::string_regex("[a-z][a-z0-9._-]{0,31}").expect("valid regex")
+    }
+
+    fn arb_metadata() -> impl Strategy<Value = std::collections::HashMap<String, String>> {
+        proptest::collection::hash_map(arb_metadata_key(), valid_id(), 0..5)
+    }
+
     /// Generate a simple OutcomeRecorded event (most common variant for store tests).
     fn arb_outcome_event() -> impl Strategy<Value = ExperienceEvent> {
-        (valid_chain_id(), arb_step(), any::<bool>()).prop_map(|(chain_id, step, passed)| {
-            ExperienceEvent::OutcomeRecorded {
+        (valid_chain_id(), arb_step(), any::<bool>(), arb_metadata()).prop_map(
+            |(chain_id, step, passed, metadata)| ExperienceEvent::OutcomeRecorded {
                 chain_id,
                 step,
                 passed,
@@ -515,8 +531,9 @@ mod proptest_tests {
                 tokens: None,
                 cost_microdollars: None,
                 backend: None,
-            }
-        })
+                metadata,
+            },
+        )
     }
 
     /// Generate a BudgetExceeded event.
@@ -701,6 +718,66 @@ mod proptest_tests {
             let results = store.query_events(&q).expect("query");
             prop_assert_eq!(results.len(), target_count);
             prop_assert!(results.iter().all(|e| e.correlation_id.as_deref() == Some("corr-target")));
+        }
+    }
+
+    // Property 7: Metadata survives store roundtrip — arbitrary key-value pairs
+    // appended to OutcomeRecorded events are preserved through write and query.
+    proptest! {
+        #[test]
+        fn metadata_roundtrip(
+            events in proptest::collection::vec(
+                (valid_id(), arb_outcome_event()),
+                1..10,
+            ),
+        ) {
+            let store = InMemoryExperienceStore::new();
+            let mut expected: Vec<(String, std::collections::HashMap<String, String>)> = Vec::new();
+
+            for (id, event) in &events {
+                let meta = match event {
+                    ExperienceEvent::OutcomeRecorded { metadata, .. } => metadata.clone(),
+                    _ => std::collections::HashMap::new(),
+                };
+                expected.push((id.clone(), meta));
+                let env = ExperienceEventEnvelope::new(id.clone(), event.clone());
+                store.append_event(env).expect("append");
+            }
+
+            let results = store.query_events(&EventQuery::default()).expect("query");
+            prop_assert_eq!(results.len(), expected.len());
+
+            for (result, (_, expected_meta)) in results.iter().zip(expected.iter()) {
+                if let ExperienceEvent::OutcomeRecorded { metadata, .. } = &result.event {
+                    prop_assert_eq!(metadata, expected_meta);
+                }
+            }
+        }
+    }
+
+    // Property 8: Metadata serialization roundtrip — OutcomeRecorded with
+    // arbitrary metadata survives JSON serialize/deserialize.
+    proptest! {
+        #[test]
+        fn metadata_serde_roundtrip(meta in arb_metadata()) {
+            let event = ExperienceEvent::OutcomeRecorded {
+                chain_id: "chain-serde".to_string(),
+                step: DecisionStep::Planning,
+                passed: true,
+                stop_reason: None,
+                latency_ms: None,
+                tokens: None,
+                cost_microdollars: None,
+                backend: None,
+                metadata: meta.clone(),
+            };
+            let json = serde_json::to_string(&event).expect("serialize");
+            let back: ExperienceEvent = serde_json::from_str(&json).expect("deserialize");
+            if let ExperienceEvent::OutcomeRecorded { metadata, .. } = back {
+                prop_assert_eq!(metadata, meta);
+            } else {
+                prop_assert!(false, "wrong variant after deserialize");
+            }
         }
     }
 }

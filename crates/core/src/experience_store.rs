@@ -120,6 +120,7 @@ pub enum ExperienceEventKind {
     OutcomeRecorded,
     BudgetExceeded,
     PolicySnapshotCaptured,
+    HypothesisResolved,
 }
 
 /// Append-only experience event payloads.
@@ -194,6 +195,9 @@ pub enum ExperienceEvent {
         tokens: Option<u64>,
         cost_microdollars: Option<u64>,
         backend: Option<String>,
+        /// Provider/gateway metadata (Kong headers, OpenRouter cost, etc.).
+        #[serde(default, skip_serializing_if = "std::collections::HashMap::is_empty")]
+        metadata: std::collections::HashMap<String, String>,
     },
     /// Budget exceeded event for a chain/run.
     BudgetExceeded {
@@ -208,6 +212,20 @@ pub enum ExperienceEvent {
         policy: PolicySnapshot,
         snapshot_hash: String,
         captured_by: String,
+    },
+    /// A tracked hypothesis reached a terminal outcome.
+    HypothesisResolved {
+        chain_id: String,
+        fact_id: String,
+        domain: String,
+        claim: String,
+        confidence: f64,
+        /// "confirmed" | "falsified" | "superseded" | "unresolved"
+        outcome: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        contradiction_id: Option<String>,
+        formed_cycle: u32,
+        resolved_cycle: u32,
     },
 }
 
@@ -230,6 +248,7 @@ impl ExperienceEvent {
             Self::OutcomeRecorded { .. } => ExperienceEventKind::OutcomeRecorded,
             Self::BudgetExceeded { .. } => ExperienceEventKind::BudgetExceeded,
             Self::PolicySnapshotCaptured { .. } => ExperienceEventKind::PolicySnapshotCaptured,
+            Self::HypothesisResolved { .. } => ExperienceEventKind::HypothesisResolved,
         }
     }
 }
@@ -398,6 +417,7 @@ mod tests {
             tokens: Some(42),
             cost_microdollars: None,
             backend: Some("local".to_string()),
+            metadata: Default::default(),
         };
         let envelope = ExperienceEventEnvelope::new("evt-1", event)
             .with_tenant("tenant-a")

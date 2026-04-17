@@ -1,6 +1,7 @@
 // Copyright 2024-2026 Reflective Labs
 // SPDX-License-Identifier: MIT
 
+use std::collections::HashMap;
 use std::time::Duration;
 
 use reqwest::Client;
@@ -289,6 +290,8 @@ impl OpenRouterBackend {
             _ => None,
         });
 
+        let metadata = extract_openrouter_metadata(&response);
+
         finalize_chat_response(
             req.response_format,
             ChatResponse {
@@ -301,6 +304,7 @@ impl OpenRouterBackend {
                 }),
                 model: Some(response.model),
                 finish_reason,
+                metadata,
             },
         )
     }
@@ -358,6 +362,36 @@ impl OpenRouterBackend {
             code: None,
         }))
     }
+}
+
+fn extract_openrouter_metadata(response: &OpenRouterResponse) -> HashMap<String, String> {
+    let mut meta = HashMap::new();
+
+    if let Some(provider) = &response.provider {
+        meta.insert("provider".to_string(), provider.clone());
+    }
+
+    if let Some(usage) = &response.usage {
+        if let Some(cost) = usage.cost {
+            meta.insert("cost".to_string(), cost.to_string());
+        }
+        if let Some(byok) = usage.is_byok {
+            meta.insert("is_byok".to_string(), byok.to_string());
+        }
+        if let Some(details) = &usage.cost_details {
+            if let Some(v) = details.upstream_inference_cost {
+                meta.insert("cost.upstream".to_string(), v.to_string());
+            }
+            if let Some(v) = details.upstream_inference_prompt_cost {
+                meta.insert("cost.prompt".to_string(), v.to_string());
+            }
+            if let Some(v) = details.upstream_inference_completions_cost {
+                meta.insert("cost.completion".to_string(), v.to_string());
+            }
+        }
+    }
+
+    meta
 }
 
 impl ChatBackend for OpenRouterBackend {
@@ -422,6 +456,8 @@ struct OpenRouterResponse {
     model: String,
     choices: Vec<OpenRouterChoice>,
     usage: Option<OpenRouterUsage>,
+    #[serde(default)]
+    provider: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -453,6 +489,22 @@ struct OpenRouterUsage {
     prompt_tokens: u32,
     completion_tokens: u32,
     total_tokens: u32,
+    #[serde(default)]
+    cost: Option<f64>,
+    #[serde(default)]
+    is_byok: Option<bool>,
+    #[serde(default)]
+    cost_details: Option<OpenRouterCostDetails>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenRouterCostDetails {
+    #[serde(default)]
+    upstream_inference_cost: Option<f64>,
+    #[serde(default)]
+    upstream_inference_prompt_cost: Option<f64>,
+    #[serde(default)]
+    upstream_inference_completions_cost: Option<f64>,
 }
 
 // ============================================================================
@@ -586,6 +638,7 @@ mod tests {
                 .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
                     "id": "gen-test",
                     "model": "anthropic/claude-sonnet-4",
+                    "provider": "Anthropic",
                     "choices": [{
                         "message": {
                             "content": "Hello from OpenRouter!",
@@ -596,7 +649,14 @@ mod tests {
                     "usage": {
                         "prompt_tokens": 10,
                         "completion_tokens": 5,
-                        "total_tokens": 15
+                        "total_tokens": 15,
+                        "cost": 0.000075,
+                        "is_byok": false,
+                        "cost_details": {
+                            "upstream_inference_cost": 0.000075,
+                            "upstream_inference_prompt_cost": 0.00003,
+                            "upstream_inference_completions_cost": 0.000045
+                        }
                     }
                 })))
                 .mount(&server)
@@ -629,6 +689,17 @@ mod tests {
         assert_eq!(response.content, "Hello from OpenRouter!");
         assert_eq!(response.finish_reason, Some(ChatFinishReason::Stop));
         assert_eq!(response.usage.as_ref().unwrap().total_tokens, 15);
+
+        // Verify cost/provider metadata was captured from response body
+        assert_eq!(response.metadata.get("provider").unwrap(), "Anthropic");
+        assert_eq!(response.metadata.get("cost").unwrap(), "0.000075");
+        assert_eq!(response.metadata.get("is_byok").unwrap(), "false");
+        assert_eq!(response.metadata.get("cost.upstream").unwrap(), "0.000075");
+        assert_eq!(response.metadata.get("cost.prompt").unwrap(), "0.00003");
+        assert_eq!(
+            response.metadata.get("cost.completion").unwrap(),
+            "0.000045"
+        );
 
         drop(server);
         drop(runtime);

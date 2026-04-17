@@ -1,10 +1,11 @@
 // Copyright 2024-2026 Reflective Labs
 // SPDX-License-Identifier: MIT
 
+use std::collections::HashMap;
 use std::time::Duration;
 
 use reqwest::Client;
-use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
+use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
 use serde::{Deserialize, Serialize};
 
 use super::error_classification::{
@@ -45,17 +46,17 @@ impl KongBackend {
     }
 
     pub fn from_secret_provider(secrets: &dyn SecretProvider) -> BackendResult<Self> {
-        let api_key = secrets
-            .get_secret("KONG_API_KEY")
-            .map_err(|e| BackendError::Unavailable {
-                message: format!("KONG_API_KEY: {e}"),
-            })?;
+        let api_key =
+            secrets
+                .get_secret("KONG_API_KEY")
+                .map_err(|e| BackendError::Unavailable {
+                    message: format!("KONG_API_KEY: {e}"),
+                })?;
 
-        let gateway_url = std::env::var("KONG_AI_GATEWAY_URL").map_err(|_| {
-            BackendError::Unavailable {
+        let gateway_url =
+            std::env::var("KONG_AI_GATEWAY_URL").map_err(|_| BackendError::Unavailable {
                 message: "KONG_AI_GATEWAY_URL not set".to_string(),
-            }
-        })?;
+            })?;
 
         Ok(Self {
             api_key,
@@ -91,8 +92,10 @@ impl KongBackend {
         // Konnect uses Key Auth: apikey header with the API key value
         headers.insert(
             "apikey",
-            HeaderValue::from_str(self.api_key.expose()).map_err(|e| BackendError::InvalidRequest {
-                message: format!("Invalid KONG_API_KEY: {e}"),
+            HeaderValue::from_str(self.api_key.expose()).map_err(|e| {
+                BackendError::InvalidRequest {
+                    message: format!("Invalid KONG_API_KEY: {e}"),
+                }
             })?,
         );
         Ok(headers)
@@ -202,7 +205,7 @@ impl KongBackend {
     async fn chat_async(&self, req: ChatRequest) -> Result<ChatResponse, ChatLlmError> {
         let kong_req = self.build_request(&req);
         let model = req.model.clone().unwrap_or_else(|| self.model.clone());
-        let response = self.execute_with_retries(&model, &kong_req).await?;
+        let (resp_headers, response) = self.execute_with_retries(&model, &kong_req).await?;
 
         let choice = response.choices.first();
 
@@ -232,6 +235,8 @@ impl KongBackend {
             _ => None,
         });
 
+        let metadata = extract_gateway_headers(&resp_headers);
+
         finalize_chat_response(
             req.response_format,
             ChatResponse {
@@ -244,6 +249,7 @@ impl KongBackend {
                 }),
                 model: Some(response.model),
                 finish_reason,
+                metadata,
             },
         )
     }
@@ -252,8 +258,7 @@ impl KongBackend {
         &self,
         model: &str,
         request: &KongRequest,
-    ) -> Result<KongResponse, ChatLlmError> {
-        // Kong AI Proxy route: /llm/v1/chat (static, not /v1/chat/completions)
+    ) -> Result<(HeaderMap, KongResponse), ChatLlmError> {
         let url = format!("{}/llm/v1/chat", self.gateway_url);
         let headers = self.build_headers().map_err(map_backend_error)?;
 
@@ -277,8 +282,9 @@ impl KongBackend {
                     let status = response.status();
 
                     if status.is_success() {
+                        let resp_headers = response.headers().clone();
                         match response.json::<KongResponse>().await {
-                            Ok(parsed) => return Ok(parsed),
+                            Ok(parsed) => return Ok((resp_headers, parsed)),
                             Err(e) => {
                                 last_error = Some(parse_error(e));
                             }
@@ -302,6 +308,37 @@ impl KongBackend {
             code: None,
         }))
     }
+}
+
+/// Extract governance-relevant headers from gateway responses.
+///
+/// Captures any header matching known gateway/provider prefixes. This is
+/// generic — works for Kong, upstream OpenAI headers, and any future gateway
+/// that follows the `x-<vendor>-*` convention.
+fn extract_gateway_headers(headers: &HeaderMap) -> HashMap<String, String> {
+    let prefixes = [
+        "x-kong-",
+        "x-ratelimit-",
+        "ratelimit-",
+        "x-request-id",
+        "x-openai-",
+        "openai-",
+    ];
+
+    headers
+        .iter()
+        .filter_map(|(name, value)| {
+            let key = name.as_str();
+            if prefixes.iter().any(|p| key.starts_with(p)) {
+                value
+                    .to_str()
+                    .ok()
+                    .map(|v| (key.to_string(), v.to_string()))
+            } else {
+                None
+            }
+        })
+        .collect()
 }
 
 impl ChatBackend for KongBackend {
@@ -539,29 +576,38 @@ mod tests {
         runtime.block_on(async {
             Mock::given(method("POST"))
                 .and(path("/llm/v1/chat"))
-                .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
-                    "id": "kongcmpl_test",
-                    "model": "gpt-4o",
-                    "choices": [{
-                        "message": {
-                            "content": "Response from Kong",
-                            "tool_calls": [{
-                                "id": "call_1",
-                                "type": "function",
-                                "function": {
-                                    "name": "lookup_weather",
-                                    "arguments": "{\"city\":\"Paris\"}"
-                                }
-                            }]
-                        },
-                        "finish_reason": "tool_calls"
-                    }],
-                    "usage": {
-                        "prompt_tokens": 12,
-                        "completion_tokens": 4,
-                        "total_tokens": 16
-                    }
-                })))
+                .respond_with(
+                    ResponseTemplate::new(200)
+                        .set_body_json(serde_json::json!({
+                            "id": "kongcmpl_test",
+                            "model": "gpt-4o",
+                            "choices": [{
+                                "message": {
+                                    "content": "Response from Kong",
+                                    "tool_calls": [{
+                                        "id": "call_1",
+                                        "type": "function",
+                                        "function": {
+                                            "name": "lookup_weather",
+                                            "arguments": "{\"city\":\"Paris\"}"
+                                        }
+                                    }]
+                                },
+                                "finish_reason": "tool_calls"
+                            }],
+                            "usage": {
+                                "prompt_tokens": 12,
+                                "completion_tokens": 4,
+                                "total_tokens": 16
+                            }
+                        }))
+                        .insert_header("x-kong-upstream-latency", "142")
+                        .insert_header("x-kong-proxy-latency", "3")
+                        .insert_header("x-kong-request-id", "abc123")
+                        .insert_header("x-kong-llm-model", "openai/gpt-4o")
+                        .insert_header("x-ratelimit-remaining-requests", "499")
+                        .insert_header("ratelimit-remaining", "498"),
+                )
                 .mount(&server)
                 .await;
         });
@@ -569,14 +615,12 @@ mod tests {
         let backend = KongBackend::new("test-key", server.uri());
         let response = runtime
             .block_on(backend.chat(ChatRequest {
-                messages: vec![
-                    ChatMessage {
-                        role: ChatRole::User,
-                        content: "Weather?".to_string(),
-                        tool_calls: Vec::new(),
-                        tool_call_id: None,
-                    },
-                ],
+                messages: vec![ChatMessage {
+                    role: ChatRole::User,
+                    content: "Weather?".to_string(),
+                    tool_calls: Vec::new(),
+                    tool_call_id: None,
+                }],
                 system: Some("You are helpful.".to_string()),
                 tools: vec![ToolDefinition {
                     name: "lookup_weather".to_string(),
@@ -605,6 +649,29 @@ mod tests {
         assert_eq!(usage.prompt_tokens, 12);
         assert_eq!(usage.completion_tokens, 4);
         assert_eq!(usage.total_tokens, 16);
+
+        // Verify gateway metadata was captured from response headers
+        assert_eq!(
+            response.metadata.get("x-kong-upstream-latency").unwrap(),
+            "142"
+        );
+        assert_eq!(response.metadata.get("x-kong-proxy-latency").unwrap(), "3");
+        assert_eq!(
+            response.metadata.get("x-kong-request-id").unwrap(),
+            "abc123"
+        );
+        assert_eq!(
+            response.metadata.get("x-kong-llm-model").unwrap(),
+            "openai/gpt-4o"
+        );
+        assert_eq!(
+            response
+                .metadata
+                .get("x-ratelimit-remaining-requests")
+                .unwrap(),
+            "499"
+        );
+        assert_eq!(response.metadata.get("ratelimit-remaining").unwrap(), "498");
 
         drop(server);
         drop(runtime);

@@ -248,6 +248,7 @@ impl ChatBackend for MockInsightProvider {
                 total_tokens: 150,
             }),
             finish_reason: Some(FinishReason::Stop),
+            metadata: Default::default(),
         }))
     }
 }
@@ -492,6 +493,7 @@ impl ChatBackend for MockRiskProvider {
                 total_tokens: 200,
             }),
             finish_reason: Some(FinishReason::Stop),
+            metadata: Default::default(),
         }))
     }
 }
@@ -506,14 +508,20 @@ mod tests {
         for (key, id, content) in entries {
             ctx.add_input(*key, *id, *content).unwrap();
         }
-        Engine::new().run(ctx).unwrap().context
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current()
+                .block_on(async { Engine::new().run(ctx).await.unwrap().context })
+        })
     }
 
     fn promote_proposals(mut ctx: Context, proposals: Vec<ProposedFact>) -> Context {
         for proposal in proposals {
             ctx.add_proposal(proposal).unwrap();
         }
-        Engine::new().run(ctx).unwrap().context
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current()
+                .block_on(async { Engine::new().run(ctx).await.unwrap().context })
+        })
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -526,7 +534,7 @@ mod tests {
 
         assert!(agent.accepts(&ctx));
 
-        let effect = agent.execute(&ctx);
+        let effect = agent.execute(&ctx).await;
 
         assert!(!effect.proposals.is_empty());
         assert!(
@@ -564,7 +572,7 @@ mod tests {
 
         assert!(agent.accepts(&ctx));
 
-        let effect = agent.execute(&ctx);
+        let effect = agent.execute(&ctx).await;
 
         assert!(!effect.proposals.is_empty());
         assert!(effect.proposals.iter().any(|f| f.id.starts_with("risk:")));

@@ -288,6 +288,15 @@ async fn live_mistral_happy_path_multiturn() {
         .unwrap();
 }
 
+#[cfg(feature = "kong")]
+#[tokio::test(flavor = "current_thread")]
+#[ignore = "requires live API access"]
+async fn live_kong_happy_path_multiturn() {
+    run_multiturn_chat_probe("kong", "KONG_API_KEY")
+        .await
+        .unwrap();
+}
+
 #[cfg(feature = "openai")]
 #[tokio::test(flavor = "current_thread")]
 #[ignore = "requires live API access"]

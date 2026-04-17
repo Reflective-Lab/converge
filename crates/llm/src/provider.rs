@@ -213,6 +213,7 @@ impl MockProvider {
                 total_tokens: 30,
             }),
             finish_reason: Some(FinishReason::Stop),
+            metadata: Default::default(),
         })
     }
 }

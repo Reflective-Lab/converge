@@ -92,6 +92,11 @@ Knowledge base for the Converge platform — a correctness-first, context-driven
 - [[Workflow/Working with Codex]] — plain-language workflow equivalents
 - [[Workflow/Working with Gemini]] — native tools + shared scripts
 
+## Experiments
+
+- [[Experiments/INDEX]] — hypothesis-driven development with evidence logging
+- [[Experiments/LOG]] — mutation log of all experiments
+
 ## Audits
 
 - [[Architecture/Audits/2026-04-11 Drift Report]] — baseline: philosophy vs implementation

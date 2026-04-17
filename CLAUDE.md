@@ -10,6 +10,7 @@ Read and follow `AGENTS.md` — it is the canonical project documentation.
 
 ## Claude-Specific Notes
 
+- **Available skills:** `/experiment` — hypothesis-driven development with evidence logging.
 - Use `kb/Architecture/System Overview.md` and `kb/Architecture/API Surfaces.md` as the authoritative API reference. When they conflict with other docs, the KB docs win.
 - Prefer Edit over Write for existing files. Prefer Grep/Glob over Bash for search.
 - Do not create documentation files unless explicitly asked. Knowledge belongs in `kb/`.

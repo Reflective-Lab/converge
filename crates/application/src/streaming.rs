@@ -165,14 +165,19 @@ mod tests {
     fn promoted_fact(key: ContextKey, id: &str, content: &str) -> Fact {
         let mut ctx = Context::new();
         let _ = ctx.add_input(key, id, content);
-        Engine::new()
-            .run(ctx)
-            .expect("should promote test input")
-            .context
-            .get(key)
-            .first()
-            .expect("promoted fact should exist")
-            .clone()
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(async {
+                Engine::new()
+                    .run(ctx)
+                    .await
+                    .expect("should promote test input")
+                    .context
+            })
+        })
+        .get(key)
+        .first()
+        .expect("promoted fact should exist")
+        .clone()
     }
 
     #[test]

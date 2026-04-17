@@ -73,7 +73,7 @@ struct Model {
 
 impl Model {
     fn short_name(&self) -> &str {
-        self.id.split('/').last().unwrap_or(self.id)
+        self.id.split('/').next_back().unwrap_or(self.id)
     }
 
     fn estimate_cost(&self, usage: &TokenUsage) -> f64 {

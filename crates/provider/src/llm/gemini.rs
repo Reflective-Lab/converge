@@ -258,6 +258,7 @@ impl GeminiBackend {
                 usage,
                 model: Some(model),
                 finish_reason,
+                metadata: Default::default(),
             },
         )
     }

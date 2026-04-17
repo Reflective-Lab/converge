@@ -1644,6 +1644,7 @@ fn emit_terminal_event(
                 tokens: None,
                 cost_microdollars: None,
                 backend: Some("converge-engine".to_string()),
+                metadata: Default::default(),
             });
         }
         Err(error) => {
@@ -1665,6 +1666,7 @@ fn emit_terminal_event(
                 tokens: None,
                 cost_microdollars: None,
                 backend: Some("converge-engine".to_string()),
+                metadata: Default::default(),
             });
         }
     }

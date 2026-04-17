@@ -148,6 +148,7 @@ mod tests {
             usage: None,
             model: None,
             finish_reason: None,
+            metadata: Default::default(),
         }
     }
 

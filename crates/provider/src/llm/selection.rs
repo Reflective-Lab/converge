@@ -408,7 +408,7 @@ fn parse_bool(key: &'static str, value: &str) -> Result<bool, ChatBackendSelecti
 
 #[cfg(test)]
 mod tests {
-    use super::{select_chat_backend_with_secret_provider, ChatBackendSelectionConfig};
+    use super::{ChatBackendSelectionConfig, select_chat_backend_with_secret_provider};
     use crate::secret::{SecretError, SecretProvider, StaticSecretProvider};
     use converge_core::model_selection::{RequiredCapabilities, SelectionCriteria};
 

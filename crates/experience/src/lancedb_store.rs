@@ -438,6 +438,7 @@ mod tests {
                 tokens: None,
                 cost_microdollars: None,
                 backend: None,
+                metadata: Default::default(),
             },
         )
     }

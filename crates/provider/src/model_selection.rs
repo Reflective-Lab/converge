@@ -920,6 +920,29 @@ impl Default for ModelSelector {
                     .with_data_sovereignty(DataSovereignty::Switzerland)
                     .with_compliance(ComplianceLevel::GDPR)
                     .with_multilingual(true),
+                // Kong AI Gateway — proxies to upstream models via kong.example.com
+                #[cfg(feature = "kong")]
+                ModelMetadata::new("kong", "gpt-4o", CostClass::Low, 2500, 0.92)
+                    .with_reasoning(true)
+                    .with_tool_use(true)
+                    .with_vision(true)
+                    .with_structured_output(true)
+                    .with_code(true)
+                    .with_context_tokens(128_000),
+                #[cfg(feature = "kong")]
+                ModelMetadata::new("kong", "gpt-4o-mini", CostClass::VeryLow, 1200, 0.85)
+                    .with_tool_use(true)
+                    .with_vision(true)
+                    .with_structured_output(true)
+                    .with_context_tokens(128_000),
+                #[cfg(feature = "kong")]
+                ModelMetadata::new("kong", "claude-sonnet-4", CostClass::Low, 2500, 0.93)
+                    .with_reasoning(true)
+                    .with_tool_use(true)
+                    .with_vision(true)
+                    .with_structured_output(true)
+                    .with_code(true)
+                    .with_context_tokens(200_000),
             ],
         }
     }

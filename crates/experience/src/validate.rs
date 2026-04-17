@@ -93,6 +93,7 @@ mod tests {
             tokens: None,
             cost_microdollars: None,
             backend: None,
+            metadata: Default::default(),
         };
         ExperienceEventEnvelope::new(event_id, event)
     }

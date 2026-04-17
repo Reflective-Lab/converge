@@ -249,6 +249,7 @@ impl OpenAiBackend {
                 }),
                 model: Some(response.model),
                 finish_reason,
+                metadata: Default::default(),
             },
         )
     }

@@ -56,7 +56,7 @@ impl ResilientChatBackend {
 
         // Attempt 1: primary backend, requested format
         match self.primary.chat(req.clone()).await {
-            Ok(response) => return Ok(response),
+            Ok(response) => Ok(response),
             Err(e) if is_retryable_with_format_change(&e) => {
                 // Format-related failure — try JSON fallback
                 if let Some(fallback_format) = original_format.fallback() {
@@ -70,12 +70,10 @@ impl ResilientChatBackend {
                     let mut retry_req = req.clone();
                     retry_req.response_format = fallback_format;
 
-                    match self.primary.chat(retry_req).await {
-                        Ok(response) => return Ok(response),
-                        Err(retry_err) => return Err(retry_err),
-                    }
+                    self.primary.chat(retry_req).await
+                } else {
+                    Err(e)
                 }
-                return Err(e);
             }
             Err(e) if is_retryable_with_model_change(&e) => {
                 // Model/provider failure — try fallback backend
@@ -93,22 +91,22 @@ impl ResilientChatBackend {
                                 fallback = %self.fallback_label,
                                 "Fallback backend succeeded"
                             );
-                            return Ok(response);
+                            Ok(response)
                         }
                         Err(fallback_err) => {
-                            // Both failed — return the original error
                             warn!(
                                 fallback = %self.fallback_label,
                                 error = %fallback_err,
                                 "Fallback backend also failed"
                             );
-                            return Err(e);
+                            Err(e)
                         }
                     }
+                } else {
+                    Err(e)
                 }
-                return Err(e);
             }
-            Err(e) => return Err(e),
+            Err(e) => Err(e),
         }
     }
 }
@@ -198,6 +196,7 @@ mod tests {
                                 usage: None,
                                 model: None,
                                 finish_reason: None,
+                                metadata: Default::default(),
                             })
                         }
                     }

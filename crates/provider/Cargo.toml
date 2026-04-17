@@ -40,7 +40,7 @@ arrow-schema = { workspace = true, optional = true }
 futures = { workspace = true, optional = true }
 
 [features]
-default = ["anthropic", "gemini", "openai", "openrouter", "mistral", "registry", "brave", "tavily"]
+default = ["anthropic", "gemini", "openai", "openrouter", "mistral", "kong", "registry", "brave", "tavily"]
 
 # Private convenience feature: any provider that needs HTTP pulls this in
 _http = ["dep:reqwest"]

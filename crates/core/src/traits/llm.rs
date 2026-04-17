@@ -208,6 +208,11 @@ pub struct ChatResponse {
     pub usage: Option<TokenUsage>,
     pub model: Option<String>,
     pub finish_reason: Option<FinishReason>,
+    /// Provider/gateway metadata captured from response headers and body.
+    ///
+    /// Populated by backends that have extra telemetry (Kong headers,
+    /// OpenRouter cost fields, etc.). Empty for backends that don't.
+    pub metadata: std::collections::HashMap<String, String>,
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]

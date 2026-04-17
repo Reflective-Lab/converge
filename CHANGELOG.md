@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Kong AI Gateway provider**: Full `KongBackend` with Konnect Key Auth, retry with exponential backoff, model selection, and tool calling support. Added to default features.
+- **Provider metadata capture**: Generic `metadata: HashMap<String, String>` on `ChatResponse`. Kong captures gateway headers (upstream/proxy latency, request ID, model, rate limits). OpenRouter captures cost, provider, and cost breakdown from response body.
+- **`HypothesisResolved` experience event**: New `ExperienceEvent` variant for tracking hypothesis lifecycle across convergence cycles — confirmed, falsified, superseded, or unresolved.
+- **`/experiment` skill**: Hypothesis-driven development workflow with evidence logging (`experiments/LOG.md`).
+- **Kong live test**: End-to-end test through Konnect gateway in `live_endpoints.rs`.
+- **Property tests**: Metadata store roundtrip and serde roundtrip for `OutcomeRecorded` with arbitrary metadata maps.
+
+### Changed
+- `OutcomeRecorded` experience event now carries optional `metadata: HashMap<String, String>` for provider/gateway telemetry.
+- Kong added to provider model registry (gpt-4o, gpt-4o-mini, claude-sonnet-4).
+
+### Fixed
+- Build failure: removed dead `converge_axiom` import and `StubChatBackend` from runtime handlers.
+- Clippy: removed needless returns in `ResilientChatBackend`.
+
 ## [3.2.1] - 2026-04-15
 
 ### Changed
