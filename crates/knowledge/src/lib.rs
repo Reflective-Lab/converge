@@ -71,9 +71,6 @@ pub mod storage;
 #[cfg(feature = "grpc")]
 pub mod grpc;
 
-#[cfg(feature = "mcp")]
-pub mod mcp;
-
 // Re-exports
 pub use crate::agentic::{
     // Core agent memory

@@ -155,8 +155,7 @@ pub use contract::{
 // Re-exports: tool integration
 pub use tools::{
     GraphQlConfig, GraphQlConverter, GraphQlOperationType, InlineToolConfig, InputSchema,
-    McpClient, McpClientBuilder, McpServerConfig, McpTransport, McpTransportType, OpenApiConfig,
-    OpenApiConverter, SourceFilter, ToolCall, ToolDefinition, ToolError, ToolErrorKind, ToolFormat,
-    ToolHandler, ToolRegistry, ToolResult, ToolResultContent, ToolSource, ToolsConfig,
-    ToolsConfigError,
+    OpenApiConfig, OpenApiConverter, SourceFilter, ToolCall, ToolDefinition, ToolError,
+    ToolErrorKind, ToolFormat, ToolHandler, ToolRegistry, ToolResult, ToolResultContent,
+    ToolSource, ToolsConfig, ToolsConfigError,
 };

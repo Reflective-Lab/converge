@@ -3,10 +3,7 @@
 
 //! YAML-based tool configuration loader.
 
-use super::{
-    GraphQlConverter, OpenApiConverter, ToolDefinition, ToolError,
-    ToolRegistry,
-};
+use super::{GraphQlConverter, OpenApiConverter, ToolDefinition, ToolError, ToolRegistry};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -144,17 +141,6 @@ impl InlineToolConfig {
 
 fn default_enabled() -> bool {
     true
-}
-
-fn expand_env_vars(s: &str) -> String {
-    let mut result = s.to_string();
-    let re = regex_lite::Regex::new(r"\$\{([^}]+)\}").unwrap();
-    for cap in re.captures_iter(s) {
-        if let Ok(value) = std::env::var(&cap[1]) {
-            result = result.replace(&cap[0], &value);
-        }
-    }
-    result
 }
 
 pub fn load_tools_config(path: impl AsRef<Path>) -> Result<ToolsConfig, ToolsConfigError> {

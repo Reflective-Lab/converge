@@ -35,8 +35,8 @@ pub use registry::{SourceFilter, ToolHandler, ToolRegistry};
 
 // Convenience re-exports from submodules
 pub use config::{
-    GraphQlConfig, InlineToolConfig, OpenApiConfig, ToolsConfig,
-    ToolsConfigError, build_registry_from_config, load_tools_config, parse_tools_config,
+    GraphQlConfig, InlineToolConfig, OpenApiConfig, ToolsConfig, ToolsConfigError,
+    build_registry_from_config, load_tools_config, parse_tools_config,
 };
 pub use graphql::GraphQlConverter;
 pub use openapi::OpenApiConverter;

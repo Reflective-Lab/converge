@@ -55,7 +55,7 @@ soak:
 # ── Lint & Format ─────────────────────────────────────────────────────
 
 # Check formatting and clippy
-lint:
+lint: _coverage-summary
     cargo fmt --check
     cargo clippy --all-targets -- -D warnings
 
@@ -67,6 +67,32 @@ fix-lint:
 # Format only
 fmt:
     cargo fmt
+
+# Show test coverage by crate (unit tests per source file)
+_coverage-summary:
+    #!/usr/bin/env bash
+    echo "──────────────────────────────────────────────"
+    echo "Test Coverage Summary"
+    echo "──────────────────────────────────────────────"
+    (
+      for crate in crates/*/; do
+        crate_name=$(basename "$crate")
+        unit_count=$(find "$crate/src" -name "*.rs" -exec grep -l "#\[cfg(test)\]" {} \; 2>/dev/null | wc -l)
+        integration_count=$(ls "$crate/tests"/*.rs 2>/dev/null | wc -l)
+        bench_count=$(ls "$crate/benches"/*.rs 2>/dev/null | wc -l)
+        src_files=$(find "$crate/src" -name "*.rs" 2>/dev/null | wc -l)
+
+        if [ "$unit_count" -gt 0 ] || [ "$integration_count" -gt 0 ] || [ "$bench_count" -gt 0 ]; then
+          printf "%-25s unit=%2d integration=%d bench=%d (src: %d files)\n" \
+            "$crate_name" "$unit_count" "$integration_count" "$bench_count" "$src_files"
+        fi
+      done | sort -t= -k2 -rn
+    )
+    echo "──────────────────────────────────────────────"
+    crates_with_tests=$(find crates -path "*/tests/*.rs" -o -path "*/benches/*.rs" | cut -d/ -f2 | sort -u | wc -l)
+    total_crates=$(ls -1d crates/*/ | wc -l)
+    echo "Test coverage: $crates_with_tests/$total_crates crates have tests"
+    echo "──────────────────────────────────────────────"
 
 # ── Docs ───────────────────────────────────────────────────────────────
 
@@ -81,7 +107,7 @@ doc-open:
 # ── Publish ────────────────────────────────────────────────────────────
 
 # Publishable crates in dependency order
-_publishable := "converge-pack converge-provider-api converge-core converge-policy converge-mcp converge-model converge-kernel converge-protocol converge-client converge-storage converge-provider converge-experience converge-knowledge ortools-sys converge-optimization converge-domain converge-analytics"
+_publishable := "converge-pack converge-provider-api converge-core converge-policy converge-model converge-kernel converge-protocol converge-client converge-storage converge-provider converge-experience converge-knowledge ortools-sys converge-optimization converge-domain converge-analytics"
 
 # Dry-run publish to crates.io (validates readiness)
 publish-dry-run:
@@ -297,11 +323,10 @@ deps:
     @echo "  converge-model           -> core, pack"
     @echo "  converge-kernel          -> core, pack"
     @echo "  converge-client          -> protocol"
-    @echo "  converge-mcp             (no internal deps)"
     @echo "  converge-provider        → core, pack, provider-api"
     @echo "  converge-domain          → core, provider"
     @echo "  converge-experience      → core"
-    @echo "  converge-knowledge       → mcp (server feature)"
+    @echo "  converge-knowledge       (standalone, optional in app)"
     @echo "  ortools-sys              (no deps, FFI)"
     @echo "  converge-optimization    → ortools-sys (optional)"
     @echo "  converge-analytics       → core, domain, provider"
@@ -309,5 +334,5 @@ deps:
     @echo "  converge-policy          → core"
     @echo "  converge-axiom            → core, provider"
     @echo "  converge-remote          → client, protocol"
-    @echo "  converge-runtime         → core, provider, protocol, tool"
-    @echo "  converge-application     → core, provider, domain, tool, mcp, knowledge"
+    @echo "  converge-runtime         → core, provider, protocol"
+    @echo "  converge-application     → core, provider, domain, knowledge"
