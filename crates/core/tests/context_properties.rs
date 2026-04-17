@@ -62,9 +62,15 @@ async fn evidence_valid_id_roundtrips() {
     let facts = ctx.get(ContextKey::Seeds);
     assert!(!facts.is_empty(), "fact should exist after engine run");
 
-    let fact = facts.iter().find(|f| f.id == test_id).expect("should find fact");
+    let fact = facts
+        .iter()
+        .find(|f| f.id == test_id)
+        .expect("should find fact");
     assert_eq!(&fact.id, &test_id, "ID should roundtrip unchanged");
-    assert_eq!(&fact.content, &test_content, "content should roundtrip unchanged");
+    assert_eq!(
+        &fact.content, &test_content,
+        "content should roundtrip unchanged"
+    );
 }
 
 /// Document current behavior: empty IDs are accepted (should be rejected).
@@ -194,7 +200,11 @@ async fn evidence_different_keys_independent() {
     assert!(result.is_ok());
 
     let ctx = result.unwrap().context;
-    assert_eq!(ctx.get(ContextKey::Seeds).len(), 1, "Seeds should have 1 fact");
+    assert_eq!(
+        ctx.get(ContextKey::Seeds).len(),
+        1,
+        "Seeds should have 1 fact"
+    );
     assert_eq!(
         ctx.get(ContextKey::Hypotheses).len(),
         0,
