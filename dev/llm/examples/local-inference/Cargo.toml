@@ -5,7 +5,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
-converge-llm = { path = "../../crates/llm", default-features = false }
+converge-llm = { path = "../", default-features = false }
 burn = { version = "0.20.0", features = ["ndarray"] }
 tracing-subscriber = "0.3"
 tracing = "0.1"
