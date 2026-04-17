@@ -8,6 +8,16 @@ Read and follow `AGENTS.md` — it is the canonical project documentation.
 - **Changelog:** Update `kb/History/CHANGELOG.md` when shipping notable changes.
 - **Strategic context:** `~/dev/work/EPIC.md`
 
+## Root Directory Rule
+
+**Keep the root clean.** Only GitHub-essential + config files at root level:
+- **Keep at root:** `README.md`, `LICENSE`, `CODE_OF_CONDUCT.md`, `SECURITY.md`
+- **Keep at root:** `AGENTS.md`, `CLAUDE.md`, `CODEX.md`, `GEMINI.md` (agent entrypoints)
+- **Keep at root:** `Cargo.toml`, `Cargo.lock`, `Justfile`, `deny.toml`, `.env.example`, `.gitignore`
+- **Everything else goes into:** `kb/` (docs), `ops/` (deployment/infra), `dev/` (optional local tooling), `schema/` (protocols), `crates/` (source), `examples/` (examples)
+
+No new markdown files at root. No new directories. Update existing docs in `kb/` instead. Treat root as a carefully curated interface, not a dumping ground.
+
 ## Claude-Specific Notes
 
 - **Available skills:** `/experiment` — hypothesis-driven development with evidence logging.
