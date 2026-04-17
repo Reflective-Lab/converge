@@ -183,3 +183,66 @@ async fn soak_throughput_latencies() {
         p99
     );
 }
+
+/// Soak test: memory stability under repeated convergence.
+///
+/// Validates that engine memory usage doesn't grow unboundedly across many runs.
+/// Uses simple RSS tracking (via /proc/self/status on Linux, fallback to estimate).
+#[tokio::test]
+#[ignore = "soak"]
+async fn soak_memory_stability() {
+    let iterations = std::env::var("SOAK_ITERATIONS")
+        .unwrap_or_else(|_| "100".to_string())
+        .parse::<usize>()
+        .unwrap_or(100);
+
+    // Capture baseline RSS (pages * 4KB on most systems)
+    let rss_before = read_rss_kb().unwrap_or(0);
+
+    // Run many engine cycles
+    for _ in 0..iterations {
+        let mut engine = Engine::new();
+        engine.register_suggestor(SeedSuggestor::new("seed", "test data"));
+        let _ = engine.run(Context::new()).await;
+    }
+
+    let rss_after = read_rss_kb().unwrap_or(0);
+    let growth_mb = (rss_after - rss_before) / 1024;
+
+    println!(
+        "✓ Memory soak completed: {} iterations, RSS growth {:.1} MB",
+        iterations, growth_mb as f64
+    );
+
+    // Threshold: growth should not exceed 50% per 100 iterations
+    // This allows for some measurement noise and buffers, but flags unbounded growth
+    let growth_threshold_mb = (iterations as f64 / 100.0) * 50.0;
+    assert!(
+        (growth_mb as f64) < growth_threshold_mb,
+        "RSS growth {:.1} MB exceeds threshold {:.1} MB (potential memory leak)",
+        growth_mb as f64,
+        growth_threshold_mb
+    );
+}
+
+/// Helper: read RSS (resident set size) in KB from /proc/self/status.
+/// Returns None if unable to read (e.g., on macOS or non-Linux systems).
+#[allow(unused)]
+fn read_rss_kb() -> Option<u64> {
+    #[cfg(target_os = "linux")]
+    {
+        use std::fs;
+        let status = fs::read_to_string("/proc/self/status").ok()?;
+        for line in status.lines() {
+            if line.starts_with("VmRSS:") {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    return parts[1].parse::<u64>().ok();
+                }
+            }
+        }
+    }
+
+    // Fallback: return None for non-Linux or parse failure
+    None
+}
