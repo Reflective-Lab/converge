@@ -54,8 +54,6 @@ reqwest.workspace = true
 # Pattern matching for routing
 regex.workspace = true
 
-# MCP
-converge-mcp = { workspace = true, optional = true, features = ["client", "server"] }
 
 # CLI
 clap = { workspace = true, optional = true }
@@ -69,10 +67,9 @@ tokio-test = "0.4"
 tonic-build.workspace = true
 
 [features]
-default = ["cli", "grpc", "mcp"]
+default = ["cli", "grpc"]
 cli = ["clap"]
 grpc = []
-mcp = ["dep:converge-mcp"]
 memory-only = []
 
 [[bin]]
@@ -84,11 +81,6 @@ required-features = ["cli"]
 name = "converge-knowledge-server"
 path = "src/bin/server.rs"
 required-features = ["grpc"]
-
-[[bin]]
-name = "converge-knowledge-mcp"
-path = "src/bin/mcp_server.rs"
-required-features = ["mcp"]
 
 [[bench]]
 name = "vector_search"

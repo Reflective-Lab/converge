@@ -47,7 +47,8 @@
       "Bash(sed -n '205,250p' /Users/kpernyer/dev/work/converge/crates/llm/src/kernel.rs)",
       "Bash(head -20 /Users/kpernyer/dev/work/converge/kb/Architecture/*.md)",
       "Bash(cargo fmt:*)",
-      "Bash(cargo clippy:*)"
+      "Bash(cargo clippy:*)",
+      "Bash(cargo bench:*)"
     ]
   }
 }

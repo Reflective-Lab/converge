@@ -1,0 +1,144 @@
+name: Stability
+
+on:
+  schedule:
+    # Weekly Monday morning (6am UTC = 7am London)
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_VERSION: "1.94.0"
+  EXCLUDES: >-
+    --exclude converge-runtime
+    --exclude converge-remote
+    --exclude example-custom-agent
+    --exclude example-meeting-scheduler
+    --exclude example-custom-provider
+    --exclude example-local-inference
+    --exclude example-expense-approval
+    --exclude example-vendor-selection
+    --exclude example-loan-application
+    --exclude example-hello-convergence
+
+jobs:
+  # ── Regression gate: ADR-004 compliance ────────────────────────────────
+
+  regression-gate:
+    name: Regression Gate (ADR-004)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install protoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Run regression gate
+        run: |
+          cargo check --workspace
+          cargo test -p converge-policy
+          cargo test -p converge-runtime --lib
+          cargo test -p converge-pack --test compile_fail
+          cargo test -p converge-core --test compile_fail --test truth_pipeline --test negative --test properties
+          cargo test -p converge-client --test messages
+
+  # ── Benchmarks: ensure compilation and capture baselines ──────────────
+
+  bench-compile:
+    name: Benchmarks (compile)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Ensure benchmarks compile
+        run: cargo bench --workspace --no-run
+
+  bench-run:
+    name: Benchmarks (execute)
+    runs-on: ubuntu-latest
+    needs: bench-compile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Run core engine benchmarks
+        run: |
+          cargo bench -p converge-core --
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-reports
+          path: target/criterion/
+
+  # ── Soak tests: long-running stability validation ──────────────────────
+
+  soak:
+    name: Soak Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Run soak tests
+        env:
+          SOAK_CYCLES: "1000"
+          SOAK_CONCURRENCY: "100"
+          SOAK_ITERATIONS: "200"
+        run: cargo test --workspace -- --include-ignored soak
+
+  # ── Supply chain: security & compliance ───────────────────────────────
+
+  security-blocking:
+    name: Security Audit (blocking)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+      - name: Run cargo-audit (blocking)
+        run: cargo audit --deny warnings
+
+  deny:
+    name: Cargo Deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v1
+
+  # ── Optional: Live provider endpoints (if secrets configured) ─────────
+
+  live-endpoints:
+    name: Live Provider Tests
+    runs-on: ubuntu-latest
+    if: secrets.OPENAI_API_KEY != ''
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install protoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Run live endpoint tests
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: cargo test -p converge-provider --test live_endpoints -- --include-ignored

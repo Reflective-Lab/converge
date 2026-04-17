@@ -40,6 +40,18 @@ test-crate crate:
 test-one name:
     cargo test --all-targets -- {{name}}
 
+# Run benchmarks (compile only)
+bench:
+    cargo bench --workspace --no-run
+
+# Run benchmarks (with execution)
+bench-run:
+    cargo bench --workspace
+
+# Run soak tests (long-running stability tests)
+soak:
+    cargo test --workspace -- --include-ignored soak
+
 # ── Lint & Format ─────────────────────────────────────────────────────
 
 # Check formatting and clippy

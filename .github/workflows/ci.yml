@@ -10,8 +10,8 @@ env:
   CARGO_TERM_COLOR: always
   RUST_VERSION: "1.94.0"
   # Crates that need protoc or external system deps
+  # Note: converge-runtime IS tested now (requires protoc which is installed)
   EXCLUDES: >-
-    --exclude converge-runtime
     --exclude converge-remote
     --exclude example-custom-agent
     --exclude example-meeting-scheduler

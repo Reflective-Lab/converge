@@ -4,7 +4,7 @@
 //! YAML-based tool configuration loader.
 
 use super::{
-    GraphQlConverter, McpClient, McpTransport, OpenApiConverter, ToolDefinition, ToolError,
+    GraphQlConverter, OpenApiConverter, ToolDefinition, ToolError,
     ToolRegistry,
 };
 use schemars::JsonSchema;

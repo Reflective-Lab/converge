@@ -23,7 +23,6 @@ async-trait.workspace = true
 
 # Optional subsystems
 converge-knowledge = { workspace = true, optional = true }
-converge-mcp = { workspace = true, optional = true }
 converge-llm = { workspace = true, optional = true }
 converge-analytics = { workspace = true, optional = true }
 converge-optimization = { workspace = true, optional = true }
@@ -64,11 +63,10 @@ hostname.workspace = true
 default = ["tui"]
 tui = ["dep:ratatui", "dep:crossterm"]
 knowledge = ["dep:converge-knowledge"]
-mcp = ["dep:converge-mcp", "knowledge"]
 llm = ["dep:converge-llm"]
 analytics = ["dep:converge-analytics"]
 optimization = ["dep:converge-optimization"]
-full = ["tui", "knowledge", "mcp", "llm", "analytics", "optimization"]
+full = ["tui", "knowledge", "llm", "analytics", "optimization"]
 
 [lints]
 workspace = true
