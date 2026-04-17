@@ -110,4 +110,4 @@ Agent-specific workflow details: `kb/Workflow/Working with Claude.md`, `kb/Workf
 
 ## Milestones
 
-Read `MILESTONES.md` at the start of every session. Scope all work to the current milestone. See `~/dev/work/EPIC.md` for the strategic context (Converge = E1) and `~/dev/work/MILESTONES.md` for the cross-project rollup.
+Read `kb/Planning/MILESTONES.md` at the start of every session. Scope all work to the current milestone. See `~/dev/work/EPIC.md` for the strategic context (Converge = E1) and `~/dev/work/MILESTONES.md` for the cross-project rollup.

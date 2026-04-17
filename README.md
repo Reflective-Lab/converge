@@ -264,8 +264,8 @@ See [kb/Governance/](kb/Governance/) for the full framework.
 - [kb/Architecture/API Surfaces.md](kb/Architecture/API%20Surfaces.md) — canonical public contracts
 - [kb/Philosophy/Nine Axioms.md](kb/Philosophy/Nine%20Axioms.md) — the inviolable design principles
 - [kb/Philosophy/Convergence Explained.md](kb/Philosophy/Convergence%20Explained.md) — how fixed-point execution works
-- [DEVELOPMENT.md](DEVELOPMENT.md) — setup, build, git workflow
-- [CONTRIBUTING.md](CONTRIBUTING.md) — contribution guidelines
+- [kb/Building/DEVELOPMENT.md](kb/Building/DEVELOPMENT.md) — setup, build, git workflow
+- [kb/Governance/CONTRIBUTING.md](kb/Governance/CONTRIBUTING.md) — contribution guidelines
 - [SECURITY.md](SECURITY.md) — vulnerability reporting and security baseline
 
 ## License

@@ -22,17 +22,17 @@ Use `wolfgang-app` as the arrowhead for deployment and auth decisions:
 - Frontend auth state: `apps/web/src/lib/stores/auth.svelte.ts`
 - Backend auth middleware: `backend/src/http/auth.rs`
 - Backend route protection through Axum middleware layers
-- Infra root: `infra/environments/prod/wolfgang-bot/main.tf`
-- Reusable Cloud Run module: `infra/modules/cloud-run-service/main.tf`
-- Firebase Hosting deploy config: `deploy/frontend/firebase.json`
+- Infra root: `ops/infra/environments/prod/wolfgang-bot/main.tf`
+- Reusable Cloud Run module: `ops/infra/modules/cloud-run-service/main.tf`
+- Firebase Hosting deploy config: `ops/deploy/frontend/firebase.json`
 - Operational commands centralized in `Justfile`
 
 ## Key Files
 
-- `scripts/dev-up.sh`, `scripts/dev-down.sh`, `scripts/smoke-test.sh`
-- `scripts/deploy-cloud-run.sh`
-- `infra/environments/prod/converge-runtime/main.tf`
-- `infra/modules/cloud-run-service/main.tf`, `infra/modules/artifact-registry/main.tf`
+- `ops/scripts/dev-up.sh`, `ops/scripts/dev-down.sh`, `ops/scripts/smoke-test.sh`
+- `ops/scripts/deploy-cloud-run.sh`
+- `ops/infra/environments/prod/converge-runtime/main.tf`
+- `ops/infra/modules/cloud-run-service/main.tf`, `ops/infra/modules/artifact-registry/main.tf`
 - `Dockerfile`, `compose.yaml`
 - `crates/provider/.env.example` — provider API key and endpoint catalog
 
@@ -43,7 +43,7 @@ These were verified during implementation, not just inferred:
 - `converge-runtime` builds in baseline mode
 - `converge-runtime` also builds with `--features gcp,auth,firebase`
 - `converge-llm-server` builds with `--features server`
-- Native startup via `scripts/dev-up.sh native` can bring up the runtime
+- Native startup via `ops/scripts/dev-up.sh native` can bring up the runtime
 - The runtime responds on `/health` once started
 
 ## Important Fixes Already Made
@@ -66,8 +66,8 @@ Key files: `crates/runtime/src/http_auth.rs`, `http.rs`, `handlers.rs`, `pilot.r
 
 ## Hosted Infra Layout
 
-Terraform environment: `infra/environments/prod/converge-runtime`
-Terraform modules: `infra/modules/artifact-registry`, `infra/modules/cloud-run-service`
+Terraform environment: `ops/infra/environments/prod/converge-runtime`
+Terraform modules: `ops/infra/modules/artifact-registry`, `ops/infra/modules/cloud-run-service`
 
 Hosted flow:
 1. Create GCS state bucket

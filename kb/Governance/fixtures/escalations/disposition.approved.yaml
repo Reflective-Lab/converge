@@ -41,6 +41,6 @@ action:
     1. System Architect will review minimal feature PR (#847) - target review by EOD 2026-01-27
     2. Update Cargo.toml to use tokio minimal features before RC tag
     3. Add release notes entry documenting binary size reduction and environmental rationale
-    4. Update CHANGELOG.md with sustainability improvement highlight
+    4. Update kb/History/CHANGELOG.md with sustainability improvement highlight
   compensating_controls: []
   follow_up_owner: "system-architect"

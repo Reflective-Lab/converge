@@ -130,7 +130,7 @@ deny-advisories:
 
 # Validate repository security/compliance documentation
 compliance-check:
-    bash scripts/validate-security-docs.sh
+    bash ops/scripts/validate-security-docs.sh
 
 # Security regression gate for policy, runtime, and public control surfaces
 security-gate:
@@ -141,23 +141,23 @@ security-gate:
     cargo test -p converge-core --test compile_fail --test truth_pipeline --test negative --test properties
     cargo test -p converge-client --test messages
 
-INFRA_ENV := "infra/environments/prod/converge-runtime"
+INFRA_ENV := "ops/infra/environments/prod/converge-runtime"
 
 # Start local runtime, preferring native Rust if available
 dev-up mode="auto":
-    bash scripts/dev-up.sh {{mode}}
+    bash ops/scripts/dev-up.sh {{mode}}
 
 # Stop local runtime or compose stack
 dev-down mode="auto":
-    bash scripts/dev-down.sh {{mode}}
+    bash ops/scripts/dev-down.sh {{mode}}
 
 # Smoke-test local runtime
 smoke-test url="http://127.0.0.1:8080":
-    bash scripts/smoke-test.sh {{url}}
+    bash ops/scripts/smoke-test.sh {{url}}
 
 # Deploy runtime to Google Cloud Run
 deploy-cloud-run:
-    bash scripts/deploy-cloud-run.sh
+    bash ops/scripts/deploy-cloud-run.sh
 
 # ── Infrastructure ─────────────────────────────────────────────────────
 
@@ -300,15 +300,15 @@ clean:
 
 # Session opener — repo health + recent activity
 focus:
-    @bash scripts/workflow/focus.sh
+    @bash ops/scripts/workflow/focus.sh
 
 # Team sync — PRs, issues, recent commits
 sync:
-    @bash scripts/workflow/sync.sh
+    @bash ops/scripts/workflow/sync.sh
 
 # Build health, test results
 status:
-    @bash scripts/workflow/status.sh
+    @bash ops/scripts/workflow/status.sh
 
 # ── Info ───────────────────────────────────────────────────────────────
 

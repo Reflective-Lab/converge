@@ -31,7 +31,7 @@ Gemini implements these personas through specific CLI workflows:
 - **`/wip`**: Save WIP, push, and switch devices.
 
 ### ── Product Owner ──────────────────────────────────
-- **`/focus`**: Session opener. Run `just focus`, read `MILESTONES.md`, and summarize.
+- **`/focus`**: Session opener. Run `just focus`, read `kb/Planning/MILESTONES.md`, and summarize.
 - **`/next`**: Pick the next task from the current milestone.
 - **`/ticket <desc>`**: File a new GitHub issue for the team.
 - **`/done`**: End session. Summarize progress, blockers, and next steps.

@@ -41,7 +41,7 @@ Use those when you want deterministic output from the repo itself.
 | `/fix 42` | `fix 42` or `fix issue #42` |
 | `/pr` | `pr` or `create a PR from the current branch` |
 | `/ticket` | `ticket` or `create issue for <description>` |
-| `/done` | `done` or `update MILESTONES.md and CHANGELOG.md` |
+| `/done` | `done` or `update kb/Planning/MILESTONES.md and kb/History/CHANGELOG.md` |
 | `/review 5` | `review 5` or `review PR #5` |
 
 `/done` may still be backed by the `checkpoint` workflow internally, and `/check` by `quality`. Keep `/done` and `/check` as the public names in docs and day-to-day use.

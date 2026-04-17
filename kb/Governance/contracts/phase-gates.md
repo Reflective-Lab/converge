@@ -329,7 +329,7 @@ source: mixed
 # .git/hooks/pre-push
 #!/bin/bash
 # Run quick evals before push
-./scripts/run-quick-evals.sh || exit 1
+./ops/scripts/run-quick-evals.sh || exit 1
 ```
 
 ### CI/CD Triggers
