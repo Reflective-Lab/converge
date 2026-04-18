@@ -27,7 +27,7 @@ def load_criterion_json(bench_name: str) -> Optional[Dict[str, Any]]:
     Returns:
         Parsed JSON dict, or None if file not found or invalid.
     """
-    criterion_path = Path("target/criterion") / bench_name / "base" / "benchmark.json"
+    criterion_path = Path("target/criterion") / bench_name / "base" / "estimates.json"
 
     if not criterion_path.exists():
         return None
@@ -41,40 +41,41 @@ def load_criterion_json(bench_name: str) -> Optional[Dict[str, Any]]:
 
 
 def extract_stats(data: Dict[str, Any]) -> Optional[Dict[str, float]]:
-    """Extract p50, p95, p99, mean, stddev from Criterion JSON.
+    """Extract p50, p95, p99, mean, stddev from Criterion estimates.json.
 
-    Criterion stores timing data in nanoseconds under estimates.point_estimate
-    and in the raw measurements. We convert to microseconds.
+    Criterion stores timing data in nanoseconds under mean.point_estimate,
+    median.point_estimate, and std_dev.point_estimate. We convert to microseconds.
 
     Args:
-        data: Parsed Criterion benchmark.json
+        data: Parsed Criterion estimates.json
 
     Returns:
         Dict with keys: p50_us, p95_us, p99_us, mean_us, std_dev_us (all floats)
         or None if data structure is unexpected.
     """
     try:
-        estimates = data.get("estimates", {})
-        point_estimate = estimates.get("point_estimate")
+        # Get mean and median (p50 approximation)
+        mean_data = data.get("mean", {})
+        median_data = data.get("median", {})
+        std_dev_data = data.get("std_dev", {})
 
-        if point_estimate is None:
+        mean_ns = mean_data.get("point_estimate")
+        median_ns = median_data.get("point_estimate")
+        std_dev_ns = std_dev_data.get("point_estimate")
+
+        if mean_ns is None or std_dev_ns is None:
             return None
 
-        # point_estimate is in nanoseconds; convert to microseconds
-        mean_ns = point_estimate
+        # Convert from nanoseconds to microseconds
         mean_us = mean_ns / 1000.0
+        median_us = median_ns / 1000.0 if median_ns else mean_us
+        std_dev_us = std_dev_ns / 1000.0
 
-        # Try to extract std dev from confidence interval or std_dev field
-        std_dev_us = 0.0
-        if "std_dev" in estimates:
-            std_dev_us = estimates["std_dev"] / 1000.0
-
-        # Criterion stores percentiles in its statistics; fallback to raw measurements
-        # For now, we'll estimate percentiles from point_estimate and std_dev
-        # In a full implementation, parse the raw sample data
-        p50_us = mean_us
-        p95_us = mean_us + (1.96 * std_dev_us)  # Rough estimate
-        p99_us = mean_us + (2.576 * std_dev_us)  # Rough estimate
+        # Estimate percentiles using normal distribution approximation
+        # p50 = median, p95 ≈ mean + 1.96*stddev, p99 ≈ mean + 2.576*stddev
+        p50_us = median_us
+        p95_us = mean_us + (1.96 * std_dev_us)
+        p99_us = mean_us + (2.576 * std_dev_us)
 
         return {
             "p50_us": round(p50_us, 2),

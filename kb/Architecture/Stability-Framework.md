@@ -2,7 +2,7 @@
 name: Stability Framework Architecture
 description: Production-grade stability testing pipeline with automated regression detection
 type: architecture
-source: human
+source: mixed
 ---
 
 # Stability Testing Framework
@@ -98,7 +98,7 @@ Converge stability testing transforms ad-hoc manual validation into systematic, 
 5. Whitespace-only IDs accepted (should reject)
 6. Uppercase letters accepted (should enforce lowercase)
 
-**Purpose**: These tests become acceptance criteria for ADR-005 (Typed-ID newtype)
+**Purpose**: These tests become acceptance criteria for ADR-006 (Typed-ID newtype)
 
 ### 5. Supply Chain Security
 
@@ -302,7 +302,7 @@ Based on EXP-001 and benchmarks:
 2. **Distributed tracing** — Span-level latency breakdown
 3. **Custom metrics** — Engine-specific histograms (fact count, cycle count)
 4. **Flame graphs** — CPU profiling under load
-5. **ADR-005 implementation** — Typed-ID newtype (evidence ready in EXP-002)
+5. **ADR-006 implementation** — Typed-ID newtype (evidence ready in EXP-002)
 6. **deny.toml hardening** — Supply chain risk assessment
 
 ## References
