@@ -27,6 +27,7 @@ use crate::gates::StopReason;
 use crate::gates::hitl::{GateDecision, GateEvent, GateRequest, GateVerdict, TimeoutPolicy};
 use crate::gates::promotion::PromotionGate;
 use crate::gates::validation::{ValidationContext, ValidationPolicy};
+use crate::integrity::TrackedContext;
 use crate::invariant::{Invariant, InvariantError, InvariantId, InvariantRegistry};
 use crate::kernel_boundary::DecisionStep;
 use crate::truth::{CriterionEvaluator, CriterionOutcome, CriterionResult};
@@ -155,6 +156,8 @@ pub struct ConvergeResult {
     pub stop_reason: StopReason,
     /// Evaluated success criteria for the active intent, if any.
     pub criteria_outcomes: Vec<CriterionOutcome>,
+    /// Cryptographic integrity proof for the final context state.
+    pub integrity: crate::integrity::IntegrityProof,
 }
 
 /// State returned when convergence pauses at a HITL gate.
@@ -342,42 +345,38 @@ impl Engine {
     /// On rejection: the proposal is discarded and convergence continues
     /// without it (may still converge on remaining facts).
     pub async fn resume(&mut self, mut pause: HitlPause, decision: GateDecision) -> RunResult {
-        // Record the decision in the audit trail
         let event = GateEvent::from_decision(&decision);
         pause.gate_events.push(event);
 
-        let mut context = pause.context;
+        let mut tracked = TrackedContext::new(pause.context);
         let mut facts_added = pause.facts_added;
 
         if decision.is_approved() {
-            // Promote the proposal
             let promoted_by = format!("suggestor-{}", pause.agent_id.0);
             match self.promote_pack_proposal(&pause.proposal, pause.cycle, &promoted_by) {
                 Ok(fact) => {
                     info!(gate_id = %decision.gate_id.as_str(), "HITL gate approved, promoting proposal");
-                    context.remove_proposal(pause.proposal.key, &pause.proposal.id);
+                    tracked
+                        .context
+                        .remove_proposal(pause.proposal.key, &pause.proposal.id);
                     if let Some(ref cb) = self.streaming_callback {
                         cb.on_fact(pause.cycle, &fact);
                     }
-                    if let Err(e) = context.add_fact(fact) {
+                    if let Err(e) = tracked.add_fact(fact) {
                         return RunResult::Complete(Err(e));
                     }
                     facts_added += 1;
                 }
                 Err(e) => {
                     info!(gate_id = %decision.gate_id.as_str(), reason = %e, "HITL-approved proposal failed validation");
-                    // Approval doesn't bypass validation — if the proposal
-                    // is structurally invalid, it still gets rejected.
                 }
             }
         } else {
             info!(gate_id = %decision.gate_id.as_str(), "HITL gate rejected, discarding proposal");
-            // Track rejected proposal ID so re-proposals are auto-rejected.
             self.rejected_proposals.insert(pause.proposal.id.clone());
-            context.remove_proposal(pause.proposal.key, &pause.proposal.id);
-            // Record rejection as a diagnostic fact so suggestors can observe it.
-            // Without this, suggestors that check !ctx.has(key) would re-propose
-            // the same fact indefinitely, triggering infinite HITL pauses.
+            tracked
+                .context
+                .remove_proposal(pause.proposal.key, &pause.proposal.id);
             let reason = match &decision.verdict {
                 GateVerdict::Reject { reason } => reason.as_deref().unwrap_or("no reason provided"),
                 GateVerdict::Approve => "rejected",
@@ -390,36 +389,33 @@ impl Engine {
                     pause.proposal.id, decision.decided_by, reason
                 ),
             );
-            let _ = context.add_fact(diagnostic);
+            let _ = tracked.add_fact(diagnostic);
             facts_added += 1;
         }
 
-        // Continue merging any remaining effects
         if !pause.remaining_effects.is_empty() {
             match self.merge_remaining(
-                &mut context,
+                &mut tracked,
                 pause.remaining_effects,
                 pause.cycle,
                 facts_added,
             ) {
                 Ok((dirty, total_facts)) => {
-                    // Emit cycle end
                     if let Some(ref cb) = self.streaming_callback {
                         cb.on_cycle_end(pause.cycle, total_facts);
                     }
-
-                    // Continue the convergence loop from the next cycle
-                    self.continue_convergence(context, pause.cycle, dirty).await
+                    self.continue_convergence(tracked.context, pause.cycle, dirty)
+                        .await
                 }
                 Err(e) => RunResult::Complete(Err(e)),
             }
         } else {
-            // No remaining effects — emit cycle end and continue
             if let Some(ref cb) = self.streaming_callback {
                 cb.on_cycle_end(pause.cycle, facts_added);
             }
-            let dirty = context.dirty_keys().to_vec();
-            self.continue_convergence(context, pause.cycle, dirty).await
+            let dirty = tracked.context.dirty_keys().to_vec();
+            self.continue_convergence(tracked.context, pause.cycle, dirty)
+                .await
         }
     }
 
@@ -577,77 +573,72 @@ impl Engine {
 
     async fn run_observed(
         &mut self,
-        mut context: Context,
+        context: Context,
         event_observer: Option<&Arc<dyn ExperienceEventObserver>>,
     ) -> Result<ConvergeResult, ConvergeError> {
         async {
+            let mut tracked = TrackedContext::new(context);
             let mut cycles: u32 = 0;
 
-            if context.has_pending_proposals() {
-                context.clear_dirty();
-                self.promote_pending_context_proposals(&mut context, 0, event_observer)?;
+            if tracked.context.has_pending_proposals() {
+                tracked.context.clear_dirty();
+                self.promote_pending_context_proposals(&mut tracked, 0, event_observer)?;
             }
 
-            // First cycle: we treat all existing keys in the context as "dirty"
-            // to ensure that dependency-indexed suggestors are triggered by initial data.
-            let mut dirty_keys: Vec<ContextKey> = if context.dirty_keys().is_empty() {
-                context.all_keys()
+            let mut dirty_keys: Vec<ContextKey> = if tracked.context.dirty_keys().is_empty() {
+                tracked.context.all_keys()
             } else {
-                context.dirty_keys().to_vec()
+                tracked.context.dirty_keys().to_vec()
             };
 
             loop {
                 cycles += 1;
                 info!(cycle = cycles, "Starting convergence cycle");
 
-                // Emit cycle start callback
                 if let Some(ref cb) = self.streaming_callback {
                     cb.on_cycle_start(cycles);
                 }
 
-                // Budget check: cycles
                 if cycles > self.budget.max_cycles {
                     return Err(ConvergeError::BudgetExhausted {
                         kind: format!("max_cycles ({})", self.budget.max_cycles),
                     });
                 }
 
-                // Find eligible suggestors
                 let eligible = info_span!("eligible_agents", cycle = cycles).in_scope(|| {
-                    let e = self.find_eligible(&context, &dirty_keys);
+                    let e = self.find_eligible(&tracked.context, &dirty_keys);
                     info!(count = e.len(), "Found eligible suggestors");
                     e
                 });
 
                 if eligible.is_empty() {
                     info!("No more eligible suggestors. Convergence reached.");
-                    // Emit cycle end callback (0 facts added)
                     if let Some(ref cb) = self.streaming_callback {
                         cb.on_cycle_end(cycles, 0);
                     }
-                    // No suggestors want to run — check acceptance invariants before declaring convergence
-                    if let Err(e) = self.invariants.check_acceptance(&context) {
-                        self.emit_diagnostic(&mut context, &e);
+                    if let Err(e) = self.invariants.check_acceptance(&tracked.context) {
+                        self.emit_diagnostic(&mut tracked, &e);
                         return Err(ConvergeError::InvariantViolation {
                             name: e.invariant_name,
                             class: e.class,
                             reason: e.violation.reason,
-                            context: Box::new(context),
+                            context: Box::new(tracked.context),
                         });
                     }
 
+                    let integrity = tracked.extract_proof();
                     return Ok(ConvergeResult {
-                        context,
+                        context: tracked.context,
                         cycles,
                         converged: true,
                         stop_reason: StopReason::converged(),
                         criteria_outcomes: Vec::new(),
+                        integrity,
                     });
                 }
 
-                // Execute eligible suggestors and collect effects
                 let effects = self
-                    .execute_agents(&context, &eligible)
+                    .execute_agents(&tracked.context, &eligible)
                     .instrument(info_span!(
                         "execute_agents",
                         cycle = cycles,
@@ -656,71 +647,64 @@ impl Engine {
                     .await;
                 info!(count = effects.len(), "Executed suggestors");
 
-                // Merge effects serially (deterministic order by SuggestorId)
                 let (new_dirty_keys, facts_added) =
                     info_span!("merge_effects", cycle = cycles, count = effects.len()).in_scope(
                         || {
                             let (d, count) =
-                                self.merge_effects(&mut context, effects, cycles, event_observer)?;
+                                self.merge_effects(&mut tracked, effects, cycles, event_observer)?;
                             info!(count = d.len(), "Merged effects");
                             Ok::<_, ConvergeError>((d, count))
                         },
                     )?;
                 dirty_keys = new_dirty_keys;
 
-                // Emit cycle end callback
                 if let Some(ref cb) = self.streaming_callback {
                     cb.on_cycle_end(cycles, facts_added);
                 }
 
-                // STRUCTURAL INVARIANTS: checked after every merge
-                // Violation = immediate failure, no recovery
-                if let Err(e) = self.invariants.check_structural(&context) {
-                    self.emit_diagnostic(&mut context, &e);
+                if let Err(e) = self.invariants.check_structural(&tracked.context) {
+                    self.emit_diagnostic(&mut tracked, &e);
                     return Err(ConvergeError::InvariantViolation {
                         name: e.invariant_name,
                         class: e.class,
                         reason: e.violation.reason,
-                        context: Box::new(context),
+                        context: Box::new(tracked.context),
                     });
                 }
 
-                // Convergence check: no keys changed
                 if dirty_keys.is_empty() {
-                    // Check acceptance invariants before declaring convergence
-                    if let Err(e) = self.invariants.check_acceptance(&context) {
-                        self.emit_diagnostic(&mut context, &e);
+                    if let Err(e) = self.invariants.check_acceptance(&tracked.context) {
+                        self.emit_diagnostic(&mut tracked, &e);
                         return Err(ConvergeError::InvariantViolation {
                             name: e.invariant_name,
                             class: e.class,
                             reason: e.violation.reason,
-                            context: Box::new(context),
+                            context: Box::new(tracked.context),
                         });
                     }
 
+                    let integrity = tracked.extract_proof();
                     return Ok(ConvergeResult {
-                        context,
+                        context: tracked.context,
                         cycles,
                         converged: true,
                         stop_reason: StopReason::converged(),
                         criteria_outcomes: Vec::new(),
+                        integrity,
                     });
                 }
 
-                // SEMANTIC INVARIANTS: checked at end of each cycle
-                // Violation = blocks convergence (could allow recovery in future)
-                if let Err(e) = self.invariants.check_semantic(&context) {
-                    self.emit_diagnostic(&mut context, &e);
+                if let Err(e) = self.invariants.check_semantic(&tracked.context) {
+                    self.emit_diagnostic(&mut tracked, &e);
                     return Err(ConvergeError::InvariantViolation {
                         name: e.invariant_name,
                         class: e.class,
                         reason: e.violation.reason,
-                        context: Box::new(context),
+                        context: Box::new(tracked.context),
                     });
                 }
 
-                // Budget check: facts
-                let fact_count = self.count_facts(&context);
+                let fact_count = self.count_facts(&tracked.context);
                 if fact_count > self.budget.max_facts {
                     return Err(ConvergeError::BudgetExhausted {
                         kind: format!("max_facts ({} > {})", fact_count, self.budget.max_facts),
@@ -951,11 +935,11 @@ impl Engine {
 
     fn promote_pending_context_proposals(
         &self,
-        context: &mut Context,
+        tracked: &mut TrackedContext,
         cycle: u32,
         event_observer: Option<&Arc<dyn ExperienceEventObserver>>,
     ) -> Result<usize, ConvergeError> {
-        let proposals = context.drain_proposals();
+        let proposals = tracked.context.drain_proposals();
         let mut facts_added = 0usize;
 
         for proposal in proposals {
@@ -974,7 +958,7 @@ impl Engine {
                     if let Some(ref cb) = self.streaming_callback {
                         cb.on_fact(cycle, &fact);
                     }
-                    context.add_fact(fact)?;
+                    tracked.add_fact(fact)?;
                     facts_added += 1;
                 }
                 Err(error) => {
@@ -995,15 +979,14 @@ impl Engine {
     /// Returns a tuple of (dirty keys for next cycle, count of facts added).
     fn merge_effects(
         &self,
-        context: &mut Context,
+        tracked: &mut TrackedContext,
         mut effects: Vec<(SuggestorId, AgentEffect)>,
         cycle: u32,
         event_observer: Option<&Arc<dyn ExperienceEventObserver>>,
     ) -> Result<(Vec<ContextKey>, usize), ConvergeError> {
-        // Sort by SuggestorId for deterministic ordering (DECISIONS.md §1)
         effects.sort_by_key(|(id, _)| *id);
 
-        context.clear_dirty();
+        tracked.context.clear_dirty();
         let mut facts_added = 0usize;
 
         for (id, effect) in effects {
@@ -1026,11 +1009,10 @@ impl Engine {
                                 requires_human: false,
                             },
                         );
-                        // Emit streaming callback for promoted proposal
                         if let Some(ref cb) = self.streaming_callback {
                             cb.on_fact(cycle, &fact);
                         }
-                        if let Err(e) = context.add_fact(fact) {
+                        if let Err(e) = tracked.add_fact(fact) {
                             return match e {
                                 ConvergeError::Conflict {
                                     id, existing, new, ..
@@ -1038,7 +1020,7 @@ impl Engine {
                                     id,
                                     existing,
                                     new,
-                                    context: Box::new(context.clone()),
+                                    context: Box::new(tracked.context.clone()),
                                 }),
                                 _ => Err(e),
                             };
@@ -1047,13 +1029,12 @@ impl Engine {
                     }
                     Err(e) => {
                         info!(agent = %id, reason = %e, "Proposal rejected");
-                        // Future: emit diagnostic fact or signal
                     }
                 }
             }
         }
 
-        Ok((context.dirty_keys().to_vec(), facts_added))
+        Ok((tracked.context.dirty_keys().to_vec(), facts_added))
     }
 
     /// Counts total facts in context.
@@ -1066,33 +1047,38 @@ impl Engine {
     }
 
     /// Emits a diagnostic fact to the context.
-    fn emit_diagnostic(&self, context: &mut Context, err: &InvariantError) {
-        let _ = self; // May use engine state in future (e.g., for diagnostic IDs)
+    fn emit_diagnostic(&self, tracked: &mut TrackedContext, err: &InvariantError) {
+        let _ = self;
         let fact = crate::context::new_fact(
             ContextKey::Diagnostic,
-            format!("violation:{}:{}", err.invariant_name, context.version()),
+            format!(
+                "violation:{}:{}",
+                err.invariant_name,
+                tracked.context.version()
+            ),
             format!(
                 "{:?} invariant '{}' violated: {}",
                 err.class, err.invariant_name, err.violation.reason
             ),
         );
-        let _ = context.add_fact(fact);
+        let _ = tracked.add_fact(fact);
     }
 
     /// Inner convergence loop that returns `RunResult` (supports HITL pause).
-    async fn run_inner(&mut self, mut context: Context) -> RunResult {
+    async fn run_inner(&mut self, context: Context) -> RunResult {
         async {
+            let mut tracked = TrackedContext::new(context);
             let mut cycles: u32 = 0;
-            if context.has_pending_proposals() {
-                context.clear_dirty();
-                if let Err(e) = self.promote_pending_context_proposals(&mut context, 0, None) {
+            if tracked.context.has_pending_proposals() {
+                tracked.context.clear_dirty();
+                if let Err(e) = self.promote_pending_context_proposals(&mut tracked, 0, None) {
                     return RunResult::Complete(Err(e));
                 }
             }
-            let mut dirty_keys: Vec<ContextKey> = if context.dirty_keys().is_empty() {
-                context.all_keys()
+            let mut dirty_keys: Vec<ContextKey> = if tracked.context.dirty_keys().is_empty() {
+                tracked.context.all_keys()
             } else {
-                context.dirty_keys().to_vec()
+                tracked.context.dirty_keys().to_vec()
             };
 
             loop {
@@ -1103,15 +1089,13 @@ impl Engine {
                     cb.on_cycle_start(cycles);
                 }
 
-                // Budget check: cycles
                 if cycles > self.budget.max_cycles {
                     return RunResult::Complete(Err(ConvergeError::BudgetExhausted {
                         kind: format!("max_cycles ({})", self.budget.max_cycles),
                     }));
                 }
 
-                // Find eligible agents
-                let eligible = self.find_eligible(&context, &dirty_keys);
+                let eligible = self.find_eligible(&tracked.context, &dirty_keys);
                 info!(count = eligible.len(), "Found eligible agents");
 
                 if eligible.is_empty() {
@@ -1119,27 +1103,28 @@ impl Engine {
                     if let Some(ref cb) = self.streaming_callback {
                         cb.on_cycle_end(cycles, 0);
                     }
-                    if let Err(e) = self.invariants.check_acceptance(&context) {
-                        self.emit_diagnostic(&mut context, &e);
+                    if let Err(e) = self.invariants.check_acceptance(&tracked.context) {
+                        self.emit_diagnostic(&mut tracked, &e);
                         return RunResult::Complete(Err(ConvergeError::InvariantViolation {
                             name: e.invariant_name,
                             class: e.class,
                             reason: e.violation.reason,
-                            context: Box::new(context),
+                            context: Box::new(tracked.context),
                         }));
                     }
+                    let integrity = tracked.extract_proof();
                     return RunResult::Complete(Ok(ConvergeResult {
-                        context,
+                        context: tracked.context,
                         cycles,
                         converged: true,
                         stop_reason: StopReason::converged(),
                         criteria_outcomes: Vec::new(),
+                        integrity,
                     }));
                 }
 
-                // Execute agents
                 let effects = self
-                    .execute_agents(&context, &eligible)
+                    .execute_agents(&tracked.context, &eligible)
                     .instrument(info_span!(
                         "execute_agents",
                         cycle = cycles,
@@ -1147,8 +1132,7 @@ impl Engine {
                     ))
                     .await;
 
-                // Merge effects with HITL support
-                match self.merge_effects_hitl(&mut context, effects, cycles) {
+                match self.merge_effects_hitl(&mut tracked, effects, cycles) {
                     MergeResult::Complete(Ok((new_dirty, facts_added))) => {
                         if let Some(ref cb) = self.streaming_callback {
                             cb.on_cycle_end(cycles, facts_added);
@@ -1163,50 +1147,48 @@ impl Engine {
                     }
                 }
 
-                // Structural invariants
-                if let Err(e) = self.invariants.check_structural(&context) {
-                    self.emit_diagnostic(&mut context, &e);
+                if let Err(e) = self.invariants.check_structural(&tracked.context) {
+                    self.emit_diagnostic(&mut tracked, &e);
                     return RunResult::Complete(Err(ConvergeError::InvariantViolation {
                         name: e.invariant_name,
                         class: e.class,
                         reason: e.violation.reason,
-                        context: Box::new(context),
+                        context: Box::new(tracked.context),
                     }));
                 }
 
-                // Convergence check
                 if dirty_keys.is_empty() {
-                    if let Err(e) = self.invariants.check_acceptance(&context) {
-                        self.emit_diagnostic(&mut context, &e);
+                    if let Err(e) = self.invariants.check_acceptance(&tracked.context) {
+                        self.emit_diagnostic(&mut tracked, &e);
                         return RunResult::Complete(Err(ConvergeError::InvariantViolation {
                             name: e.invariant_name,
                             class: e.class,
                             reason: e.violation.reason,
-                            context: Box::new(context),
+                            context: Box::new(tracked.context),
                         }));
                     }
+                    let integrity = tracked.extract_proof();
                     return RunResult::Complete(Ok(ConvergeResult {
-                        context,
+                        context: tracked.context,
                         cycles,
                         converged: true,
                         stop_reason: StopReason::converged(),
                         criteria_outcomes: Vec::new(),
+                        integrity,
                     }));
                 }
 
-                // Semantic invariants
-                if let Err(e) = self.invariants.check_semantic(&context) {
-                    self.emit_diagnostic(&mut context, &e);
+                if let Err(e) = self.invariants.check_semantic(&tracked.context) {
+                    self.emit_diagnostic(&mut tracked, &e);
                     return RunResult::Complete(Err(ConvergeError::InvariantViolation {
                         name: e.invariant_name,
                         class: e.class,
                         reason: e.violation.reason,
-                        context: Box::new(context),
+                        context: Box::new(tracked.context),
                     }));
                 }
 
-                // Budget check: facts
-                let fact_count = self.count_facts(&context);
+                let fact_count = self.count_facts(&tracked.context);
                 if fact_count > self.budget.max_facts {
                     return RunResult::Complete(Err(ConvergeError::BudgetExhausted {
                         kind: format!("max_facts ({} > {})", fact_count, self.budget.max_facts),
@@ -1221,68 +1203,67 @@ impl Engine {
     /// Continue convergence from a specific cycle after HITL resume.
     async fn continue_convergence(
         &mut self,
-        mut context: Context,
+        context: Context,
         from_cycle: u32,
         dirty_keys: Vec<ContextKey>,
     ) -> RunResult {
-        if context.has_pending_proposals() {
-            context.clear_dirty();
-            if let Err(e) = self.promote_pending_context_proposals(&mut context, from_cycle, None) {
+        let mut tracked = TrackedContext::new(context);
+
+        if tracked.context.has_pending_proposals() {
+            tracked.context.clear_dirty();
+            if let Err(e) = self.promote_pending_context_proposals(&mut tracked, from_cycle, None) {
                 return RunResult::Complete(Err(e));
             }
         }
 
-        // Check structural invariants from the completed cycle
-        if let Err(e) = self.invariants.check_structural(&context) {
-            self.emit_diagnostic(&mut context, &e);
+        if let Err(e) = self.invariants.check_structural(&tracked.context) {
+            self.emit_diagnostic(&mut tracked, &e);
             return RunResult::Complete(Err(ConvergeError::InvariantViolation {
                 name: e.invariant_name,
                 class: e.class,
                 reason: e.violation.reason,
-                context: Box::new(context),
+                context: Box::new(tracked.context),
             }));
         }
 
         if dirty_keys.is_empty() {
-            if let Err(e) = self.invariants.check_acceptance(&context) {
-                self.emit_diagnostic(&mut context, &e);
+            if let Err(e) = self.invariants.check_acceptance(&tracked.context) {
+                self.emit_diagnostic(&mut tracked, &e);
                 return RunResult::Complete(Err(ConvergeError::InvariantViolation {
                     name: e.invariant_name,
                     class: e.class,
                     reason: e.violation.reason,
-                    context: Box::new(context),
+                    context: Box::new(tracked.context),
                 }));
             }
+            let integrity = tracked.extract_proof();
             return RunResult::Complete(Ok(ConvergeResult {
-                context,
+                context: tracked.context,
                 cycles: from_cycle,
                 converged: true,
                 stop_reason: StopReason::converged(),
                 criteria_outcomes: Vec::new(),
+                integrity,
             }));
         }
 
-        // Semantic invariants
-        if let Err(e) = self.invariants.check_semantic(&context) {
-            self.emit_diagnostic(&mut context, &e);
+        if let Err(e) = self.invariants.check_semantic(&tracked.context) {
+            self.emit_diagnostic(&mut tracked, &e);
             return RunResult::Complete(Err(ConvergeError::InvariantViolation {
                 name: e.invariant_name,
                 class: e.class,
                 reason: e.violation.reason,
-                context: Box::new(context),
+                context: Box::new(tracked.context),
             }));
         }
 
-        // Budget check: facts
-        let fact_count = self.count_facts(&context);
+        let fact_count = self.count_facts(&tracked.context);
         if fact_count > self.budget.max_facts {
             return RunResult::Complete(Err(ConvergeError::BudgetExhausted {
                 kind: format!("max_facts ({} > {})", fact_count, self.budget.max_facts),
             }));
         }
 
-        // Continue the main loop from the next cycle
-        // Reset dirty keys and continue
         let mut cycles = from_cycle;
         let mut dirty = dirty_keys;
 
@@ -1298,32 +1279,34 @@ impl Engine {
                 cb.on_cycle_start(cycles);
             }
 
-            let eligible = self.find_eligible(&context, &dirty);
+            let eligible = self.find_eligible(&tracked.context, &dirty);
             if eligible.is_empty() {
                 if let Some(ref cb) = self.streaming_callback {
                     cb.on_cycle_end(cycles, 0);
                 }
-                if let Err(e) = self.invariants.check_acceptance(&context) {
-                    self.emit_diagnostic(&mut context, &e);
+                if let Err(e) = self.invariants.check_acceptance(&tracked.context) {
+                    self.emit_diagnostic(&mut tracked, &e);
                     return RunResult::Complete(Err(ConvergeError::InvariantViolation {
                         name: e.invariant_name,
                         class: e.class,
                         reason: e.violation.reason,
-                        context: Box::new(context),
+                        context: Box::new(tracked.context),
                     }));
                 }
+                let integrity = tracked.extract_proof();
                 return RunResult::Complete(Ok(ConvergeResult {
-                    context,
+                    context: tracked.context,
                     cycles,
                     converged: true,
                     stop_reason: StopReason::converged(),
                     criteria_outcomes: Vec::new(),
+                    integrity,
                 }));
             }
 
-            let effects = self.execute_agents(&context, &eligible).await;
+            let effects = self.execute_agents(&tracked.context, &eligible).await;
 
-            match self.merge_effects_hitl(&mut context, effects, cycles) {
+            match self.merge_effects_hitl(&mut tracked, effects, cycles) {
                 MergeResult::Complete(Ok((new_dirty, facts_added))) => {
                     if let Some(ref cb) = self.streaming_callback {
                         cb.on_cycle_end(cycles, facts_added);
@@ -1334,46 +1317,48 @@ impl Engine {
                 MergeResult::HitlPause(pause) => return RunResult::HitlPause(pause),
             }
 
-            if let Err(e) = self.invariants.check_structural(&context) {
-                self.emit_diagnostic(&mut context, &e);
+            if let Err(e) = self.invariants.check_structural(&tracked.context) {
+                self.emit_diagnostic(&mut tracked, &e);
                 return RunResult::Complete(Err(ConvergeError::InvariantViolation {
                     name: e.invariant_name,
                     class: e.class,
                     reason: e.violation.reason,
-                    context: Box::new(context),
+                    context: Box::new(tracked.context),
                 }));
             }
 
             if dirty.is_empty() {
-                if let Err(e) = self.invariants.check_acceptance(&context) {
-                    self.emit_diagnostic(&mut context, &e);
+                if let Err(e) = self.invariants.check_acceptance(&tracked.context) {
+                    self.emit_diagnostic(&mut tracked, &e);
                     return RunResult::Complete(Err(ConvergeError::InvariantViolation {
                         name: e.invariant_name,
                         class: e.class,
                         reason: e.violation.reason,
-                        context: Box::new(context),
+                        context: Box::new(tracked.context),
                     }));
                 }
+                let integrity = tracked.extract_proof();
                 return RunResult::Complete(Ok(ConvergeResult {
-                    context,
+                    context: tracked.context,
                     cycles,
                     converged: true,
                     stop_reason: StopReason::converged(),
                     criteria_outcomes: Vec::new(),
+                    integrity,
                 }));
             }
 
-            if let Err(e) = self.invariants.check_semantic(&context) {
-                self.emit_diagnostic(&mut context, &e);
+            if let Err(e) = self.invariants.check_semantic(&tracked.context) {
+                self.emit_diagnostic(&mut tracked, &e);
                 return RunResult::Complete(Err(ConvergeError::InvariantViolation {
                     name: e.invariant_name,
                     class: e.class,
                     reason: e.violation.reason,
-                    context: Box::new(context),
+                    context: Box::new(tracked.context),
                 }));
             }
 
-            let fact_count = self.count_facts(&context);
+            let fact_count = self.count_facts(&tracked.context);
             if fact_count > self.budget.max_facts {
                 return RunResult::Complete(Err(ConvergeError::BudgetExhausted {
                     kind: format!("max_facts ({} > {})", fact_count, self.budget.max_facts),
@@ -1389,23 +1374,20 @@ impl Engine {
     /// and returns the remaining unmerged effects.
     fn merge_effects_hitl(
         &self,
-        context: &mut Context,
+        tracked: &mut TrackedContext,
         mut effects: Vec<(SuggestorId, AgentEffect)>,
         cycle: u32,
     ) -> MergeResult {
         effects.sort_by_key(|(id, _)| *id);
-        context.clear_dirty();
+        tracked.context.clear_dirty();
         let mut facts_added = 0usize;
         let mut idx = 0;
 
         while idx < effects.len() {
             let (id, ref mut effect) = effects[idx];
 
-            // Process proposals with HITL check
             let proposals = std::mem::take(&mut effect.proposals);
             for proposal in proposals {
-                // Skip proposals that were previously HITL-rejected.
-                // A human already said no — silently discard re-proposals.
                 if self.rejected_proposals.contains(&proposal.id) {
                     warn!(
                         proposal_id = %proposal.id,
@@ -1414,7 +1396,6 @@ impl Engine {
                     continue;
                 }
 
-                // Check HITL policy
                 if let Some(ref policy) = self.hitl_policy {
                     if policy.requires_approval(&proposal) {
                         info!(
@@ -1444,18 +1425,17 @@ impl Engine {
                             gate_request.agent_id.clone(),
                         );
 
-                        let _ = context.add_proposal(proposal.clone());
+                        let _ = tracked.context.add_proposal(proposal.clone());
 
-                        // Collect remaining unmerged effects (after current index)
                         let remaining: Vec<(SuggestorId, AgentEffect)> = effects.split_off(idx + 1);
 
                         return MergeResult::HitlPause(Box::new(HitlPause {
                             request: gate_request,
-                            context: context.clone(),
+                            context: tracked.context.clone(),
                             cycle,
                             proposal,
                             agent_id: id,
-                            dirty_keys: context.dirty_keys().to_vec(),
+                            dirty_keys: tracked.context.dirty_keys().to_vec(),
                             remaining_effects: remaining,
                             facts_added,
                             gate_events: vec![gate_event],
@@ -1463,7 +1443,6 @@ impl Engine {
                     }
                 }
 
-                // Normal promotion path
                 let _span =
                     info_span!("validate_proposal", agent = %id, proposal = %proposal.id).entered();
                 let promoted_by = format!("agent-{}", id.0);
@@ -1473,7 +1452,7 @@ impl Engine {
                         if let Some(ref cb) = self.streaming_callback {
                             cb.on_fact(cycle, &fact);
                         }
-                        if let Err(e) = context.add_fact(fact) {
+                        if let Err(e) = tracked.add_fact(fact) {
                             return MergeResult::Complete(match e {
                                 ConvergeError::Conflict {
                                     id: cid,
@@ -1484,7 +1463,7 @@ impl Engine {
                                     id: cid,
                                     existing,
                                     new,
-                                    context: Box::new(context.clone()),
+                                    context: Box::new(tracked.context.clone()),
                                 }),
                                 _ => Err(e),
                             });
@@ -1500,13 +1479,13 @@ impl Engine {
             idx += 1;
         }
 
-        MergeResult::Complete(Ok((context.dirty_keys().to_vec(), facts_added)))
+        MergeResult::Complete(Ok((tracked.context.dirty_keys().to_vec(), facts_added)))
     }
 
     /// Continue merging remaining effects after a HITL resume.
     fn merge_remaining(
         &self,
-        context: &mut Context,
+        tracked: &mut TrackedContext,
         effects: Vec<(SuggestorId, AgentEffect)>,
         cycle: u32,
         initial_facts: usize,
@@ -1521,7 +1500,7 @@ impl Engine {
                         if let Some(ref cb) = self.streaming_callback {
                             cb.on_fact(cycle, &fact);
                         }
-                        context.add_fact(fact)?;
+                        tracked.add_fact(fact)?;
                         facts_added += 1;
                     }
                     Err(e) => {
@@ -1531,7 +1510,7 @@ impl Engine {
             }
         }
 
-        Ok((context.dirty_keys().to_vec(), facts_added))
+        Ok((tracked.context.dirty_keys().to_vec(), facts_added))
     }
 }
 
@@ -1719,6 +1698,36 @@ mod tests {
         assert!(logs_contain("Starting convergence cycle"));
         assert!(logs_contain("Merged effects"));
         assert!(logs_contain("Convergence reached"));
+    }
+
+    #[tokio::test]
+    async fn converge_result_carries_integrity_proof() {
+        let mut engine = Engine::new();
+        engine.register_suggestor(SeedSuggestor);
+        let result = engine.run(Context::new()).await.unwrap();
+
+        assert!(
+            result.integrity.clock_time > 0,
+            "clock should tick on fact promotion"
+        );
+        assert!(result.integrity.fact_count > 0, "facts should be counted");
+    }
+
+    #[tokio::test]
+    async fn different_inputs_produce_different_merkle_roots() {
+        let mut engine = Engine::new();
+        engine.register_suggestor(SeedSuggestor);
+        let r1 = engine.run(Context::new()).await.unwrap();
+
+        let mut engine2 = Engine::new();
+        engine2.register_suggestor(ReactOnceSuggestor);
+        engine2.register_suggestor(SeedSuggestor);
+        let r2 = engine2.run(Context::new()).await.unwrap();
+
+        assert_ne!(
+            r1.integrity.merkle_root, r2.integrity.merkle_root,
+            "different fact sets must produce different merkle roots"
+        );
     }
 
     /// Suggestor that emits a seed fact once.
@@ -2313,7 +2322,7 @@ mod tests {
             name: "AgentB",
             fact_id: "b",
         });
-        let mut context = Context::new();
+        let mut tracked = TrackedContext::new(Context::new());
 
         let effect_a =
             AgentEffect::with_proposal(proposal(ContextKey::Seeds, "a", "first", "AgentA"));
@@ -2323,14 +2332,14 @@ mod tests {
         // Intentionally feed merge_effects in reverse order.
         let (dirty, facts_added) = engine
             .merge_effects(
-                &mut context,
+                &mut tracked,
                 vec![(id_b, effect_b), (id_a, effect_a)],
                 1,
                 None,
             )
             .expect("should not conflict");
 
-        let seeds = context.get(ContextKey::Seeds);
+        let seeds = tracked.context.get(ContextKey::Seeds);
         assert_eq!(seeds.len(), 2);
         assert_eq!(seeds[0].id, "a");
         assert_eq!(seeds[1].id, "b");

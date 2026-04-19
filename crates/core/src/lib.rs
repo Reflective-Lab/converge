@@ -234,6 +234,7 @@ pub use experience_store::{
     ExperienceEventEnvelope, ExperienceEventKind, ExperienceStore, ExperienceStoreError,
     ExperienceStoreResult, PolicySnapshot, TimeRange,
 };
+pub use integrity::{IntegrityProof, LamportClock, MerkleRoot, TrackedContext};
 pub use invariant::{Invariant, InvariantClass, InvariantError, InvariantResult, Violation};
 pub use model_selection::{
     AgentRequirements, ComplianceLevel, CostClass, CostTier, DataSovereignty, Jurisdiction,

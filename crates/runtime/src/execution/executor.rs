@@ -411,6 +411,11 @@ mod tests {
             context,
             stop_reason: converge_core::StopReason::Converged,
             criteria_outcomes: Vec::new(),
+            integrity: converge_core::integrity::IntegrityProof {
+                merkle_root: converge_core::integrity::MerkleRoot::compute(&[]),
+                clock_time: 0,
+                fact_count: 0,
+            },
         };
 
         let result = ExecutionResult::from((converge_result, 100));

@@ -119,98 +119,46 @@ impl std::fmt::Display for ContentHashError {
 
 impl std::error::Error for ContentHashError {}
 
-/// A hash of content for integrity verification.
+/// A SHA-256 hash of content for integrity verification.
 ///
 /// Content hashes enable:
 /// - Tamper detection: any change to content changes the hash
 /// - Efficient comparison: compare 32 bytes instead of full content
 /// - Merkle tree construction: hashes combine into a tree
-///
-/// # Deprecation Notice
-///
-/// In converge-core v2.0.0, SHA-256 was replaced with a non-cryptographic stub
-/// (FNV-1a) to eliminate the sha2 dependency. For cryptographic hashing, use
-/// `converge-runtime` with a `Fingerprint` implementation.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ContentHash(pub [u8; 32]);
 
 impl ContentHash {
-    /// Computes a hash of the given content.
-    ///
-    /// # Deprecation Notice
-    ///
-    /// This method currently uses a stub implementation (FNV-1a hash padded to 32 bytes).
-    /// For cryptographic hashing, use `converge-runtime` with a `Fingerprint` implementation.
-    #[deprecated(
-        since = "2.0.0",
-        note = "Use converge-runtime with Fingerprint trait for cryptographic hashing"
-    )]
+    /// Computes a SHA-256 hash of the given content.
     #[must_use]
     pub fn compute(content: &str) -> Self {
-        // Stub: FNV-1a hash (non-cryptographic, but deterministic)
-        let mut hash = 0xcbf2_9ce4_8422_2325_u64; // FNV offset basis
-        for byte in content.as_bytes() {
-            hash ^= u64::from(*byte);
-            hash = hash.wrapping_mul(0x0100_0000_01b3); // FNV prime
-        }
-        // Pad to 32 bytes (repeat the 8-byte hash 4 times)
-        let bytes = hash.to_le_bytes();
-        let mut result = [0u8; 32];
-        for i in 0..4 {
-            result[i * 8..(i + 1) * 8].copy_from_slice(&bytes);
-        }
-        Self(result)
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(content.as_bytes());
+        Self(hasher.finalize().into())
     }
 
     /// Computes the hash of a Fact (combines key, id, and content).
-    ///
-    /// # Deprecation Notice
-    ///
-    /// This method currently uses a stub implementation. For cryptographic hashing,
-    /// use `converge-runtime` with a `Fingerprint` implementation.
-    #[deprecated(
-        since = "2.0.0",
-        note = "Use converge-runtime with Fingerprint trait for cryptographic hashing"
-    )]
     #[must_use]
     pub fn compute_fact(fact: &Fact) -> Self {
         let combined = format!("{:?}|{}|{}", fact.key(), fact.id, fact.content);
-        #[allow(deprecated)]
         Self::compute(&combined)
     }
 
     /// Combines two hashes (for Merkle tree internal nodes).
-    ///
-    /// # Deprecation Notice
-    ///
-    /// This method currently uses a stub implementation (FNV-1a on concatenated hashes).
-    /// For cryptographic hash combination, use `converge-runtime` with a `Fingerprint` implementation.
-    #[deprecated(
-        since = "2.0.0",
-        note = "Use converge-runtime with Fingerprint trait for cryptographic hashing"
-    )]
     #[must_use]
     pub fn combine(left: &Self, right: &Self) -> Self {
-        // Hash the concatenation of both hashes using FNV-1a
-        let mut hash = 0xcbf2_9ce4_8422_2325_u64;
-        for byte in left.0.iter().chain(right.0.iter()) {
-            hash ^= u64::from(*byte);
-            hash = hash.wrapping_mul(0x0100_0000_01b3);
-        }
-        let bytes = hash.to_le_bytes();
-        let mut result = [0u8; 32];
-        for i in 0..4 {
-            result[i * 8..(i + 1) * 8].copy_from_slice(&bytes);
-        }
-        Self(result)
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(left.0);
+        hasher.update(right.0);
+        Self(hasher.finalize().into())
     }
 
     /// Verifies that this hash matches the given content.
     #[must_use]
     pub fn verify(&self, content: &str) -> bool {
-        #[allow(deprecated)]
-        let computed = Self::compute(content);
-        *self == computed
+        *self == Self::compute(content)
     }
 
     /// Returns the hash as a hex string.
@@ -273,7 +221,6 @@ impl MerkleRoot {
     /// Uses a standard binary Merkle tree construction.
     /// Empty list returns a hash of empty string.
     /// Single element is combined with itself (Bitcoin-style).
-    #[allow(deprecated)]
     #[must_use]
     pub fn compute(hashes: &[ContentHash]) -> Self {
         if hashes.is_empty() {
@@ -313,7 +260,6 @@ impl MerkleRoot {
     /// Computes the Merkle root from a Context's facts.
     ///
     /// Facts are hashed in deterministic order (by key, then by position).
-    #[allow(deprecated)]
     #[must_use]
     pub fn from_context(ctx: &Context) -> Self {
         let mut all_hashes: Vec<ContentHash> = Vec::new();
@@ -398,7 +344,6 @@ impl TrackedContext {
     /// Verifies the integrity of all facts.
     ///
     /// Returns `true` if all recorded hashes match current fact content.
-    #[allow(deprecated)]
     #[must_use]
     pub fn verify_integrity(&self) -> bool {
         for (key, id, expected_hash) in &self.fact_hashes {
@@ -414,7 +359,6 @@ impl TrackedContext {
     }
 
     /// Recomputes all fact hashes.
-    #[allow(deprecated)]
     fn recompute_hashes(&mut self) {
         self.fact_hashes.clear();
         for key in self.context.all_keys() {
@@ -431,7 +375,6 @@ impl TrackedContext {
     /// # Errors
     ///
     /// Returns an error if the fact conflicts with an existing fact.
-    #[allow(deprecated)]
     pub fn add_fact(&mut self, fact: Fact) -> Result<bool, crate::error::ConvergeError> {
         let key = fact.key();
         let id = fact.id.clone();
@@ -447,12 +390,42 @@ impl TrackedContext {
 
         Ok(changed)
     }
+
+    /// Extracts an integrity proof from the current state.
+    pub fn extract_proof(&mut self) -> IntegrityProof {
+        let merkle_root = self.merkle_root().clone();
+        IntegrityProof {
+            merkle_root,
+            clock_time: self.clock_time(),
+            fact_count: self.fact_hashes.len(),
+        }
+    }
 }
 
 impl Default for TrackedContext {
     fn default() -> Self {
         Self::empty()
     }
+}
+
+// ============================================================================
+// Integrity Proof
+// ============================================================================
+
+/// Cryptographic integrity proof for a converged context.
+///
+/// Produced by the engine at the end of convergence. Provides:
+/// - Merkle root: tamper-evident commitment to all facts
+/// - Clock time: causal ordering count (number of fact-addition events)
+/// - Fact count: total facts in the context
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct IntegrityProof {
+    /// Merkle root over all facts in deterministic order.
+    pub merkle_root: MerkleRoot,
+    /// Final Lamport clock time (number of tracked events).
+    pub clock_time: u64,
+    /// Number of facts in the context.
+    pub fact_count: usize,
 }
 
 // ============================================================================
@@ -499,7 +472,7 @@ mod tests {
     // =========================================================================
 
     #[test]
-    #[allow(deprecated)]
+
     fn content_hash_is_deterministic() {
         let h1 = ContentHash::compute("hello world");
         let h2 = ContentHash::compute("hello world");
@@ -507,7 +480,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(deprecated)]
+
     fn content_hash_changes_with_content() {
         let h1 = ContentHash::compute("hello");
         let h2 = ContentHash::compute("world");
@@ -515,7 +488,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(deprecated)]
+
     fn content_hash_verify_works() {
         let hash = ContentHash::compute("test");
         assert!(hash.verify("test"));
@@ -523,7 +496,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(deprecated)]
+
     fn content_hash_hex_roundtrip() {
         let original = ContentHash::compute("test content");
         let hex = original.to_hex();
@@ -536,7 +509,7 @@ mod tests {
     // =========================================================================
 
     #[test]
-    #[allow(deprecated)]
+
     fn merkle_root_empty_list() {
         let root = MerkleRoot::compute(&[]);
         let empty_hash = ContentHash::compute("");
@@ -544,7 +517,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(deprecated)]
+
     fn merkle_root_single_element() {
         let h = ContentHash::compute("only element");
         let root = MerkleRoot::compute(std::slice::from_ref(&h));
@@ -553,7 +526,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(deprecated)]
+
     fn merkle_root_two_elements() {
         let h1 = ContentHash::compute("first");
         let h2 = ContentHash::compute("second");
@@ -563,7 +536,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(deprecated)]
+
     fn merkle_root_is_deterministic() {
         let hashes = vec![
             ContentHash::compute("a"),
@@ -576,7 +549,7 @@ mod tests {
     }
 
     #[test]
-    #[allow(deprecated)]
+
     fn merkle_root_changes_with_different_content() {
         let hashes1 = vec![ContentHash::compute("a"), ContentHash::compute("b")];
         let hashes2 = vec![ContentHash::compute("a"), ContentHash::compute("c")];
@@ -641,5 +614,37 @@ mod tests {
             .unwrap();
 
         assert!(tracked.verify_integrity());
+    }
+
+    #[test]
+    fn integrity_proof_serializes() {
+        let mut tracked = TrackedContext::empty();
+        tracked
+            .add_fact(crate::context::new_fact(ContextKey::Seeds, "s1", "test"))
+            .unwrap();
+        let proof = tracked.extract_proof();
+        assert_eq!(proof.clock_time, 1);
+        assert_eq!(proof.fact_count, 1);
+
+        let json = serde_json::to_string(&proof).unwrap();
+        let deser: IntegrityProof = serde_json::from_str(&json).unwrap();
+        assert_eq!(proof, deser);
+    }
+
+    #[test]
+    fn integrity_proof_changes_with_different_facts() {
+        let mut t1 = TrackedContext::empty();
+        t1.add_fact(crate::context::new_fact(ContextKey::Seeds, "s1", "alpha"))
+            .unwrap();
+        let proof1 = t1.extract_proof();
+
+        let mut t2 = TrackedContext::empty();
+        t2.add_fact(crate::context::new_fact(ContextKey::Seeds, "s1", "beta"))
+            .unwrap();
+        let proof2 = t2.extract_proof();
+
+        assert_ne!(proof1.merkle_root, proof2.merkle_root);
+        assert_eq!(proof1.clock_time, proof2.clock_time);
+        assert_eq!(proof1.fact_count, proof2.fact_count);
     }
 }
