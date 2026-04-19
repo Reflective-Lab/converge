@@ -278,4 +278,4 @@ cargo test -p converge-client --test messages
 Semver promises apply only to the six public crates and the `converge.v1` wire
 protocol. Everything else is internal and may change without notice.
 
-See also: [[Architecture/System Overview]], [[Architecture/Crate Map]], [[Architecture/Hexagonal Architecture]], [[Architecture/Known Drift]], [[Architecture/Golden Path Matrix]]
+See also: [[Architecture/System Overview]], [[Architecture/Crate Map]], [[Architecture/Hexagonal Architecture]], [[Architecture/Known Drift]], [[Architecture/Golden Path Matrix]], [[Architecture/Embedding Quick Start]]
