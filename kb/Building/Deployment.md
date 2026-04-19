@@ -24,13 +24,12 @@ Use `wolfgang-app` as the arrowhead for deployment and auth decisions:
 - Backend route protection through Axum middleware layers
 - Infra root: `ops/infra/environments/prod/wolfgang-bot/main.tf`
 - Reusable Cloud Run module: `ops/infra/modules/cloud-run-service/main.tf`
-- Firebase Hosting deploy config: `ops/deploy/frontend/firebase.json`
+- Firebase Hosting deploy config: see `runway` repo (`ops/deploy/frontend/firebase.json`)
 - Operational commands centralized in `Justfile`
 
 ## Key Files
 
-- `ops/scripts/dev-up.sh`, `ops/scripts/dev-down.sh`, `ops/scripts/smoke-test.sh`
-- `ops/scripts/deploy-cloud-run.sh`
+- Dev scripts moved to `runway` repo: `dev-up.sh`, `dev-down.sh`, `smoke-test.sh`, `deploy-cloud-run.sh`
 - `ops/infra/environments/prod/converge-runtime/main.tf`
 - `ops/infra/modules/cloud-run-service/main.tf`, `ops/infra/modules/artifact-registry/main.tf`
 - `Dockerfile`, `compose.yaml`
@@ -42,8 +41,8 @@ These were verified during implementation, not just inferred:
 
 - `converge-runtime` builds in baseline mode
 - `converge-runtime` also builds with `--features gcp,auth,firebase`
-- `converge-llm-server` builds with `--features server`
-- Native startup via `ops/scripts/dev-up.sh native` can bring up the runtime
+- `converge-llm-server` builds with `--features server` (now in `runway` repo)
+- Native startup via `dev-up.sh native` (now in `runway` repo) can bring up the runtime
 - The runtime responds on `/health` once started
 
 ## Important Fixes Already Made
@@ -79,9 +78,9 @@ Hosted flow:
 
 ## GPU Worker Preparation
 
-Scaffolding exists at `deploy/gpu/cloudrun/`, `deploy/gpu/runpod/`, `deploy/gpu/modal/`.
+GPU scaffolding moved to `runway` repo (`deploy/gpu/cloudrun/`, `deploy/gpu/runpod/`, `deploy/gpu/modal/`).
 
-`crates/llm/src/bin/server.rs` resolves backend type from compiled features (`cuda`, `wgpu`, fallback CPU).
+`converge-llm` server (now in `runway` repo) resolves backend type from compiled features (`cuda`, `wgpu`, fallback CPU).
 
 Still needs: model artifact strategy, secure service-to-service auth, runtime-to-worker call path, deployment test on real GPU infrastructure.
 

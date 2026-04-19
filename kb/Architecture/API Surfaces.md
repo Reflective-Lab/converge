@@ -252,7 +252,7 @@ not the promised public surface and may change without preserving compatibility.
 |---|---|
 | organism | `converge-pack` + `converge-kernel` + `converge-model` + `converge-client` |
 | axiom | `converge-provider-api` + `converge-provider` |
-| helm (`saas-killer`) | `converge-kernel` + `converge-model` + `converge-pack` + `converge-provider-api`/`converge-provider` as needed |
+| helms | `converge-kernel` + `converge-model` + `converge-pack` + `converge-provider-api`/`converge-provider` as needed |
 | wolfgang | `converge-kernel` + `converge-model` + `converge-provider-api` + `converge-provider` |
 | hackathon | `converge-pack` + `converge-kernel` + `converge-provider-api` + `converge-provider` |
 

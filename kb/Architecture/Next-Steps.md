@@ -17,7 +17,7 @@ The **6-pillar stability framework** is now implemented and committed. This docu
 
 **What**:
 1. Run benchmarks locally: `cargo bench -p converge-core`
-2. Extract baseline: `python3 ops/scripts/extract-criterion-baseline.py`
+2. Extract baseline: `python3 runway/ops/scripts/extract-criterion-baseline.py`
 3. Record memory soak: `SOAK_MEMORY_ITERATIONS=1000 cargo test --test soak soak_memory_stability -- --include-ignored --nocapture`
 4. Document results in EXP-001, EXP-004 baseline tables
 
@@ -63,7 +63,7 @@ SOAK_ITERATIONS=100 cargo test --test soak -- --include-ignored
 echo "→ Benchmarks"
 cargo bench -p converge-core --no-run
 cargo bench -p converge-core -- --profile-time 10
-python3 ops/scripts/extract-criterion-baseline.py
+python3 runway/ops/scripts/extract-criterion-baseline.py
 
 echo "=== Pre-Release Check Complete ==="
 echo "Review: cat kb/Baselines/latest-summary.md"
@@ -108,7 +108,7 @@ Add to `CHANGELOG.md` under v3.3.x or Unreleased section:
 2. Verify chaos tests compile: `cargo test --test chaos --no-run`
 3. Verify soak tests compile: `cargo test --test soak --no-run`
 4. Run context properties: `cargo test --test context_properties`
-5. Spot-check extraction script: `python3 ops/scripts/extract-criterion-baseline.py`
+5. Spot-check extraction script: `python3 runway/ops/scripts/extract-criterion-baseline.py`
 
 **Why**: 
 - Catches any integration issues before weekly CI runs

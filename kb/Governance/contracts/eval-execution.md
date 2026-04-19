@@ -274,7 +274,7 @@ for eval in "${EVALS[@]}"; do
 done
 
 # Aggregate results
-./ops/scripts/aggregate-eval-reports.sh reports/
+./runway/ops/scripts/aggregate-eval-reports.sh reports/
 ```
 
 ### Method 4: CI/CD Integration (GitHub Actions example)
@@ -307,7 +307,7 @@ jobs:
 
       - name: Check Results
         run: |
-          ./ops/scripts/check-eval-results.sh reports/
+          ./runway/ops/scripts/check-eval-results.sh reports/
           # Fails if any required eval is FAIL
 ```
 
@@ -326,10 +326,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run Weekly Suite
-        run: ./ops/scripts/run-weekly-evals.sh
+        run: ./runway/ops/scripts/run-weekly-evals.sh
 
       - name: Post to Slack
-        run: ./ops/scripts/post-eval-summary.sh
+        run: ./runway/ops/scripts/post-eval-summary.sh
 ```
 
 ---

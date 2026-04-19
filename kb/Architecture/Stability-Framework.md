@@ -19,7 +19,7 @@ Converge stability testing transforms ad-hoc manual validation into systematic, 
 - **File**: `crates/core/benches/engine_bench.rs` (4 benchmarks)
 - **Tool**: Criterion (JSON output to `target/criterion/`)
 - **Metrics**: p50, p95, p99, mean, stddev (microseconds)
-- **Extraction**: `ops/scripts/extract-criterion-baseline.py`
+- **Extraction**: `extract-criterion-baseline.py` (moved to `runway` repo)
 - **Storage**: `kb/Baselines/trends.csv` (historical tracking)
 
 **Benchmarks**:
@@ -176,7 +176,7 @@ cargo bench -p converge-core
 
 **Regression Detection** (after benchmark):
 ```bash
-python3 ops/scripts/extract-criterion-baseline.py
+python3 runway/ops/scripts/extract-criterion-baseline.py
 cat kb/Baselines/latest-summary.md
 ```
 
@@ -313,6 +313,6 @@ Based on EXP-001 and benchmarks:
 - `crates/core/tests/chaos.rs` — Chaos test suite
 - `crates/core/tests/soak.rs` — Long-running stability tests
 - `crates/core/tests/context_properties.rs` — Property tests + ADR evidence
-- `ops/scripts/extract-criterion-baseline.py` — Baseline extraction
+- Baseline extraction script: moved to `runway` repo
 - `kb/Baselines/README.md` — Baseline format specification
 - `kb/Experiments/` — Hypothesis tracking and evidence

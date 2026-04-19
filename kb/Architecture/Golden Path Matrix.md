@@ -85,7 +85,7 @@ Rules:
 |---|---|
 | Organism | `converge-pack` + `converge-kernel` + `converge-model` + `converge-client` |
 | Axiom | `converge-provider-api` + `converge-provider` |
-| Helm (`saas-killer`, during rename) | Axiom + `organism-pack`/`organism-runtime` + `converge-kernel`/`converge-model`/`converge-pack` |
+| Helms | Axiom + `organism-pack`/`organism-runtime` + `converge-kernel`/`converge-model`/`converge-pack` |
 | Wolfgang | `converge-kernel` + `converge-model` + `converge-provider-api` + `converge-provider`; Organism only when a reusable capability clearly beats product-local code |
 | Hackathon participant-facing code | `converge-pack` + `converge-kernel` + `converge-provider-api` + `converge-provider` + `organism-pack`/`organism-runtime` |
 
