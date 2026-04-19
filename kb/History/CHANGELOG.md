@@ -11,12 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Narrowed downstream surface**: Provider capability contracts (`ChatBackend`, `ModelSelector`, `ChatRequest`/`ChatResponse`) moved from `converge-core` to `converge-provider-api`. Downstream consumers (`organism`, `helms`, `wolfgang`, `hackathon`) now depend on the lightweight API crate instead of pulling in the full engine.
-- **Integrity primitives** (available, not yet wired into engine):
-  - `LamportClock` — logical clock for causal ordering without wall clocks. Tested: initial state, monotonic increment, merge rule (max + 1).
-  - `ContentHash` — deterministic content fingerprinting. Tested: determinism, content sensitivity, verify, hex roundtrip. Note: uses FNV-1a stub, not SHA-256.
-  - `MerkleRoot` — tamper-evident tree over fact hashes. Tested: empty, single, two-element, determinism, content sensitivity.
-  - `TrackedContext` — context wrapper with embedded clock and merkle tree. Tested: computes root, verifies integrity.
-  - These primitives are exported from `converge_core::integrity` for opt-in use by downstream crates. They are not yet integrated into `Engine::run`.
+- **Integrity as contract** (breaking: `ConvergeResult` has new required `integrity` field):
+  - `Engine::run` now wraps `Context` in `TrackedContext` internally. Every `add_fact` ticks a Lamport clock and records a SHA-256 content hash.
+  - `ConvergeResult.integrity: IntegrityProof` — merkle root, clock time, fact count.
+  - `LamportClock` — logical clock for causal ordering without wall clocks.
+  - `ContentHash` — SHA-256 content fingerprinting (upgraded from FNV-1a stub).
+  - `MerkleRoot` — tamper-evident tree over fact hashes.
+  - `TrackedContext` — context wrapper with embedded clock and merkle tree.
+  - All exported from `converge_core::integrity` and re-exported via `converge-kernel`.
 - **Kong AI Gateway provider**: Full `KongBackend` with Konnect Key Auth, retry with exponential backoff, model selection, and tool calling support. Added to default features.
 - **Provider metadata capture**: Generic `metadata: HashMap<String, String>` on `ChatResponse`. Kong captures gateway headers (upstream/proxy latency, request ID, model, rate limits). OpenRouter captures cost, provider, and cost breakdown from response body.
 - **`HypothesisResolved` experience event**: New `ExperienceEvent` variant for tracking hypothesis lifecycle across convergence cycles — confirmed, falsified, superseded, or unresolved.
@@ -41,7 +43,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documentation: all kb/ references to deleted `ops/` paths updated to point to `runway` repo.
 
 ### Known Limitations
-- `ContentHash` uses FNV-1a (non-cryptographic). SHA-256 upgrade tracked for future release.
 - `bipartite_matching()` in `converge-optimization` contains a `todo!()` — will panic if called.
 - `validate_rules` endpoint is a stub (returns 500). Validation moved to `organism-application`.
 - mTLS identity extraction in gRPC interceptor is a placeholder (always returns `None`).
