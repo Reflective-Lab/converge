@@ -782,16 +782,22 @@ mod tests {
         // Same number of cycles
         assert_eq!(r1.cycles, r2.cycles);
 
-        // Same assignments
+        // Same assignments (compare content, ignoring timestamps that may differ across runs)
+        let content = |facts: &[converge_core::Fact]| -> Vec<(String, String)> {
+            facts
+                .iter()
+                .map(|f| (f.id.clone(), f.content.clone()))
+                .collect()
+        };
         assert_eq!(
-            r1.context.get(ContextKey::Strategies),
-            r2.context.get(ContextKey::Strategies)
+            content(r1.context.get(ContextKey::Strategies)),
+            content(r2.context.get(ContextKey::Strategies))
         );
 
         // Same evaluations
         assert_eq!(
-            r1.context.get(ContextKey::Evaluations),
-            r2.context.get(ContextKey::Evaluations)
+            content(r1.context.get(ContextKey::Evaluations)),
+            content(r2.context.get(ContextKey::Evaluations))
         );
     }
 }

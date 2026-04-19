@@ -48,7 +48,13 @@
       "Bash(head -20 /Users/kpernyer/dev/work/converge/kb/Architecture/*.md)",
       "Bash(cargo fmt:*)",
       "Bash(cargo clippy:*)",
-      "Bash(cargo bench:*)"
+      "Bash(cargo bench:*)",
+      "Bash(git stash:*)",
+      "Bash(git merge feat/clock-trait --no-ff -m ':*)",
+      "Bash(cargo audit:*)",
+      "Bash(cargo run:*)",
+      "Read(//Users/kpernyer/dev/work/organism/**)",
+      "Bash(grep:*)"
     ]
   }
 }

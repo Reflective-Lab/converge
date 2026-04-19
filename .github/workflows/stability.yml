@@ -28,7 +28,7 @@ jobs:
     name: Regression Gate (ADR-004)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install protoc
         run: |
           sudo apt-get update
@@ -52,7 +52,7 @@ jobs:
     name: Benchmarks (compile)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: bench-compile
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
@@ -114,13 +114,13 @@ jobs:
           EOF
       - name: Upload benchmark results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: bench-reports
           path: target/criterion/
       - name: Upload baseline data
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: baseline-data
           path: kb/Baselines/
@@ -131,7 +131,7 @@ jobs:
     name: Soak Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
@@ -149,7 +149,7 @@ jobs:
     name: Security Audit (blocking)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
@@ -163,7 +163,7 @@ jobs:
     name: Cargo Deny
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: EmbarkStudios/cargo-deny-action@v1
 
   # ── Optional: Live provider endpoints (if secrets configured) ─────────
@@ -173,7 +173,7 @@ jobs:
     runs-on: ubuntu-latest
     if: secrets.OPENAI_API_KEY != ''
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install protoc
         run: |
           sudo apt-get update
