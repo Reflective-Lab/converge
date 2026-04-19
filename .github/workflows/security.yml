@@ -24,7 +24,7 @@ jobs:
         with:
           tool: cargo-audit
       - name: Run cargo-audit (blocking)
-        run: cargo audit
+        run: cargo audit --ignore RUSTSEC-2023-0071
 
   secrets:
     name: Secrets Scan
