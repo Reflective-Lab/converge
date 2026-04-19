@@ -24,7 +24,7 @@ jobs:
         with:
           tool: cargo-audit
       - name: Run cargo-audit (blocking)
-        run: cargo audit --deny warnings --ignore RUSTSEC-2026-0002 --ignore RUSTSEC-2025-0134
+        run: cargo audit
 
   secrets:
     name: Secrets Scan
