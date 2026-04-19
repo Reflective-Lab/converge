@@ -9,7 +9,8 @@ unmaintained = "warn"
 yanked = "warn"
 notice = "warn"
 # lru 0.12.5 unsound IterMut — transitive via tantivy/lance, not in our code path
-ignore = ["RUSTSEC-2026-0002"]
+# rustls-pemfile 2.2.0 — transitive via tonic/reqwest, awaiting upstream update
+ignore = ["RUSTSEC-2026-0002", "RUSTSEC-2025-0134"]
 
 [licenses]
 unlicensed = "deny"
