@@ -1040,20 +1040,9 @@ def hello():
         let doc = ingester.ingest_file(&path).await.unwrap();
 
         // Find Rust code block
-        let chunk_types: Vec<_> = doc
-            .chunks
-            .iter()
-            .map(|c| {
-                format!(
-                    "{:?}: {:?}",
-                    c.chunk_type,
-                    &c.content[..c.content.len().min(50)]
-                )
-            })
-            .collect();
         let rust_block = doc.chunks.iter()
             .find(|c| matches!(&c.chunk_type, ChunkType::CodeBlock { language: Some(l) } if l == "rust"))
-            .unwrap_or_else(|| panic!("Should find Rust code block. Chunks: {chunk_types:?}"));
+            .expect("Should find Rust code block");
 
         assert!(
             rust_block.content.contains("println!"),
