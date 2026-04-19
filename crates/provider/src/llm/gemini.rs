@@ -12,7 +12,7 @@ use super::error_classification::{classify_http_error, network_error, parse_erro
 use super::format_contract::finalize_chat_response;
 use crate::secret::{EnvSecretProvider, SecretProvider, SecretString};
 use converge_core::backend::{BackendError, BackendResult};
-use converge_core::traits::{
+use converge_provider_api::{
     BoxFuture, ChatBackend, ChatRequest, ChatResponse, ChatRole, FinishReason as ChatFinishReason,
     LlmError as ChatLlmError, ResponseFormat, TokenUsage as ChatTokenUsage, ToolCall,
 };

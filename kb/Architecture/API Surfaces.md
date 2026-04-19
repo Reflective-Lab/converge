@@ -9,7 +9,9 @@ reachable through one of the surfaces below, it is an implementation detail and
 must not be treated as a stable dependency.
 
 Stabilization decisions live in [[Architecture/ADRs/ADR-001-canonical-public-crates]]
-through [[Architecture/ADRs/ADR-005-type-ownership-boundaries]].
+through [[Architecture/ADRs/ADR-007-capability-contract-ownership]].
+
+Shared stack guidance for downstream consumers lives in [[Architecture/Golden Path Matrix]].
 
 ## Public Contracts
 
@@ -25,6 +27,19 @@ Converge exposes six external contracts:
 These contracts are intentionally separate. A pack author should not need
 provider selection APIs. A provider adapter should not need kernel internals. A
 remote Rust consumer should not need CLI implementation code.
+
+## Narrowest Surface Rule
+
+Each layer should depend on the smallest public contract that satisfies its job.
+
+- If code authors packs or invariants, use `converge-pack`.
+- If code only needs chat contracts or routing vocabulary, use `converge-provider-api`.
+- If code needs ready-made provider adapters, use `converge-provider` in controlled repos.
+- If code embeds the Converge engine, use `converge-kernel`.
+- If code only reads governed semantic outputs, use `converge-model`.
+
+`converge-core` is not the default integration surface for next-layer consumers.
+It is the engine and governance implementation crate.
 
 ## Supported Rust Crates
 
@@ -58,22 +73,42 @@ Important note:
 ### `converge-provider-api`
 
 Purpose:
-- describe provider identity, capabilities, and routing requirements
+- describe provider identity, capability contracts, chat request and response
+  types, and routing requirements
 
 What external code may use:
 - `Backend`
 - `BackendKind`
 - `Capability`
+- `ChatBackend`
+- `DynChatBackend`
+- `ChatRequest`
+- `ChatResponse`
+- `ChatMessage`
+- `ChatRole`
+- `ResponseFormat`
+- `LlmError`
+- `ToolDefinition`
+- `ToolCall`
 - `BackendError`
 - `BackendErrorKind`
 - `BackendRequirements`
 - `BackendSelector`
+- `SelectionCriteria`
+- `Jurisdiction`
+- `LatencyClass`
+- `CostTier`
+- `TaskComplexity`
+- `RequiredCapabilities`
+- `AgentRequirements`
+- `ModelSelectorTrait`
 - `ComplianceLevel`
 - `CostClass`
 - `DataSovereignty`
 
 Status:
 - canonical provider capability contract
+- narrowest dependency for provider-capability consumers that do not need engine semantics
 
 ### `converge-model`
 
@@ -100,6 +135,7 @@ What external code may use:
 - `RunResult`
 - `HitlPause`
 - `EngineHitlPolicy`
+- advanced HITL and flow-gate configuration types used by embedders
 - `CriterionEvaluator`
 - `ExperienceEventObserver`
 - `TypesRunHooks`
@@ -157,6 +193,7 @@ Rule:
 |---|---|
 | Pack/module authors | `converge-pack`, `converge-model` |
 | Embedded applications | `converge-kernel`, `converge-model`, `converge-pack` |
+| Capability consumers | `converge-provider-api` |
 | Provider adapters | `converge-provider-api` |
 | Remote Rust consumers | `converge-client`, `converge-protocol` |
 | Non-Rust consumers | `converge.v1` protobuf/gRPC |
@@ -213,9 +250,11 @@ not the promised public surface and may change without preserving compatibility.
 
 | Project | Target API |
 |---|---|
-| organism | `converge-pack` + `converge-model` |
-| saas-killer | `converge-kernel` + `converge-model` |
-| wolfgang | `converge-provider-api` + `converge-client` |
+| organism | `converge-pack` + `converge-kernel` + `converge-model` + `converge-client` |
+| axiom | `converge-provider-api` + `converge-provider` |
+| helms | `converge-kernel` + `converge-model` + `converge-pack` + `converge-provider-api`/`converge-provider` as needed |
+| wolfgang | `converge-kernel` + `converge-model` + `converge-provider-api` + `converge-provider` |
+| hackathon | `converge-pack` + `converge-kernel` + `converge-provider-api` + `converge-provider` |
 
 ## Contract Status
 
@@ -239,4 +278,4 @@ cargo test -p converge-client --test messages
 Semver promises apply only to the six public crates and the `converge.v1` wire
 protocol. Everything else is internal and may change without notice.
 
-See also: [[Architecture/System Overview]], [[Architecture/Crate Map]], [[Architecture/Hexagonal Architecture]], [[Architecture/Known Drift]]
+See also: [[Architecture/System Overview]], [[Architecture/Crate Map]], [[Architecture/Hexagonal Architecture]], [[Architecture/Known Drift]], [[Architecture/Golden Path Matrix]]

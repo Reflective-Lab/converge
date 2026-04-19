@@ -14,15 +14,17 @@ use super::error_classification::{
 use super::format_contract::finalize_chat_response;
 use crate::secret::{EnvSecretProvider, SecretProvider, SecretString};
 use converge_core::backend::{BackendError, BackendResult};
-use converge_core::traits::{
+use converge_provider_api::{
     BoxFuture, ChatBackend, ChatRequest, ChatResponse, ChatRole, FinishReason as ChatFinishReason,
-    LlmError as ChatLlmError, TokenUsage as ChatTokenUsage, ToolCall as ChatToolCall,
+    LlmError as ChatLlmError, ResponseFormat, TokenUsage as ChatTokenUsage,
+    ToolCall as ChatToolCall,
 };
 
 pub struct KongBackend {
     api_key: SecretString,
     model: String,
     gateway_url: String,
+    route: String,
     client: Client,
     temperature: f32,
     max_retries: usize,
@@ -35,6 +37,7 @@ impl KongBackend {
             api_key: SecretString::new(api_key),
             model: "gpt-4o".to_string(),
             gateway_url: gateway_url.into().trim_end_matches('/').to_string(),
+            route: "llm/v1/chat".to_string(),
             client: Client::new(),
             temperature: 0.0,
             max_retries: 3,
@@ -57,11 +60,13 @@ impl KongBackend {
             std::env::var("KONG_AI_GATEWAY_URL").map_err(|_| BackendError::Unavailable {
                 message: "KONG_AI_GATEWAY_URL not set".to_string(),
             })?;
+        let route = std::env::var("KONG_LLM_ROUTE").unwrap_or_else(|_| "llm/v1/chat".to_string());
 
         Ok(Self {
             api_key,
             model: "gpt-4o".to_string(),
             gateway_url: gateway_url.trim_end_matches('/').to_string(),
+            route: normalize_route(route),
             client: Client::new(),
             temperature: 0.0,
             max_retries: 3,
@@ -77,6 +82,12 @@ impl KongBackend {
     #[must_use]
     pub fn with_temperature(mut self, temp: f32) -> Self {
         self.temperature = temp;
+        self
+    }
+
+    #[must_use]
+    pub fn with_route(mut self, route: impl Into<String>) -> Self {
+        self.route = normalize_route(route);
         self
     }
 
@@ -179,9 +190,7 @@ impl KongBackend {
         };
 
         let response_format = match req.response_format {
-            converge_core::traits::ResponseFormat::Json => {
-                Some(serde_json::json!({"type": "json_object"}))
-            }
+            ResponseFormat::Json => Some(serde_json::json!({"type": "json_object"})),
             _ => None,
         };
 
@@ -200,6 +209,10 @@ impl KongBackend {
             response_format,
             stop,
         }
+    }
+
+    fn request_url(&self) -> String {
+        format!("{}/{}", self.gateway_url, self.route)
     }
 
     async fn chat_async(&self, req: ChatRequest) -> Result<ChatResponse, ChatLlmError> {
@@ -259,7 +272,7 @@ impl KongBackend {
         model: &str,
         request: &KongRequest,
     ) -> Result<(HeaderMap, KongResponse), ChatLlmError> {
-        let url = format!("{}/llm/v1/chat", self.gateway_url);
+        let url = self.request_url();
         let headers = self.build_headers().map_err(map_backend_error)?;
 
         let mut last_error = None;
@@ -307,6 +320,20 @@ impl KongBackend {
             message: "unknown error".to_string(),
             code: None,
         }))
+    }
+}
+
+fn normalize_route(route: impl Into<String>) -> String {
+    let route = route
+        .into()
+        .trim()
+        .trim_start_matches('/')
+        .trim_end_matches('/')
+        .to_string();
+    if route.is_empty() {
+        "llm/v1/chat".to_string()
+    } else {
+        route
     }
 }
 
@@ -459,6 +486,7 @@ mod tests {
         assert_eq!(backend.temperature, 0.5);
         assert_eq!(backend.api_key.expose(), "test-key");
         assert_eq!(backend.gateway_url, "https://kong.example.com");
+        assert_eq!(backend.route, "llm/v1/chat");
     }
 
     #[test]
@@ -466,6 +494,17 @@ mod tests {
         let backend = KongBackend::new("test-key", "https://kong.example.com/");
 
         assert_eq!(backend.gateway_url, "https://kong.example.com");
+    }
+
+    #[test]
+    fn test_kong_backend_route_normalization() {
+        let backend = KongBackend::new("test-key", "https://kong.example.com")
+            .with_route("/custom/llm/v1/chat/");
+
+        assert_eq!(backend.route, "custom/llm/v1/chat");
+
+        let defaulted = KongBackend::new("test-key", "https://kong.example.com").with_route("");
+        assert_eq!(defaulted.route, "llm/v1/chat");
     }
 
     #[test]
@@ -672,6 +711,62 @@ mod tests {
             "499"
         );
         assert_eq!(response.metadata.get("ratelimit-remaining").unwrap(), "498");
+
+        drop(server);
+        drop(runtime);
+    }
+
+    #[test]
+    fn test_chat_respects_custom_route() {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        let server = runtime.block_on(MockServer::start());
+
+        runtime.block_on(async {
+            Mock::given(method("POST"))
+                .and(path("/api/llm/chat"))
+                .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                    "id": "kongcmpl_route",
+                    "model": "gpt-4o",
+                    "choices": [{
+                        "message": {
+                            "content": "Route test response",
+                            "tool_calls": []
+                        },
+                        "finish_reason": "stop"
+                    }],
+                    "usage": {
+                        "prompt_tokens": 1,
+                        "completion_tokens": 2,
+                        "total_tokens": 3
+                    }
+                })))
+                .mount(&server)
+                .await;
+        });
+
+        let backend = KongBackend::new("test-key", server.uri()).with_route("api/llm/chat");
+        let response = runtime
+            .block_on(backend.chat(ChatRequest {
+                messages: vec![ChatMessage {
+                    role: ChatRole::User,
+                    content: "ping".to_string(),
+                    tool_calls: Vec::new(),
+                    tool_call_id: None,
+                }],
+                system: None,
+                tools: Vec::new(),
+                response_format: ResponseFormat::Text,
+                max_tokens: Some(16),
+                temperature: Some(0.0),
+                stop_sequences: Vec::new(),
+                model: None,
+            }))
+            .unwrap();
+
+        assert_eq!(response.content, "Route test response");
 
         drop(server);
         drop(runtime);

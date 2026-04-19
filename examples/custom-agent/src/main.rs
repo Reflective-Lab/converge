@@ -5,7 +5,44 @@
 //!
 //! Shows: Suggestor trait, accepts/execute contract, AgentEffect, ProposedFact.
 
-use converge_core::{AgentEffect, Context, ContextKey, Engine, ProposedFact, Suggestor};
+use converge_kernel::{Context, Engine};
+use converge_pack::{AgentEffect, Context as ContextView, ContextKey, ProposedFact, Suggestor};
+
+const NO_DEPENDENCIES: [ContextKey; 0] = [];
+
+struct SeedOnceSuggestor {
+    name: &'static str,
+    id: &'static str,
+    content: &'static str,
+}
+
+impl SeedOnceSuggestor {
+    fn new(name: &'static str, id: &'static str, content: &'static str) -> Self {
+        Self { name, id, content }
+    }
+}
+
+#[async_trait::async_trait]
+impl Suggestor for SeedOnceSuggestor {
+    fn name(&self) -> &str {
+        self.name
+    }
+
+    fn dependencies(&self) -> &[ContextKey] {
+        &NO_DEPENDENCIES
+    }
+
+    fn accepts(&self, ctx: &dyn ContextView) -> bool {
+        !ctx.has(ContextKey::Seeds)
+    }
+
+    async fn execute(&self, _ctx: &dyn ContextView) -> AgentEffect {
+        AgentEffect::with_proposal(
+            ProposedFact::new(ContextKey::Seeds, self.id, self.content, self.name)
+                .with_confidence(1.0),
+        )
+    }
+}
 
 /// A custom agent that reads Seeds and emits a summary as a Hypothesis.
 struct SummaryAgent {
@@ -30,11 +67,11 @@ impl Suggestor for SummaryAgent {
         &[ContextKey::Seeds]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn ContextView) -> bool {
         !ctx.get(ContextKey::Seeds).is_empty() && ctx.get(ContextKey::Hypotheses).is_empty()
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
         let seeds = ctx.get(ContextKey::Seeds);
         let summary = seeds
             .iter()
@@ -58,11 +95,9 @@ async fn main() {
 
     let mut engine = Engine::new();
 
-    engine.register_suggestor(converge_core::suggestors::SeedSuggestor::new(
-        "data-a",
-        "Revenue up 12%",
-    ));
-    engine.register_suggestor(converge_core::suggestors::SeedSuggestor::new(
+    engine.register_suggestor(SeedOnceSuggestor::new("seed-a", "data-a", "Revenue up 12%"));
+    engine.register_suggestor(SeedOnceSuggestor::new(
+        "seed-b",
         "data-b",
         "Churn down to 3.5%",
     ));

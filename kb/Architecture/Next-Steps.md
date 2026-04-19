@@ -2,7 +2,7 @@
 name: Stability Framework - Next Steps
 description: Prioritized work to operationalize and extend the stability testing pipeline
 type: planning
-source: human
+source: mixed
 ---
 
 # Next Steps: Stability Framework Operationalization
@@ -11,60 +11,13 @@ The **6-pillar stability framework** is now implemented and committed. This docu
 
 ## Immediate (This Sprint)
 
-### 1. **Create deny.toml for Supply Chain Security** ⚡ High Impact
-**Effort**: 30 min | **Impact**: Blocks vulnerable dependencies  
-**Status**: Planned (mentioned in ADR-004, not yet implemented)
-
-**What**:
-- Create `deny.toml` at repo root
-- Configure `cargo deny check` to block licenses and advisories
-- Add to CI as blocking gate (already in security.yml, needs config)
-
-**Why**: 
-- No license compliance checking currently
-- Advisories not enforced (only cargo audit, which warns)
-- Risk: transitive vulnerable deps can slip through
-
-**Deliverable**:
-- `deny.toml` with:
-  - License allowlist (MIT, Apache-2.0, MPL-2.0)
-  - Advisory deny rules (CVSS > 5.0)
-  - Known exceptions (if any)
-- CI blocks on `cargo deny check` failure
-
----
-
-### 2. **Draft ADR-005: Typed-ID Newtype Design** 🎯 Actionable Outcome
-**Effort**: 1-2 hours | **Impact**: Prevents runtime ID validation errors  
-**Status**: Evidence gathered (EXP-002 documents 6 validation gaps)
-
-**What**:
-- Propose `FactId` newtype wrapping `String`
-- Validation: `[a-z][a-z0-9:_-]{0,127}` (max 128 chars)
-- Update `Context::add_input()` to accept `FactId`
-- Implement in `converge-pack` (public contract)
-
-**Why**: 
-- EXP-002 discovered 6 validation gaps (empty IDs, null bytes, newlines, unbounded length, whitespace, uppercase)
-- Type system prevents invalid IDs at compile time
-- Matches experience validation layer pattern
-
-**Deliverable**:
-- `kb/Standards/ADR/ADR-005-typed-id.md`
-  - Status: Proposed (for social review)
-  - Context: Why IDs need validation
-  - Decision: Newtype wrapper + validation in constructor
-  - Consequences: API change (breaking for internal crates)
-
----
-
-### 3. **Establish Initial Baselines from Stability Run** 📊 Data Collection
+### 1. **Establish Initial Baselines from Stability Run** 📊 Data Collection
 **Effort**: 15 min (local) + CI time | **Impact**: Enables regression detection  
 **Status**: Ready to execute
 
 **What**:
 1. Run benchmarks locally: `cargo bench -p converge-core`
-2. Extract baseline: `python3 ops/scripts/extract-criterion-baseline.py`
+2. Extract baseline: `python3 runway/ops/scripts/extract-criterion-baseline.py`
 3. Record memory soak: `SOAK_MEMORY_ITERATIONS=1000 cargo test --test soak soak_memory_stability -- --include-ignored --nocapture`
 4. Document results in EXP-001, EXP-004 baseline tables
 
@@ -83,7 +36,7 @@ The **6-pillar stability framework** is now implemented and committed. This docu
 
 ## Near-Term (Next 1-2 Weeks)
 
-### 4. **Create Pre-Release Validation Script** 🚀 Quality Gate
+### 2. **Create Pre-Release Validation Script** 🚀 Quality Gate
 **Effort**: 45 min | **Impact**: Prevents releases with regressions
 
 **What**:
@@ -110,7 +63,7 @@ SOAK_ITERATIONS=100 cargo test --test soak -- --include-ignored
 echo "→ Benchmarks"
 cargo bench -p converge-core --no-run
 cargo bench -p converge-core -- --profile-time 10
-python3 ops/scripts/extract-criterion-baseline.py
+python3 runway/ops/scripts/extract-criterion-baseline.py
 
 echo "=== Pre-Release Check Complete ==="
 echo "Review: cat kb/Baselines/latest-summary.md"
@@ -123,11 +76,11 @@ echo "Review: cat kb/Baselines/latest-summary.md"
 
 ---
 
-### 5. **Update CHANGELOG with Stability Framework** 📝 Visibility
+### 3. **Update CHANGELOG with Stability Framework** 📝 Visibility
 **Effort**: 20 min | **Impact**: Communicates infrastructure work
 
 **What**:
-Add to `CHANGELOG.md` under v3.3.0 section:
+Add to `CHANGELOG.md` under v3.3.x or Unreleased section:
 ```markdown
 ### Added
 - **Stability Testing Framework** — Production-grade continuous validation
@@ -147,7 +100,7 @@ Add to `CHANGELOG.md` under v3.3.0 section:
 
 ---
 
-### 6. **Test Stability Workflow Manually** ✅ Verification
+### 4. **Test Stability Workflow Manually** ✅ Verification
 **Effort**: 2-3 min (local) + CI time | **Impact**: Confirms automation works
 
 **What**:
@@ -155,7 +108,7 @@ Add to `CHANGELOG.md` under v3.3.0 section:
 2. Verify chaos tests compile: `cargo test --test chaos --no-run`
 3. Verify soak tests compile: `cargo test --test soak --no-run`
 4. Run context properties: `cargo test --test context_properties`
-5. Spot-check extraction script: `python3 ops/scripts/extract-criterion-baseline.py`
+5. Spot-check extraction script: `python3 runway/ops/scripts/extract-criterion-baseline.py`
 
 **Why**: 
 - Catches any integration issues before weekly CI runs
@@ -166,22 +119,22 @@ Add to `CHANGELOG.md` under v3.3.0 section:
 
 ## Optional Enhancements (Backlog)
 
-### 7. **Memory Profiling Dashboard** (Future)
+### 5. **Memory Profiling Dashboard** (Future)
 - Track RSS over time in `trends.csv`
 - Graph memory growth curve
 - Alert on anomalies (e.g., 2x growth spike)
 
-### 8. **jemalloc-ctl Integration** (Future)
+### 6. **jemalloc-ctl Integration** (Future)
 - Per-allocation tracking (not just process RSS)
 - Flame graphs showing allocation hot paths
 - Per-test memory budgets
 
-### 9. **Distributed Tracing** (Future)
+### 7. **Distributed Tracing** (Future)
 - Opentelemetry spans for each Engine::run()
 - Latency breakdown by phase (suggest → promote → add_fact)
 - Trace export to Jaeger/Datadog
 
-### 10. **ADR-005 Implementation** (Future)
+### 8. **ADR-006 Implementation** (Future)
 - Once ADR is approved:
   - Implement `FactId` newtype in `converge-pack`
   - Migrate `Context` API to use `FactId`
@@ -193,23 +146,12 @@ Add to `CHANGELOG.md` under v3.3.0 section:
 ## Decision: What's Your Priority?
 
 **Recommended sequence** (balanced):
-1. ✅ deny.toml (30 min, unblocks supply chain security)
-2. ✅ ADR-005 draft (90 min, actionable outcome from evidence)
-3. ✅ Initial baselines (15 min + time, enables regression detection)
-4. ✅ Update CHANGELOG (20 min, visibility)
-5. ✅ Pre-release script (45 min, quality gate)
+1. ✅ Initial baselines (15 min + time, enables regression detection)
+2. ✅ CHANGELOG update (20 min, visibility)
+3. ✅ Pre-release script (45 min, quality gate)
+4. ✅ Manual verification (5 min, integration check)
 
-**Total**: ~3 hours of focused work to close the loop on stability infrastructure.
-
-**Or, if you prefer faster value**:
-1. Start with initial baselines (data collection)
-2. Draft ADR-005 immediately (act on evidence while fresh)
-3. Let deny.toml be a separate small task
-
-**Or, if focused on supply chain**:
-1. deny.toml first (security)
-2. Pre-release script (quality gate)
-3. CHANGELOG update (communication)
+**Total**: ~1.5 hours of focused work to close the loop on stability infrastructure.
 
 ---
 
@@ -217,21 +159,20 @@ Add to `CHANGELOG.md` under v3.3.0 section:
 
 | File | Action | Effort |
 |------|--------|--------|
-| `deny.toml` | Create | 30 min |
-| `kb/Standards/ADR/ADR-005-typed-id.md` | Create | 90 min |
-| `kb/Experiments/EXP-001.md` | Update (add baselines) | 5 min |
-| `kb/Experiments/EXP-004.md` | Update (add baselines) | 5 min |
+| `kb/Baselines/latest-baseline.json` | Populate (auto from bench run) | 5 min |
+| `kb/Baselines/trends.csv` | Append first data point | 2 min |
+| `kb/Experiments/EXP-001.md` | Update baseline table | 5 min |
+| `kb/Experiments/EXP-004.md` | Update baseline table | 5 min |
 | `scripts/pre-release.sh` | Create | 45 min |
 | `CHANGELOG.md` | Update | 20 min |
-| `.github/workflows/security.yml` | Update (if deny.toml additions needed) | 10 min |
 
 ---
 
 ## Success Criteria
 
-✅ **Immediate**: All 3 pillars (infrastructure, evidence, automation) operational  
-✅ **Near-term**: Baselines established, ADR drafted, release process documented  
-✅ **Outcome**: Convergence team runs stability tests weekly, acts on evidence
+✅ **Immediate**: All infrastructure operational with real baseline data  
+✅ **Near-term**: Release process documented, pre-release check automated  
+✅ **Outcome**: Team runs stability tests weekly, acts on evidence
 
 ---
 

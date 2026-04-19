@@ -5,6 +5,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
-converge-core = { path = "../../crates/core" }
+converge-kernel = { path = "../../crates/kernel" }
+converge-pack = { path = "../../crates/pack" }
 async-trait.workspace = true
 tokio.workspace = true

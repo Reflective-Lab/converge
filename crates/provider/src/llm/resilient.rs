@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 use tracing::{info, warn};
 
-use converge_core::traits::{
+use converge_provider_api::{
     BoxFuture, ChatBackend, ChatRequest, ChatResponse, DynChatBackend, LlmError,
 };
 

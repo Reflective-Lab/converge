@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automated weekly stability workflow with regression detection (`stability.yml`)
   - Performance baseline tracking and trend analysis (`kb/Baselines/`)
   - Hypothesis-driven experiment framework (EXP-001 through EXP-005)
-  - Baseline extraction script (`ops/scripts/extract-criterion-baseline.py`)
+  - Baseline extraction script (moved to `runway` repo)
 
 ### Changed
 - `OutcomeRecorded` experience event now carries optional `metadata: HashMap<String, String>` for provider/gateway telemetry.

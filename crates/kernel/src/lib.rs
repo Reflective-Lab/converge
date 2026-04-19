@@ -7,6 +7,11 @@
 //! Consumers embed the kernel here; they author packs in `converge-pack`
 //! and use `converge-model` for shared semantic types.
 
+pub use converge_core::gates::hitl::{GateDecision, TimeoutAction, TimeoutPolicy};
+pub use converge_core::gates::{
+    FlowAction, FlowGateAuthorizer, FlowGateContext, FlowGateInput, FlowGateOutcome,
+    FlowGatePrincipal, FlowGateResource,
+};
 pub use converge_core::{
     Budget, Context, ConvergeError, ConvergeResult, Criterion, CriterionEvaluator,
     CriterionOutcome, CriterionResult, DecisionStep, Engine, EngineHitlPolicy, EventQuery,

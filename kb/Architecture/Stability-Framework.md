@@ -2,7 +2,7 @@
 name: Stability Framework Architecture
 description: Production-grade stability testing pipeline with automated regression detection
 type: architecture
-source: human
+source: mixed
 ---
 
 # Stability Testing Framework
@@ -19,7 +19,7 @@ Converge stability testing transforms ad-hoc manual validation into systematic, 
 - **File**: `crates/core/benches/engine_bench.rs` (4 benchmarks)
 - **Tool**: Criterion (JSON output to `target/criterion/`)
 - **Metrics**: p50, p95, p99, mean, stddev (microseconds)
-- **Extraction**: `ops/scripts/extract-criterion-baseline.py`
+- **Extraction**: `extract-criterion-baseline.py` (moved to `runway` repo)
 - **Storage**: `kb/Baselines/trends.csv` (historical tracking)
 
 **Benchmarks**:
@@ -98,7 +98,7 @@ Converge stability testing transforms ad-hoc manual validation into systematic, 
 5. Whitespace-only IDs accepted (should reject)
 6. Uppercase letters accepted (should enforce lowercase)
 
-**Purpose**: These tests become acceptance criteria for ADR-005 (Typed-ID newtype)
+**Purpose**: These tests become acceptance criteria for ADR-006 (Typed-ID newtype)
 
 ### 5. Supply Chain Security
 
@@ -176,7 +176,7 @@ cargo bench -p converge-core
 
 **Regression Detection** (after benchmark):
 ```bash
-python3 ops/scripts/extract-criterion-baseline.py
+python3 runway/ops/scripts/extract-criterion-baseline.py
 cat kb/Baselines/latest-summary.md
 ```
 
@@ -302,7 +302,7 @@ Based on EXP-001 and benchmarks:
 2. **Distributed tracing** — Span-level latency breakdown
 3. **Custom metrics** — Engine-specific histograms (fact count, cycle count)
 4. **Flame graphs** — CPU profiling under load
-5. **ADR-005 implementation** — Typed-ID newtype (evidence ready in EXP-002)
+5. **ADR-006 implementation** — Typed-ID newtype (evidence ready in EXP-002)
 6. **deny.toml hardening** — Supply chain risk assessment
 
 ## References
@@ -313,6 +313,6 @@ Based on EXP-001 and benchmarks:
 - `crates/core/tests/chaos.rs` — Chaos test suite
 - `crates/core/tests/soak.rs` — Long-running stability tests
 - `crates/core/tests/context_properties.rs` — Property tests + ADR evidence
-- `ops/scripts/extract-criterion-baseline.py` — Baseline extraction
+- Baseline extraction script: moved to `runway` repo
 - `kb/Baselines/README.md` — Baseline format specification
 - `kb/Experiments/` — Hypothesis tracking and evidence

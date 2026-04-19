@@ -5,5 +5,5 @@ edition = "2024"
 publish = false
 
 [dependencies]
-converge-core = { path = "../../crates/core" }
+converge-provider-api = { path = "../../crates/provider-api" }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

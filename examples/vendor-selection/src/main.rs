@@ -6,14 +6,12 @@
 //! Demonstrates: swarms, consensus/aggregation, multi-criteria scoring, and
 //! Cedar-backed procurement gating.
 
-use converge_core::{
-    AgentEffect, Context, ContextKey, Engine, EngineHitlPolicy, ProposedFact, RunResult, Suggestor,
-    gates::hitl::GateDecision,
-    gates::{
-        FlowAction, FlowGateAuthorizer, FlowGateContext, FlowGateInput, FlowGateOutcome,
-        FlowGatePrincipal, FlowGateResource, TimeoutAction, TimeoutPolicy,
-    },
+use converge_kernel::{
+    Context, Engine, EngineHitlPolicy, FlowAction, FlowGateAuthorizer, FlowGateContext,
+    FlowGateInput, FlowGateOutcome, FlowGatePrincipal, FlowGateResource, GateDecision, RunResult,
+    TimeoutAction, TimeoutPolicy,
 };
+use converge_pack::{AgentEffect, Context as ContextView, ContextKey, ProposedFact, Suggestor};
 use converge_policy::PolicyEngine;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -74,7 +72,7 @@ fn vendor_selection_input(
     }
 }
 
-fn top_vendor(ctx: &dyn converge_core::ContextView) -> Option<serde_json::Value> {
+fn top_vendor(ctx: &dyn ContextView) -> Option<serde_json::Value> {
     let recommendation = ctx
         .get(ContextKey::Strategies)
         .iter()
@@ -90,7 +88,7 @@ fn top_vendor(ctx: &dyn converge_core::ContextView) -> Option<serde_json::Value>
     })
 }
 
-fn has_procurement_approval(ctx: &dyn converge_core::ContextView) -> bool {
+fn has_procurement_approval(ctx: &dyn ContextView) -> bool {
     ctx.get(ContextKey::Proposals)
         .iter()
         .any(|fact| fact.id == "procurement-approval")
@@ -116,11 +114,11 @@ impl Suggestor for VendorDataAgent {
         &[ContextKey::Seeds]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn ContextView) -> bool {
         ctx.has(ContextKey::Seeds) && !ctx.has(ContextKey::Signals)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
         let seeds = ctx.get(ContextKey::Seeds);
         let seed = seeds.first();
 
@@ -166,11 +164,11 @@ impl Suggestor for PriceEvaluatorAgent {
         &[ContextKey::Signals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn ContextView) -> bool {
         ctx.has(ContextKey::Signals) && !ctx.has(ContextKey::Evaluations)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
         let signals = ctx.get(ContextKey::Signals);
 
         let mut evaluations = Vec::new();
@@ -226,11 +224,11 @@ impl Suggestor for ComplianceEvaluatorAgent {
         &[ContextKey::Signals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn ContextView) -> bool {
         ctx.has(ContextKey::Signals) && !ctx.has(ContextKey::Evaluations)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
         let signals = ctx.get(ContextKey::Signals);
 
         let mut evaluations = Vec::new();
@@ -278,11 +276,11 @@ impl Suggestor for RiskEvaluatorAgent {
         &[ContextKey::Signals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn ContextView) -> bool {
         ctx.has(ContextKey::Signals) && !ctx.has(ContextKey::Evaluations)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
         let signals = ctx.get(ContextKey::Signals);
 
         let mut evaluations = Vec::new();
@@ -338,11 +336,11 @@ impl Suggestor for TimelineEvaluatorAgent {
         &[ContextKey::Signals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn ContextView) -> bool {
         ctx.has(ContextKey::Signals) && !ctx.has(ContextKey::Evaluations)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
         let signals = ctx.get(ContextKey::Signals);
 
         let mut evaluations = Vec::new();
@@ -398,11 +396,11 @@ impl Suggestor for ConsensusAgent {
         &[ContextKey::Evaluations]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn ContextView) -> bool {
         ctx.has(ContextKey::Evaluations) && !ctx.has(ContextKey::Strategies)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
         let evaluations = ctx.get(ContextKey::Evaluations);
 
         let mut vendor_scores: std::collections::HashMap<String, (f64, u32)> =
@@ -481,7 +479,7 @@ impl Suggestor for ProcurementRoutingAgent {
         &PROCUREMENT_ROUTING_DEPS
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn ContextView) -> bool {
         ctx.has(ContextKey::Signals)
             && ctx
                 .get(ContextKey::Strategies)
@@ -493,7 +491,7 @@ impl Suggestor for ProcurementRoutingAgent {
                 .any(|fact| fact.id == "vendor-procurement-routing")
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
         let Some(vendor) = top_vendor(ctx) else {
             return AgentEffect::default();
         };
@@ -541,14 +539,14 @@ impl Suggestor for ProcurementApprovalSimulationAgent {
         &[ContextKey::Constraints]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn ContextView) -> bool {
         ctx.get(ContextKey::Constraints)
             .iter()
             .any(|fact| fact.id == "vendor-procurement-routing")
             && !has_procurement_approval(ctx)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
         let Some(constraint) = ctx
             .get(ContextKey::Constraints)
             .iter()
@@ -597,7 +595,7 @@ impl Suggestor for VendorCommitDecisionAgent {
         &VENDOR_COMMIT_DEPS
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn ContextView) -> bool {
         ctx.has(ContextKey::Signals)
             && ctx
                 .get(ContextKey::Constraints)
@@ -609,7 +607,7 @@ impl Suggestor for VendorCommitDecisionAgent {
                 .any(|fact| fact.id == "vendor-commit-policy")
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
         let Some(vendor) = top_vendor(ctx) else {
             return AgentEffect::default();
         };

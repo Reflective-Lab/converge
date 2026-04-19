@@ -28,15 +28,13 @@ regex-lite.workspace = true
 base64.workspace = true
 sha2.workspace = true
 zeroize = { workspace = true, optional = true }
-
-# Async runtime used by async backend implementations
-tokio.workspace = true
-
-# Optional dependencies for vector stores
 lancedb = { workspace = true, optional = true }
 arrow-array = { workspace = true, optional = true }
 arrow-schema = { workspace = true, optional = true }
 futures = { workspace = true, optional = true }
+
+# Async runtime used by async backend implementations
+tokio.workspace = true
 
 [features]
 default = ["anthropic", "gemini", "openai", "openrouter", "mistral", "kong", "registry", "brave", "tavily"]

@@ -1,0 +1,48 @@
+{
+  "timestamp": "2026-04-18T22:17:36.984671Z",
+  "run_id": "20260418-221736",
+  "benchmarks": {
+    "engine_single_cycle": {
+      "p50_us": 1345.57,
+      "p95_us": 2050.92,
+      "p99_us": 2252.22,
+      "mean_us": 1410.42,
+      "std_dev_us": 326.79
+    },
+    "engine_multi_suggestor/suggestors/1": {
+      "p50_us": 1324.48,
+      "p95_us": 1980.46,
+      "p99_us": 2169.42,
+      "mean_us": 1379.2,
+      "std_dev_us": 306.76
+    },
+    "engine_multi_suggestor/suggestors/5": {
+      "p50_us": 1479.6,
+      "p95_us": 2150.04,
+      "p99_us": 2351.44,
+      "mean_us": 1509.23,
+      "std_dev_us": 326.95
+    },
+    "engine_multi_suggestor/suggestors/20": {
+      "p50_us": 1765.32,
+      "p95_us": 2529.27,
+      "p99_us": 2742.71,
+      "mean_us": 1850.14,
+      "std_dev_us": 346.49
+    },
+    "engine_budget_pressure_near_ceiling": {
+      "p50_us": 1280.66,
+      "p95_us": 1686.64,
+      "p99_us": 1806.98,
+      "mean_us": 1303.75,
+      "std_dev_us": 195.35
+    },
+    "engine_large_context_1000_facts": {
+      "p50_us": 20987.77,
+      "p95_us": 38873.11,
+      "p99_us": 43920.79,
+      "mean_us": 22812.3,
+      "std_dev_us": 8194.29
+    }
+  }
+}

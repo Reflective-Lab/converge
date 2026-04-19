@@ -24,7 +24,7 @@ FAILED_LAYERS=()
 
 # Layer 1: Structure (JSON Schema)
 echo "--- Layer 1: Structure Validation ---"
-if ./ops/scripts/validate-structure.sh; then
+if ./runway/ops/scripts/validate-structure.sh; then
   echo ""
 else
   echo "Structure validation failed"
@@ -34,7 +34,7 @@ fi
 
 # Layer 2: Policy Logic
 echo "--- Layer 2: Policy Validation ---"
-if ./ops/scripts/validate-policy.sh; then
+if ./runway/ops/scripts/validate-policy.sh; then
   echo ""
 else
   echo "Policy validation failed"
@@ -44,7 +44,7 @@ fi
 
 # Layer 3: Existing evals validation
 echo "--- Layer 3: Eval Frontmatter Validation ---"
-if ./ops/scripts/validate-evals.sh; then
+if ./runway/ops/scripts/validate-evals.sh; then
   echo ""
 else
   echo "Eval validation failed"
@@ -54,7 +54,7 @@ fi
 
 # Layer 4: Documentation Hygiene
 echo "--- Layer 4: Documentation Validation ---"
-if ./ops/scripts/validate-docs.sh; then
+if ./runway/ops/scripts/validate-docs.sh; then
   echo ""
 else
   echo "Documentation validation failed"

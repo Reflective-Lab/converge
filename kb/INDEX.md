@@ -9,6 +9,7 @@ All major entities in the Converge knowledge base, organized by category.
 
 - [System Overview](Architecture/System%20Overview.md)
 - [API Surfaces](Architecture/API%20Surfaces.md)
+- [Golden Path Matrix](Architecture/Golden%20Path%20Matrix.md)
 - [Crate Map](Architecture/Crate%20Map.md)
 - [Dependency Rules](Architecture/Dependency%20Rules.md)
 - [Engine Execution Model](Architecture/Engine%20Execution%20Model.md)
@@ -28,6 +29,8 @@ All major entities in the Converge knowledge base, organized by category.
 - [ADR-003: Pack Authoring Contract](Architecture/ADRs/ADR-003-pack-authoring-contract.md)
 - [ADR-004: Contract Stabilization](Architecture/ADRs/ADR-004-contract-stabilization.md)
 - [ADR-005: Type Ownership Boundaries](Architecture/ADRs/ADR-005-type-ownership-boundaries.md)
+- [ADR-006: Clock Injection for Kernel Determinism](Architecture/ADRs/ADR-006-clock-injection.md)
+- [ADR-007: Capability Contract Ownership](Architecture/ADRs/ADR-007-capability-contract-ownership.md)
 
 ## Building
 
@@ -38,6 +41,11 @@ All major entities in the Converge knowledge base, organized by category.
 - [Getting Started](Building/Getting%20Started.md)
 - [Streaming](Building/Streaming.md)
 - [Writing Agents](Building/Writing%20Agents.md)
+
+## Planning
+
+- [Milestones](Planning/MILESTONES.md)
+- [Layer API Hardening](Planning/LAYER-API-HARDENING.md)
 
 ## Concepts
 
