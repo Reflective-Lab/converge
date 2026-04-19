@@ -6,14 +6,14 @@
 //!
 //! This module provides concrete implementations of model selection
 //! with hardcoded knowledge of all providers. The abstract interface
-//! (`ModelSelectorTrait`, `AgentRequirements`) is in converge-core.
+//! (`ModelSelectorTrait`, `AgentRequirements`) is in converge-provider-api.
 
 use serde::{Deserialize, Serialize};
 
-use converge_core::model_selection::{
+use converge_provider_api::LlmError;
+use converge_provider_api::selection::{
     AgentRequirements, ComplianceLevel, CostClass, DataSovereignty, ModelSelectorTrait,
 };
-use converge_core::traits::LlmError;
 
 /// Breakdown of fitness score components.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

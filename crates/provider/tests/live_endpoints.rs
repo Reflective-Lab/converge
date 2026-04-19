@@ -4,11 +4,7 @@
 use std::sync::OnceLock;
 use std::time::Duration;
 
-use converge_core::model_selection::SelectionCriteria;
-use converge_core::traits::{
-    CapabilityError, ChatBackend, ChatMessage, ChatRequest, ChatResponse, ChatRole, DynChatBackend,
-    LlmError, ResponseFormat,
-};
+use converge_core::traits::CapabilityError;
 #[cfg(feature = "anthropic")]
 use converge_provider::AnthropicBackend;
 #[cfg(feature = "gemini")]
@@ -20,6 +16,10 @@ use converge_provider::OpenAiBackend;
 use converge_provider::{
     BraveSearchProvider, ChatBackendSelectionConfig, TavilySearchProvider, WebSearchBackend,
     WebSearchError, WebSearchRequest, select_chat_backend,
+};
+use converge_provider_api::{
+    ChatBackend, ChatMessage, ChatRequest, ChatResponse, ChatRole, DynChatBackend, LlmError,
+    ResponseFormat, SelectionCriteria,
 };
 
 #[derive(Clone, Copy)]

@@ -18,7 +18,7 @@
 //!
 //! This crate provides capability adapters (providers) that connect Converge
 //! workflows to external systems. Each provider implements
-//! [`ChatBackend`](converge_core::traits::ChatBackend) for LLM completions,
+//! [`ChatBackend`](converge_provider_api::ChatBackend) for LLM completions,
 //! or other capability traits for embedding, search, etc.
 //!
 //! # What Is a Provider?
@@ -45,7 +45,7 @@
 //!
 //! ## Structured Output
 //!
-//! All live chat backends accept [`ResponseFormat::Json`](converge_core::traits::ResponseFormat::Json),
+//! All live chat backends accept [`ResponseFormat::Json`](converge_provider_api::ResponseFormat::Json),
 //! but providers do not enforce it identically at request time:
 //! - OpenAI and Mistral use native `response_format` API fields
 //! - Gemini uses native `response_mime_type`
@@ -55,7 +55,7 @@
 //! - `Json`, `Yaml`, and `Toml` outputs are validated centrally
 //! - trivial outer code fences are stripped for those machine formats
 //! - a provider that returns prose for a structured request fails with
-//!   [`LlmError::ResponseFormatMismatch`](converge_core::traits::LlmError::ResponseFormatMismatch)
+//!   [`LlmError::ResponseFormatMismatch`](converge_provider_api::LlmError::ResponseFormatMismatch)
 //!
 //! Anthropic's instruction-based JSON handling is provider-native and correct for Claude.
 //! The difference is enforcement strength at request time, not post-response correctness.
@@ -66,7 +66,7 @@ pub mod secret;
 // Core contract types
 pub mod contract;
 
-// LLM Backend implementations (ChatBackend trait from converge-core)
+// LLM Backend implementations (ChatBackend trait from converge-provider-api)
 pub mod llm;
 
 // Capability registry
@@ -128,6 +128,7 @@ pub use llm::OpenRouterBackend;
 pub use llm::{
     ChatBackendSelectionConfig, ChatBackendSelectionConfigError, ResilientChatBackend,
     SelectedChatBackend, select_chat_backend, select_chat_backend_with_secret_provider,
+    select_healthy_chat_backend, select_healthy_chat_backend_with_secret_provider,
 };
 
 // Re-exports: search providers

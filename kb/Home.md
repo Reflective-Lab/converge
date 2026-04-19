@@ -48,6 +48,7 @@ Knowledge base for the Converge platform — a correctness-first, context-driven
 - [[Architecture/System Overview]] — system design, dependency graph, and runtime shape
 - [[Architecture/Hexagonal Architecture]] — ports and adapters, the big picture
 - [[Architecture/API Surfaces]] — the six public crates and who uses what
+- [[Architecture/Golden Path Matrix]] — the first dependency each next layer should reach for
 - [[Architecture/ADRs/README]] — binding architecture decisions
 - [[Architecture/Known Drift]] — where code diverges from axioms (and how we fix it)
 - [[Architecture/Ports]] — trait definitions (the boundary)
@@ -91,6 +92,11 @@ Knowledge base for the Converge platform — a correctness-first, context-driven
 - [[Workflow/Working with Claude]] — skills vs Justfile
 - [[Workflow/Working with Codex]] — plain-language workflow equivalents
 - [[Workflow/Working with Gemini]] — native tools + shared scripts
+
+## Planning
+
+- [[Planning/MILESTONES]] — scheduled delivery across releases
+- [[Planning/LAYER-API-HARDENING]] — move up the stack one layer at a time
 
 ## Experiments
 

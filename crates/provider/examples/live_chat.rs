@@ -3,9 +3,10 @@
 
 use std::error::Error;
 
-use converge_core::model_selection::{RequiredCapabilities, SelectionCriteria};
-use converge_core::traits::{ChatMessage, ChatRequest, ChatRole, ResponseFormat};
 use converge_provider::{ChatBackendSelectionConfig, SelectedChatBackend, select_chat_backend};
+use converge_provider_api::{
+    ChatMessage, ChatRequest, ChatRole, RequiredCapabilities, ResponseFormat, SelectionCriteria,
+};
 
 struct ConversationTuning {
     system_prompt: String,

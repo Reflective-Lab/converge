@@ -36,7 +36,7 @@ use crate::tavily::TavilySearchProvider;
 use converge_core::capability::{
     CapabilityKind, CapabilityMetadata, Embedding, GraphRecall, Modality, Reranking, VectorRecall,
 };
-use converge_core::model_selection::DataSovereignty;
+use converge_provider_api::selection::DataSovereignty;
 use std::collections::HashMap;
 use std::sync::Arc;
 

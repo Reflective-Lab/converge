@@ -14,6 +14,7 @@ categories = ["algorithms", "concurrency"]
 [dependencies]
 async-trait.workspace = true
 converge-pack = { workspace = true, features = ["kernel-authority"] }
+converge-provider-api.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 serde.workspace = true

@@ -26,7 +26,7 @@
 //! ```
 
 use crate::model_selection::{ModelMetadata, ModelSelector};
-use converge_core::model_selection::{ComplianceLevel, CostClass, DataSovereignty};
+use converge_provider_api::selection::{ComplianceLevel, CostClass, DataSovereignty};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use std::collections::HashMap;

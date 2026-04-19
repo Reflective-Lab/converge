@@ -7,13 +7,13 @@
 
 use std::sync::Arc;
 
-use converge_core::{Context, ContextKey, Engine, EventQuery, ExperienceEvent, ExperienceStore};
 use converge_domain::{
     AvailabilityRetrievalAgent, ConflictDetectionAgent, RequireParticipantAvailability,
     RequirePositiveDuration, RequireValidSlot, SlotOptimizationAgent, TimeZoneNormalizationAgent,
     WorkingHoursConstraintAgent,
 };
 use converge_experience::{InMemoryExperienceStore, StoreObserver, summarize_events};
+use converge_kernel::{Context, ContextKey, Engine, EventQuery, ExperienceEvent, ExperienceStore};
 
 fn print_experience_summary(store: &Arc<InMemoryExperienceStore>) {
     let Ok(events) = store.query_events(&EventQuery::default()) else {

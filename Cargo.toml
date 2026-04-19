@@ -15,10 +15,8 @@ members = [
     "crates/optimization",
     "crates/optimization/ortools-sys",
     "crates/analytics",
-    "dev/llm",
     "crates/policy",
     "crates/runtime",
-    "crates/application",
     "crates/storage",
     "examples/hello-convergence",
     "examples/custom-agent",
@@ -43,12 +41,11 @@ default-members = [
     "crates/optimization",
     "crates/optimization/ortools-sys",
     "crates/policy",
-    "crates/application",
     "crates/storage",
 ]
 
 [workspace.package]
-version = "3.3.1"
+version = "3.4.0"
 edition = "2024"
 rust-version = "1.94.0"
 license = "MIT"
@@ -71,10 +68,10 @@ converge-knowledge = { path = "crates/knowledge", version = "3.2.1" }
 converge-optimization = { path = "crates/optimization", version = "3.2.1" }
 ortools-sys = { path = "crates/optimization/ortools-sys", version = "3.2.1" }
 converge-analytics = { path = "crates/analytics", version = "3.2.1" }
-converge-llm = { path = "dev/llm", version = "3.2.1" }
 converge-policy = { path = "crates/policy", version = "3.2.1" }
 converge-runtime = { path = "crates/runtime", version = "3.2.1" }
 converge-application = { path = "crates/application", version = "3.2.1" }
+converge-llm = { path = "dev/llm", version = "3.2.1" }
 converge-storage = { path = "crates/storage", version = "3.2.1", default-features = false }
 
 # Shared dependencies
@@ -112,8 +109,8 @@ hmac = "0.12"
 hostname = "0.4"
 hyper = { version = "1.5", features = ["full"] }
 indexmap = "2"
-jsonwebtoken = { version = "10", default-features = false, features = ["aws_lc_rs", "use_pem"] }
-lancedb = { version = "0.26" }
+jsonwebtoken = { version = "9.3.1", default-features = false, features = ["use_pem"] }
+lancedb = { version = "0.26", default-features = false }
 llama-cpp-2 = { version = "0.1.143", default-features = false, features = ["metal"] }
 llama-burn = { git = "https://github.com/tracel-ai/models", package = "llama-burn", default-features = false }
 metrics = "0.24"
@@ -150,7 +147,7 @@ serde_yaml = "0.9"
 sha2 = "0.10"
 smallvec = "1.13"
 strum = { version = "0.26", features = ["derive"] }
-surrealdb = "3"
+surrealdb = { version = "3", default-features = false }
 tempfile = "3"
 thiserror = "2"
 tiktoken-rs = "0.5"

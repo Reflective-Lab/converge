@@ -13,9 +13,10 @@ use super::error_classification::{
 use super::format_contract::finalize_chat_response;
 use crate::secret::{EnvSecretProvider, SecretProvider, SecretString};
 use converge_core::backend::{BackendError, BackendResult};
-use converge_core::traits::{
+use converge_provider_api::{
     BoxFuture, ChatBackend, ChatRequest, ChatResponse, ChatRole, FinishReason as ChatFinishReason,
-    LlmError as ChatLlmError, TokenUsage as ChatTokenUsage, ToolCall as ChatToolCall,
+    LlmError as ChatLlmError, ResponseFormat, TokenUsage as ChatTokenUsage,
+    ToolCall as ChatToolCall,
 };
 
 pub struct OpenAiBackend {
@@ -181,9 +182,7 @@ impl OpenAiBackend {
         // Only JSON has native API-level enforcement; other structured formats
         // are handled via the system prompt instruction above.
         let response_format = match req.response_format {
-            converge_core::traits::ResponseFormat::Json => {
-                Some(serde_json::json!({"type": "json_object"}))
-            }
+            ResponseFormat::Json => Some(serde_json::json!({"type": "json_object"})),
             _ => None,
         };
 

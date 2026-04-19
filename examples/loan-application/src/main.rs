@@ -5,11 +5,10 @@
 //!
 //! Demonstrates: parallel execution, conditional HITL (borderline cases), consensus.
 
-use converge_core::{
-    AgentEffect, Context, ContextKey, Engine, EngineHitlPolicy, ProposedFact, RunResult, Suggestor,
-    gates::hitl::GateDecision,
-    gates::{TimeoutAction, TimeoutPolicy},
+use converge_kernel::{
+    Context, Engine, EngineHitlPolicy, GateDecision, RunResult, TimeoutAction, TimeoutPolicy,
 };
+use converge_pack::{AgentEffect, Context as ContextView, ContextKey, ProposedFact, Suggestor};
 
 struct ApplicationIngestionAgent;
 
@@ -23,11 +22,11 @@ impl Suggestor for ApplicationIngestionAgent {
         &[ContextKey::Seeds]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn ContextView) -> bool {
         ctx.has(ContextKey::Seeds) && !ctx.has(ContextKey::Signals)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
         let seeds = ctx.get(ContextKey::Seeds);
         let seed = seeds.first();
 
@@ -61,11 +60,11 @@ impl Suggestor for DocumentVerificationAgent {
         &[ContextKey::Signals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn ContextView) -> bool {
         ctx.has(ContextKey::Signals) && !ctx.has(ContextKey::Evaluations)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
         let signals = ctx.get(ContextKey::Signals);
         let signal = signals.first();
 
@@ -108,11 +107,11 @@ impl Suggestor for CreditCheckAgent {
         &[ContextKey::Signals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn ContextView) -> bool {
         ctx.has(ContextKey::Signals) && !ctx.has(ContextKey::Evaluations)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
         let signals = ctx.get(ContextKey::Signals);
         let signal = signals.first();
 
@@ -189,11 +188,11 @@ impl Suggestor for ComplianceAgent {
         &[ContextKey::Signals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn ContextView) -> bool {
         ctx.has(ContextKey::Signals) && !ctx.has(ContextKey::Evaluations)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
         let signals = ctx.get(ContextKey::Signals);
         let signal = signals.first();
 
@@ -257,11 +256,11 @@ impl Suggestor for RiskAssessmentAgent {
         &[ContextKey::Signals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn ContextView) -> bool {
         ctx.has(ContextKey::Signals) && !ctx.has(ContextKey::Evaluations)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
         let signals = ctx.get(ContextKey::Signals);
         let signal = signals.first();
 
@@ -327,11 +326,11 @@ impl Suggestor for LoanDecisionAgent {
         &[ContextKey::Evaluations]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn ContextView) -> bool {
         ctx.has(ContextKey::Evaluations) && !ctx.has(ContextKey::Proposals)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
         let evaluations = ctx.get(ContextKey::Evaluations);
 
         let mut total_score = 0.0;

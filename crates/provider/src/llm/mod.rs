@@ -4,13 +4,13 @@
 //! Remote chat backend implementations for the canonical `ChatBackend` surface.
 //!
 //! This module provides async multi-turn provider adapters built on
-//! `converge_core::traits::ChatBackend`. These are the canonical remote
+//! `converge_provider_api::ChatBackend`. These are the canonical remote
 //! LLM interfaces used by application and tool layers.
 //!
 //! # Architecture
 //!
 //! ```text
-//! converge-core::traits
+//! converge-provider-api
 //!     │
 //!     │  ChatBackend / DynChatBackend
 //!     ▼
@@ -56,7 +56,8 @@ pub use openrouter::OpenRouterBackend;
 pub use resilient::ResilientChatBackend;
 pub use selection::{
     ChatBackendSelectionConfig, ChatBackendSelectionConfigError, SelectedChatBackend,
-    select_chat_backend, select_chat_backend_with_secret_provider,
+    select_chat_backend, select_chat_backend_with_secret_provider, select_healthy_chat_backend,
+    select_healthy_chat_backend_with_secret_provider,
 };
 
 #[cfg(feature = "gemini")]

@@ -19,10 +19,12 @@ use crate::llm::OpenAiBackend;
 use crate::llm::OpenRouterBackend;
 use crate::model_selection::{ProviderRegistry, SelectionResult};
 use crate::secret::{EnvSecretProvider, SecretProvider};
-use converge_core::model_selection::{
+use converge_provider_api::selection::{
     ComplianceLevel, CostTier, Jurisdiction, LatencyClass, SelectionCriteria, TaskComplexity,
 };
-use converge_core::traits::{DynChatBackend, LlmError};
+use converge_provider_api::{
+    ChatMessage, ChatRequest, ChatRole, DynChatBackend, LlmError, ResponseFormat,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ChatBackendSelectionConfig {
@@ -190,6 +192,115 @@ pub fn select_chat_backend_with_secret_provider(
     let selection = registry.select_with_details(&config.criteria.to_agent_requirements())?;
     let backend = instantiate_selected_backend(&selection, secrets)?;
     Ok(SelectedChatBackend { backend, selection })
+}
+
+/// Selects a chat backend with health probing — iterates ranked candidates and
+/// returns the first one that responds to a minimal probe request.
+///
+/// Use this instead of [`select_chat_backend`] when you want automatic fallback
+/// past providers whose API keys exist but are non-functional (e.g. exhausted
+/// free-tier quotas, revoked keys, or temporary outages).
+pub async fn select_healthy_chat_backend(
+    config: &ChatBackendSelectionConfig,
+) -> Result<SelectedChatBackend, LlmError> {
+    select_healthy_chat_backend_with_secret_provider(config, &EnvSecretProvider).await
+}
+
+/// Like [`select_healthy_chat_backend`] but with an explicit secret provider.
+pub async fn select_healthy_chat_backend_with_secret_provider(
+    config: &ChatBackendSelectionConfig,
+    secrets: &dyn SecretProvider,
+) -> Result<SelectedChatBackend, LlmError> {
+    let registry = if let Some(provider) = config.provider_override.as_deref() {
+        let provider = normalize_provider_name(provider).ok_or_else(|| LlmError::InvalidRequest {
+            message: format!(
+                "Unsupported CONVERGE_LLM_FORCE_PROVIDER={provider}. Expected one of: anthropic, openai, gemini, mistral, openrouter, kong."
+            ),
+        })?;
+        if !is_chat_provider_available(provider, secrets) {
+            return Err(LlmError::AuthDenied {
+                message: format!(
+                    "Requested provider {provider} is not available. Configure the matching API key first."
+                ),
+            });
+        }
+        ProviderRegistry::with_providers(&[provider])
+    } else {
+        chat_provider_registry(secrets)
+    };
+
+    let selection = registry.select_with_details(&config.criteria.to_agent_requirements())?;
+
+    let mut last_error = None;
+    for (candidate, fitness) in &selection.candidates {
+        let candidate_selection = SelectionResult {
+            selected: candidate.clone(),
+            fitness: fitness.clone(),
+            candidates: selection.candidates.clone(),
+            rejected: selection.rejected.clone(),
+        };
+
+        let backend = match instantiate_selected_backend(&candidate_selection, secrets) {
+            Ok(b) => b,
+            Err(e) => {
+                tracing::debug!(
+                    provider = %candidate.provider,
+                    model = %candidate.model,
+                    error = %e,
+                    "skipping candidate: instantiation failed"
+                );
+                last_error = Some(e);
+                continue;
+            }
+        };
+
+        match probe_backend(&backend).await {
+            Ok(()) => {
+                tracing::info!(
+                    provider = %candidate.provider,
+                    model = %candidate.model,
+                    "health probe passed"
+                );
+                return Ok(SelectedChatBackend {
+                    backend,
+                    selection: candidate_selection,
+                });
+            }
+            Err(e) => {
+                tracing::warn!(
+                    provider = %candidate.provider,
+                    model = %candidate.model,
+                    error = %e,
+                    "health probe failed, trying next candidate"
+                );
+                last_error = Some(e);
+            }
+        }
+    }
+
+    Err(last_error.unwrap_or_else(|| LlmError::ProviderError {
+        message: "No healthy provider found among candidates".into(),
+        code: None,
+    }))
+}
+
+async fn probe_backend(backend: &Arc<dyn DynChatBackend>) -> Result<(), LlmError> {
+    let request = ChatRequest {
+        messages: vec![ChatMessage {
+            role: ChatRole::User,
+            content: "hi".to_string(),
+            tool_calls: vec![],
+            tool_call_id: None,
+        }],
+        system: None,
+        tools: vec![],
+        response_format: ResponseFormat::Text,
+        max_tokens: Some(1),
+        temperature: None,
+        stop_sequences: vec![],
+        model: None,
+    };
+    backend.chat(request).await.map(|_| ())
 }
 
 fn chat_provider_registry(secrets: &dyn SecretProvider) -> ProviderRegistry {

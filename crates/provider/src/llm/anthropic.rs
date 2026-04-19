@@ -14,7 +14,7 @@ use super::error_classification::{
 use super::format_contract::finalize_chat_response;
 use crate::secret::{EnvSecretProvider, SecretProvider, SecretString};
 use converge_core::backend::{BackendError, BackendResult};
-use converge_core::traits::{
+use converge_provider_api::{
     BoxFuture, ChatBackend, ChatRequest, ChatResponse, ChatRole, FinishReason as ChatFinishReason,
     LlmError as ChatLlmError, TokenUsage as ChatTokenUsage, ToolCall,
 };

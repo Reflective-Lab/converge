@@ -1,7 +1,7 @@
 // Copyright 2024-2026 Reflective Labs
 // SPDX-License-Identifier: MIT
 
-use converge_core::traits::{
+use converge_provider_api::{
     ChatBackend, ChatMessage, ChatRequest, ChatResponse, ChatRole, FinishReason, LlmError,
     ResponseFormat, TokenUsage,
 };

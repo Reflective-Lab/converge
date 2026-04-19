@@ -12,10 +12,10 @@
 
 use std::time::{Duration, Instant};
 
-use converge_core::traits::{
+use converge_provider::OpenRouterBackend;
+use converge_provider_api::{
     ChatBackend, ChatMessage, ChatRequest, ChatRole, ResponseFormat, TokenUsage,
 };
-use converge_provider::OpenRouterBackend;
 
 const MODELS: &[Model] = &[
     Model {

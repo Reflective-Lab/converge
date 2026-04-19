@@ -1,7 +1,7 @@
 // Copyright 2024-2026 Reflective Labs
 // SPDX-License-Identifier: MIT
 
-use converge_core::traits::{ChatResponse, LlmError, ResponseFormat};
+use converge_provider_api::{ChatResponse, LlmError, ResponseFormat};
 
 pub(super) fn finalize_chat_response(
     requested_format: ResponseFormat,

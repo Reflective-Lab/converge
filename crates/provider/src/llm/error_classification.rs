@@ -5,7 +5,7 @@ use std::fmt::Display;
 use std::time::Duration;
 
 use converge_core::backend::BackendError;
-use converge_core::traits::LlmError as ChatLlmError;
+use converge_provider_api::LlmError as ChatLlmError;
 
 const DEFAULT_RETRY_AFTER: Duration = Duration::from_secs(1);
 

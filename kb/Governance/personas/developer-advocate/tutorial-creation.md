@@ -96,16 +96,33 @@ Define 3-5 specific learning objectives using action verbs:
 
 ```rust
 // GOOD: Complete, runnable, with context
-use converge_core::{Proposal, Fact, PromotionGate};
+use async_trait::async_trait;
+use converge_kernel::{Context, Engine};
+use converge_pack::{AgentEffect, Context as ContextView, ContextKey, ProposedFact, Suggestor};
 
-fn main() {
-    // Create a proposal from an AI suggestion
-    let proposal = Proposal::new("Generated summary", confidence: 0.87);
+struct SeedSuggestor;
 
-    // Proposals are NOT facts - they need promotion
-    let fact = PromotionGate::promote(proposal, ValidationReport::passed())?;
+#[async_trait]
+impl Suggestor for SeedSuggestor {
+    fn name(&self) -> &str { "seed" }
+    fn dependencies(&self) -> &[ContextKey] { &[] }
+    fn accepts(&self, ctx: &dyn ContextView) -> bool { !ctx.has(ContextKey::Seeds) }
+    async fn execute(&self, _ctx: &dyn ContextView) -> AgentEffect {
+        AgentEffect::with_proposal(
+            ProposedFact::new(ContextKey::Seeds, "observation-1", "Generated summary", "seed")
+                .with_confidence(0.87),
+        )
+    }
+}
 
-    println!("Fact established: {:?}", fact);
+#[tokio::main]
+async fn main() {
+    let mut engine = Engine::new();
+    engine.register_suggestor(SeedSuggestor);
+
+    let result = engine.run(Context::new()).await.expect("should converge");
+    let facts = result.context.get(ContextKey::Seeds);
+    println!("promoted facts: {}", facts.len());
 }
 ```
 

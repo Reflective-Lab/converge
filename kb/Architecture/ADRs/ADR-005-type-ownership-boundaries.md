@@ -58,7 +58,7 @@ Any PR adding a `pub struct`, `pub enum`, or `pub trait` to a publishable crate 
 ## Enforcement
 
 1. **Code review**: PRs adding `pub trait` or `pub struct` to publishable crates must declare ownership
-2. **Compile/API tests**: public crates use `converge_core::traits::*` as the canonical chat surface; no local copies of chat request/response types
+2. **Compile/API tests**: public crates use the canonical owner for each surface (`converge-provider-api` for chat contracts, `converge-pack` for authoring contracts); no local copies of request/response types
 3. **`just lint` must pass**: no `#[allow(deprecated)]` without a tracking comment
 
 ## Consequences

@@ -5,7 +5,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
-converge-core = { path = "../../crates/core" }
+converge-kernel = { path = "../../crates/kernel" }
 converge-domain = { path = "../../crates/domain" }
 tokio.workspace = true
 converge-experience = { path = "../../crates/experience" }
