@@ -2442,6 +2442,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_test",
+ "sha2",
  "static_assertions",
  "strum 0.26.3",
  "thiserror 2.0.18",
