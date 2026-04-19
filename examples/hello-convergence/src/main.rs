@@ -106,7 +106,11 @@ async fn main() {
     // 4. Inspect the outcome
     println!("Converged: {}", result.converged);
     println!("Cycles:    {}", result.cycles);
-    println!("Stop:      {:?}\n", result.stop_reason);
+    println!("Stop:      {:?}", result.stop_reason);
+    println!("Integrity: {} facts, clock={}, merkle={}...\n",
+        result.integrity.fact_count,
+        result.integrity.clock_time,
+        &result.integrity.merkle_root.to_hex()[..16]);
 
     println!("Seeds:");
     for fact in result.context.get(ContextKey::Seeds) {

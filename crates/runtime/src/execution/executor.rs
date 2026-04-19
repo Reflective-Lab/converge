@@ -33,6 +33,8 @@ pub struct ExecutionResult {
     pub duration_ms: u64,
     /// Fact counts by key.
     pub fact_counts: std::collections::HashMap<String, usize>,
+    /// Integrity proof for the converged context.
+    pub integrity: converge_core::IntegrityProof,
 }
 
 impl From<(ConvergeResult, u64)> for ExecutionResult {
@@ -50,6 +52,7 @@ impl From<(ConvergeResult, u64)> for ExecutionResult {
             context: result.context,
             duration_ms,
             fact_counts,
+            integrity: result.integrity,
         }
     }
 }
