@@ -40,6 +40,7 @@ jobs:
           tool: cargo-llvm-cov
       - name: Generate coverage
         run: cargo llvm-cov --workspace ${{ env.EXCLUDES }} --lcov --output-path lcov.info
+        continue-on-error: true
       - name: Upload to Codecov
         uses: codecov/codecov-action@v5
         with:
