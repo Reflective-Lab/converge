@@ -7,13 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.4.0] - 2026-04-19
+
 ### Added
+- **Narrowed downstream surface**: Provider capability contracts (`ChatBackend`, `ModelSelector`, `ChatRequest`/`ChatResponse`) moved from `converge-core` to `converge-provider-api`. Downstream consumers (`organism`, `helms`, `wolfgang`, `hackathon`) now depend on the lightweight API crate instead of pulling in the full engine.
+- **Integrity primitives** (available, not yet wired into engine):
+  - `LamportClock` — logical clock for causal ordering without wall clocks. Tested: initial state, monotonic increment, merge rule (max + 1).
+  - `ContentHash` — deterministic content fingerprinting. Tested: determinism, content sensitivity, verify, hex roundtrip. Note: uses FNV-1a stub, not SHA-256.
+  - `MerkleRoot` — tamper-evident tree over fact hashes. Tested: empty, single, two-element, determinism, content sensitivity.
+  - `TrackedContext` — context wrapper with embedded clock and merkle tree. Tested: computes root, verifies integrity.
+  - These primitives are exported from `converge_core::integrity` for opt-in use by downstream crates. They are not yet integrated into `Engine::run`.
 - **Kong AI Gateway provider**: Full `KongBackend` with Konnect Key Auth, retry with exponential backoff, model selection, and tool calling support. Added to default features.
 - **Provider metadata capture**: Generic `metadata: HashMap<String, String>` on `ChatResponse`. Kong captures gateway headers (upstream/proxy latency, request ID, model, rate limits). OpenRouter captures cost, provider, and cost breakdown from response body.
 - **`HypothesisResolved` experience event**: New `ExperienceEvent` variant for tracking hypothesis lifecycle across convergence cycles — confirmed, falsified, superseded, or unresolved.
-- **`/experiment` skill**: Hypothesis-driven development workflow with evidence logging (`experiments/LOG.md`).
-- **Kong live test**: End-to-end test through Konnect gateway in `live_endpoints.rs`.
-- **Property tests**: Metadata store roundtrip and serde roundtrip for `OutcomeRecorded` with arbitrary metadata maps.
 - **Stability Testing Framework**: Production-grade continuous validation pipeline
   - 4 Criterion benchmarks (Engine latency: single-cycle, multi-suggestor cascades 1/5/20, budget pressure, 1000-fact context)
   - 9 chaos tests (panic injection, malformed proposals, latency variance, determinism)
@@ -21,16 +27,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 9 property tests documenting Context ID validation gaps (evidence for typed-ID ADR)
   - Automated weekly stability workflow with regression detection (`stability.yml`)
   - Performance baseline tracking and trend analysis (`kb/Baselines/`)
-  - Hypothesis-driven experiment framework (EXP-001 through EXP-005)
-  - Baseline extraction script (moved to `runway` repo)
 
 ### Changed
 - `OutcomeRecorded` experience event now carries optional `metadata: HashMap<String, String>` for provider/gateway telemetry.
 - Kong added to provider model registry (gpt-4o, gpt-4o-mini, claude-sonnet-4).
+- `crates/application`, `dev/llm`, `dev/docker`, `ops/` moved to `runway` repo. Converge workspace is now focused on the kernel and provider surface.
 
 ### Fixed
 - Build failure: removed dead `converge_axiom` import and `StubChatBackend` from runtime handlers.
-- Clippy: removed needless returns in `ResilientChatBackend`.
+- Clippy: workspace-wide zero-warning pass (runtime, analytics, provider-api, examples).
+- Doctests: fixed stale `converge_traits` references in provider-api.
+- Integration tests: updated validate_rules tests to match stub endpoint behavior.
+- Documentation: all kb/ references to deleted `ops/` paths updated to point to `runway` repo.
+
+### Known Limitations
+- `ContentHash` uses FNV-1a (non-cryptographic). SHA-256 upgrade tracked for future release.
+- `bipartite_matching()` in `converge-optimization` contains a `todo!()` — will panic if called.
+- `validate_rules` endpoint is a stub (returns 500). Validation moved to `organism-application`.
+- mTLS identity extraction in gRPC interceptor is a placeholder (always returns `None`).
+- `rsa` 0.9.10 has a medium-severity advisory (Marvin attack). No upstream fix available; transitive dependency via `jsonwebtoken`.
 
 ## [3.2.1] - 2026-04-15
 
