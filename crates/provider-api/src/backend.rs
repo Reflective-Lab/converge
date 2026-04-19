@@ -90,7 +90,7 @@ impl std::fmt::Display for BackendKind {
 /// # Example
 ///
 /// ```
-/// use converge_traits::{Backend, BackendKind, Capability};
+/// use converge_provider_api::{Backend, BackendKind, Capability};
 ///
 /// struct MockLlm;
 ///

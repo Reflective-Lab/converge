@@ -156,7 +156,10 @@ pub fn extract_temporal_features(
 
 /// Load events lazily from Parquet or CSV based on file extension.
 fn load_events_lazy(path: &str) -> Result<LazyFrame> {
-    if path.ends_with(".csv") {
+    if std::path::Path::new(path)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("csv"))
+    {
         let pb = std::path::PathBuf::from(path);
         Ok(CsvReadOptions::default()
             .with_has_header(true)

@@ -180,7 +180,7 @@ impl DatasetAgent {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct DataValidationAgent;
 
 impl DataValidationAgent {
@@ -279,7 +279,7 @@ impl Suggestor for DataValidationAgent {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct FeatureEngineeringAgent;
 
 impl FeatureEngineeringAgent {
@@ -417,7 +417,7 @@ impl Suggestor for HyperparameterSearchAgent {
             }
         };
 
-        let training_plan = read_latest_plan_from_ctx(ctx).unwrap_or_else(|| TrainingPlan {
+        let training_plan = read_latest_plan_from_ctx(ctx).unwrap_or(TrainingPlan {
             iteration: split.iteration,
             max_rows: split.max_rows,
             train_fraction: 0.8,
@@ -535,7 +535,7 @@ impl Suggestor for DatasetAgent {
             ));
         }
 
-        let plan = read_latest_plan_from_ctx(ctx).unwrap_or_else(|| TrainingPlan {
+        let plan = read_latest_plan_from_ctx(ctx).unwrap_or(TrainingPlan {
             iteration: 1,
             max_rows: total_rows,
             train_fraction: 0.8,
@@ -742,7 +742,7 @@ impl Suggestor for ModelTrainingAgent {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ModelEvaluationAgent;
 
 impl ModelEvaluationAgent {
@@ -751,7 +751,7 @@ impl ModelEvaluationAgent {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ModelRegistryAgent;
 
 impl ModelRegistryAgent {
@@ -817,7 +817,7 @@ impl Suggestor for ModelRegistryAgent {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct MonitoringAgent;
 
 impl MonitoringAgent {
@@ -875,7 +875,7 @@ impl Suggestor for MonitoringAgent {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct DeploymentAgent;
 
 impl DeploymentAgent {
@@ -1199,7 +1199,7 @@ fn load_dataframe(path: &Path) -> Result<DataFrame> {
 
     let path_str = path
         .to_str()
-        .ok_or_else(|| anyhow!("path is not valid utf-8: {:?}", path))?;
+        .ok_or_else(|| anyhow!("path is not valid utf-8: {}", path.display()))?;
 
     match extension.as_str() {
         "parquet" => {
@@ -1211,8 +1211,8 @@ fn load_dataframe(path: &Path) -> Result<DataFrame> {
             .try_into_reader_with_file_path(Some(path.to_path_buf()))?
             .finish()?),
         _ => Err(anyhow!(
-            "unsupported data format for path {:?} (expected .csv or .parquet)",
-            path
+            "unsupported data format for path {} (expected .csv or .parquet)",
+            path.display()
         )),
     }
 }

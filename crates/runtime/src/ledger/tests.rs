@@ -88,7 +88,7 @@ fn test_entry_structure() {
         key: "facts".to_string(),
         payload: b"test data".to_vec(),
         sequence: 42,
-        appended_at_ns: 1234567890_000_000_000,
+        appended_at_ns: 1_234_567_890_000_000_000,
         metadata: HashMap::from([
             ("agent_id".to_string(), "agent-001".to_string()),
             ("cycle".to_string(), "5".to_string()),
@@ -106,7 +106,7 @@ fn test_entry_structure() {
 #[test]
 fn test_snapshot_metadata() {
     let metadata = SnapshotMetadata {
-        created_at_ns: 1234567890_000_000_000,
+        created_at_ns: 1_234_567_890_000_000_000,
         entry_count: 100,
         version: 2,
     };

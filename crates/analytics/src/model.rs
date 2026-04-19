@@ -51,7 +51,7 @@ impl ModelConfig {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct InferenceAgent {
     // in real app, model might be Arc<Mutex<Model>> or just loaded
     // For demo we instantiate on fly or would hold it.

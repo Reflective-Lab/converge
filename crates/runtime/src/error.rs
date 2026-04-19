@@ -288,7 +288,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_io_error_response_status() {
-        let io_err = std::io::Error::new(std::io::ErrorKind::Other, "io failure");
+        let io_err = std::io::Error::other("io failure");
         let error = RuntimeError::Io(io_err);
         let response = error.into_response();
         assert_eq!(

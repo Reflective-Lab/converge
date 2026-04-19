@@ -33,6 +33,7 @@
 //! server.start().await?;
 //! ```
 
+#[allow(clippy::result_large_err)] // tonic::Status is the idiomatic gRPC error type
 mod server;
 
 pub use server::GrpcServer;

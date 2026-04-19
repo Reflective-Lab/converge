@@ -30,18 +30,18 @@ impl Suggestor for ApplicationIngestionAgent {
         let seeds = ctx.get(ContextKey::Seeds);
         let seed = seeds.first();
 
-        if let Some(s) = seed {
-            if let Ok(app) = serde_json::from_str::<serde_json::Value>(&s.content) {
-                return AgentEffect::with_proposal(
-                    ProposedFact::new(
-                        ContextKey::Signals,
-                        "application",
-                        app.to_string(),
-                        self.name(),
-                    )
-                    .with_confidence(1.0),
-                );
-            }
+        if let Some(s) = seed
+            && let Ok(app) = serde_json::from_str::<serde_json::Value>(&s.content)
+        {
+            return AgentEffect::with_proposal(
+                ProposedFact::new(
+                    ContextKey::Signals,
+                    "application",
+                    app.to_string(),
+                    self.name(),
+                )
+                .with_confidence(1.0),
+            );
         }
 
         AgentEffect::empty()
@@ -68,27 +68,27 @@ impl Suggestor for DocumentVerificationAgent {
         let signals = ctx.get(ContextKey::Signals);
         let signal = signals.first();
 
-        if let Some(s) = signal {
-            if let Ok(app) = serde_json::from_str::<serde_json::Value>(&s.content) {
-                let docs_complete = app
-                    .get("documents")
-                    .and_then(|d| d.as_bool())
-                    .unwrap_or(false);
+        if let Some(s) = signal
+            && let Ok(app) = serde_json::from_str::<serde_json::Value>(&s.content)
+        {
+            let docs_complete = app
+                .get("documents")
+                .and_then(|d| d.as_bool())
+                .unwrap_or(false);
 
-                return AgentEffect::with_proposal(
-                    ProposedFact::new(
-                        ContextKey::Evaluations,
-                        "documents",
-                        serde_json::json!({
-                            "criterion": "documents",
-                            "score": if docs_complete { 1.0 } else { 0.0 },
-                            "details": if docs_complete { "All required documents provided" } else { "Missing documents" }
-                        }).to_string(),
-                        self.name(),
-                    )
-                    .with_confidence(1.0),
-                );
-            }
+            return AgentEffect::with_proposal(
+                ProposedFact::new(
+                    ContextKey::Evaluations,
+                    "documents",
+                    serde_json::json!({
+                        "criterion": "documents",
+                        "score": if docs_complete { 1.0 } else { 0.0 },
+                        "details": if docs_complete { "All required documents provided" } else { "Missing documents" }
+                    }).to_string(),
+                    self.name(),
+                )
+                .with_confidence(1.0),
+            );
         }
 
         AgentEffect::empty()
@@ -115,61 +115,61 @@ impl Suggestor for CreditCheckAgent {
         let signals = ctx.get(ContextKey::Signals);
         let signal = signals.first();
 
-        if let Some(s) = signal {
-            if let Ok(app) = serde_json::from_str::<serde_json::Value>(&s.content) {
-                let credit_score: u32 = app
-                    .get("credit_score")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0) as u32;
-                let income: f64 = app.get("income").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                let requested: f64 = app
-                    .get("requested_amount")
-                    .and_then(|v| v.as_f64())
-                    .unwrap_or(0.0);
+        if let Some(s) = signal
+            && let Ok(app) = serde_json::from_str::<serde_json::Value>(&s.content)
+        {
+            let credit_score: u32 = app
+                .get("credit_score")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0) as u32;
+            let income: f64 = app.get("income").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let requested: f64 = app
+                .get("requested_amount")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0);
 
-                let credit_score_score = if credit_score >= 750 {
-                    1.0
-                } else if credit_score >= 700 {
-                    0.8
-                } else if credit_score >= 650 {
-                    0.6
-                } else if credit_score >= 600 {
-                    0.4
-                } else {
-                    0.1
-                };
+            let credit_score_score = if credit_score >= 750 {
+                1.0
+            } else if credit_score >= 700 {
+                0.8
+            } else if credit_score >= 650 {
+                0.6
+            } else if credit_score >= 600 {
+                0.4
+            } else {
+                0.1
+            };
 
-                let dti = requested / income;
-                let dti_score = if dti < 0.2 {
-                    1.0
-                } else if dti < 0.3 {
-                    0.8
-                } else if dti < 0.4 {
-                    0.5
-                } else {
-                    0.2
-                };
+            let dti = requested / income;
+            let dti_score = if dti < 0.2 {
+                1.0
+            } else if dti < 0.3 {
+                0.8
+            } else if dti < 0.4 {
+                0.5
+            } else {
+                0.2
+            };
 
-                let combined = (credit_score_score + dti_score) / 2.0;
+            let combined = (credit_score_score + dti_score) / 2.0;
 
-                return AgentEffect::with_proposal(
-                    ProposedFact::new(
-                        ContextKey::Evaluations,
-                        "credit",
-                        serde_json::json!({
-                            "criterion": "credit",
-                            "score": combined,
-                            "details": {
-                                "credit_score": credit_score,
-                                "dti_ratio": dti
-                            }
-                        })
-                        .to_string(),
-                        self.name(),
-                    )
-                    .with_confidence(1.0),
-                );
-            }
+            return AgentEffect::with_proposal(
+                ProposedFact::new(
+                    ContextKey::Evaluations,
+                    "credit",
+                    serde_json::json!({
+                        "criterion": "credit",
+                        "score": combined,
+                        "details": {
+                            "credit_score": credit_score,
+                            "dti_ratio": dti
+                        }
+                    })
+                    .to_string(),
+                    self.name(),
+                )
+                .with_confidence(1.0),
+            );
         }
 
         AgentEffect::empty()
@@ -196,48 +196,48 @@ impl Suggestor for ComplianceAgent {
         let signals = ctx.get(ContextKey::Signals);
         let signal = signals.first();
 
-        if let Some(s) = signal {
-            if let Ok(app) = serde_json::from_str::<serde_json::Value>(&s.content) {
-                let us_citizen = app
-                    .get("us_citizen")
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(false);
-                let age = app.get("age").and_then(|v| v.as_u64()).unwrap_or(0);
-                let bankruptcies = app
-                    .get("bankruptcies")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0);
+        if let Some(s) = signal
+            && let Ok(app) = serde_json::from_str::<serde_json::Value>(&s.content)
+        {
+            let us_citizen = app
+                .get("us_citizen")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let age = app.get("age").and_then(|v| v.as_u64()).unwrap_or(0);
+            let bankruptcies = app
+                .get("bankruptcies")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
 
-                let mut violations = Vec::new();
-                if !us_citizen {
-                    violations.push("Not a US citizen");
-                }
-                if age < 18 {
-                    violations.push("Under 18 years old");
-                }
-                if bankruptcies > 0 {
-                    violations.push("Recent bankruptcies");
-                }
-
-                let compliant = violations.is_empty();
-
-                return AgentEffect::with_proposal(
-                    ProposedFact::new(
-                        ContextKey::Evaluations,
-                        "compliance",
-                        serde_json::json!({
-                            "criterion": "compliance",
-                            "score": if compliant { 1.0 } else { 0.0 },
-                            "details": {
-                                "violations": violations
-                            }
-                        })
-                        .to_string(),
-                        self.name(),
-                    )
-                    .with_confidence(1.0),
-                );
+            let mut violations = Vec::new();
+            if !us_citizen {
+                violations.push("Not a US citizen");
             }
+            if age < 18 {
+                violations.push("Under 18 years old");
+            }
+            if bankruptcies > 0 {
+                violations.push("Recent bankruptcies");
+            }
+
+            let compliant = violations.is_empty();
+
+            return AgentEffect::with_proposal(
+                ProposedFact::new(
+                    ContextKey::Evaluations,
+                    "compliance",
+                    serde_json::json!({
+                        "criterion": "compliance",
+                        "score": if compliant { 1.0 } else { 0.0 },
+                        "details": {
+                            "violations": violations
+                        }
+                    })
+                    .to_string(),
+                    self.name(),
+                )
+                .with_confidence(1.0),
+            );
         }
 
         AgentEffect::empty()
@@ -264,50 +264,50 @@ impl Suggestor for RiskAssessmentAgent {
         let signals = ctx.get(ContextKey::Signals);
         let signal = signals.first();
 
-        if let Some(s) = signal {
-            if let Ok(app) = serde_json::from_str::<serde_json::Value>(&s.content) {
-                let employment_years: u32 = app
-                    .get("employment_years")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0) as u32;
-                let requested: f64 = app
-                    .get("requested_amount")
-                    .and_then(|v| v.as_f64())
-                    .unwrap_or(0.0);
+        if let Some(s) = signal
+            && let Ok(app) = serde_json::from_str::<serde_json::Value>(&s.content)
+        {
+            let employment_years: u32 = app
+                .get("employment_years")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0) as u32;
+            let requested: f64 = app
+                .get("requested_amount")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0);
 
-                let risk_factors = if employment_years < 1 {
-                    vec!["Less than 1 year employment"]
-                } else if requested > 500000.0 {
-                    vec!["High loan amount"]
-                } else {
-                    vec![]
-                };
+            let risk_factors = if employment_years < 1 {
+                vec!["Less than 1 year employment"]
+            } else if requested > 500000.0 {
+                vec!["High loan amount"]
+            } else {
+                vec![]
+            };
 
-                let risk_score = if risk_factors.is_empty() {
-                    1.0
-                } else if risk_factors.len() == 1 {
-                    0.6
-                } else {
-                    0.3
-                };
+            let risk_score = if risk_factors.is_empty() {
+                1.0
+            } else if risk_factors.len() == 1 {
+                0.6
+            } else {
+                0.3
+            };
 
-                return AgentEffect::with_proposal(
-                    ProposedFact::new(
-                        ContextKey::Evaluations,
-                        "risk",
-                        serde_json::json!({
-                            "criterion": "risk",
-                            "score": risk_score,
-                            "details": {
-                                "risk_factors": risk_factors
-                            }
-                        })
-                        .to_string(),
-                        self.name(),
-                    )
-                    .with_confidence(1.0),
-                );
-            }
+            return AgentEffect::with_proposal(
+                ProposedFact::new(
+                    ContextKey::Evaluations,
+                    "risk",
+                    serde_json::json!({
+                        "criterion": "risk",
+                        "score": risk_score,
+                        "details": {
+                            "risk_factors": risk_factors
+                        }
+                    })
+                    .to_string(),
+                    self.name(),
+                )
+                .with_confidence(1.0),
+            );
         }
 
         AgentEffect::empty()
@@ -337,11 +337,11 @@ impl Suggestor for LoanDecisionAgent {
         let mut count = 0;
 
         for eval in evaluations {
-            if let Ok(e) = serde_json::from_str::<serde_json::Value>(&eval.content) {
-                if let Some(score) = e.get("score").and_then(|v| v.as_f64()) {
-                    total_score += score;
-                    count += 1;
-                }
+            if let Ok(e) = serde_json::from_str::<serde_json::Value>(&eval.content)
+                && let Some(score) = e.get("score").and_then(|v| v.as_f64())
+            {
+                total_score += score;
+                count += 1;
             }
         }
 

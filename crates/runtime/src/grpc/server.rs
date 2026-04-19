@@ -71,7 +71,7 @@ impl GrpcServer {
             .add_service(ConvergeServiceServer::new(service))
             .serve(addr)
             .await
-            .map_err(|e| RuntimeError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+            .map_err(|e| RuntimeError::Io(std::io::Error::other(e)))?;
 
         Ok(())
     }
@@ -131,7 +131,7 @@ impl GrpcServer {
             .add_service(ConvergeServiceServer::new(service))
             .serve(addr)
             .await
-            .map_err(|e| RuntimeError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+            .map_err(|e| RuntimeError::Io(std::io::Error::other(e)))?;
 
         Ok(())
     }

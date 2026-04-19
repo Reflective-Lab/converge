@@ -724,10 +724,10 @@ async fn main() {
             println!("⏸️  HITL Gate: Cedar required procurement approval");
             println!("    Approval request: {}", pause.request.summary);
             println!();
-            if let Some(vendor) = top_vendor(&pause.context) {
-                if let Some(id) = vendor.get("id").and_then(|value| value.as_str()) {
-                    println!("    Top vendor: {}", id);
-                }
+            if let Some(vendor) = top_vendor(&pause.context)
+                && let Some(id) = vendor.get("id").and_then(|value| value.as_str())
+            {
+                println!("    Top vendor: {}", id);
             }
 
             let decision =

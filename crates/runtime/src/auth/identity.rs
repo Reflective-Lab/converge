@@ -35,7 +35,7 @@ impl ServiceIdentity {
         // Extract service name from spiffe://trust-domain/path/to/service
         let service_id = spiffe
             .strip_prefix("spiffe://")
-            .and_then(|s| s.split('/').last())
+            .and_then(|s| s.rsplit('/').next())
             .unwrap_or(&spiffe)
             .to_string();
 

@@ -5,6 +5,7 @@
 //! - Validating JWT tokens and extracting user identity
 //! - Attaching verified identity to request extensions
 
+#[allow(clippy::result_large_err)] // tonic::Status is the idiomatic gRPC error type
 mod auth;
 
 pub use auth::{AuthInterceptor, AuthInterceptorLayer};

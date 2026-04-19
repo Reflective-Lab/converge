@@ -4,7 +4,7 @@ use anyhow::{Result, anyhow};
 use converge_core::{AgentEffect, ContextKey, ProposedFact, Suggestor};
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// A fact content representing computed features.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -16,7 +16,7 @@ pub struct FeatureVector {
 impl FeatureVector {
     pub fn new(data: Vec<f32>, shape: [usize; 2]) -> Result<Self> {
         let expected = shape
-            .get(0)
+            .first()
             .and_then(|rows| shape.get(1).map(|cols| rows.saturating_mul(*cols)))
             .unwrap_or(0);
         if data.len() != expected {
@@ -187,7 +187,7 @@ fn compute_features_from_df(
     Ok(FeatureVector::row(vec![left_val, right_val, interaction]))
 }
 
-fn load_dataframe(path: &PathBuf) -> Result<DataFrame> {
+fn load_dataframe(path: &Path) -> Result<DataFrame> {
     let extension = path
         .extension()
         .and_then(|ext| ext.to_str())
@@ -196,7 +196,7 @@ fn load_dataframe(path: &PathBuf) -> Result<DataFrame> {
 
     let path_str = path
         .to_str()
-        .ok_or_else(|| anyhow!("path is not valid utf-8: {:?}", path))?;
+        .ok_or_else(|| anyhow!("path is not valid utf-8: {}", path.display()))?;
 
     match extension.as_str() {
         "parquet" => {
@@ -208,8 +208,8 @@ fn load_dataframe(path: &PathBuf) -> Result<DataFrame> {
             .try_into_reader_with_file_path(Some(path.to_path_buf()))?
             .finish()?),
         _ => Err(anyhow!(
-            "unsupported data format for path {:?} (expected .csv or .parquet)",
-            path
+            "unsupported data format for path {} (expected .csv or .parquet)",
+            path.display()
         )),
     }
 }

@@ -26,7 +26,7 @@ use crate::capability::Capability;
 /// # Example
 ///
 /// ```
-/// use converge_traits::{BackendError, BackendErrorKind};
+/// use converge_provider_api::{BackendError, BackendErrorKind};
 ///
 /// let err = BackendError::new(BackendErrorKind::Timeout, "operation timed out");
 /// assert!(err.is_retryable());

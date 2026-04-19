@@ -116,7 +116,7 @@ pub fn read_tsv(path: &Path) -> Result<DataFrame> {
 pub fn read_parquet(path: &Path) -> Result<DataFrame> {
     let path_str = path
         .to_str()
-        .ok_or_else(|| anyhow!("path is not valid UTF-8: {:?}", path))?;
+        .ok_or_else(|| anyhow!("path is not valid UTF-8: {}", path.display()))?;
 
     let df = LazyFrame::scan_parquet(PlPath::from_str(path_str), Default::default())?.collect()?;
 
