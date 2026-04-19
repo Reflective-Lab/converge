@@ -8,6 +8,8 @@ vulnerability = "deny"
 unmaintained = "warn"
 yanked = "warn"
 notice = "warn"
+# lru 0.12.5 unsound IterMut — transitive via tantivy/lance, not in our code path
+ignore = ["RUSTSEC-2026-0002"]
 
 [licenses]
 unlicensed = "deny"
