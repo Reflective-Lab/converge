@@ -11,14 +11,10 @@ dist/
 .env.*
 !.env.example
 .DS_Store
+.claude/settings.local.json
 *.pdb
 .converge/
 .terraform/
 *.tfstate
 *.tfstate.*
 *.tfplan
-
-# Internal docs — not for partner eyes
-/docs/project/
-/docs/personas/
-MILESTONES.md
