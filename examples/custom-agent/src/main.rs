@@ -5,8 +5,9 @@
 //!
 //! Shows: Suggestor trait, accepts/execute contract, AgentEffect, ProposedFact.
 
-use converge_kernel::{Context, Engine};
-use converge_pack::{AgentEffect, Context as ContextView, ContextKey, ProposedFact, Suggestor};
+use converge_kernel::{
+    AgentEffect, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+};
 
 const NO_DEPENDENCIES: [ContextKey; 0] = [];
 
@@ -32,11 +33,11 @@ impl Suggestor for SeedOnceSuggestor {
         &NO_DEPENDENCIES
     }
 
-    fn accepts(&self, ctx: &dyn ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn Context) -> bool {
         !ctx.has(ContextKey::Seeds)
     }
 
-    async fn execute(&self, _ctx: &dyn ContextView) -> AgentEffect {
+    async fn execute(&self, _ctx: &dyn Context) -> AgentEffect {
         AgentEffect::with_proposal(
             ProposedFact::new(ContextKey::Seeds, self.id, self.content, self.name)
                 .with_confidence(1.0),
@@ -67,11 +68,11 @@ impl Suggestor for SummaryAgent {
         &[ContextKey::Seeds]
     }
 
-    fn accepts(&self, ctx: &dyn ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn Context) -> bool {
         !ctx.get(ContextKey::Seeds).is_empty() && ctx.get(ContextKey::Hypotheses).is_empty()
     }
 
-    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn Context) -> AgentEffect {
         let seeds = ctx.get(ContextKey::Seeds);
         let summary = seeds
             .iter()
@@ -104,7 +105,10 @@ async fn main() {
 
     engine.register_suggestor(SummaryAgent::new("summarizer"));
 
-    let result = engine.run(Context::new()).await.expect("should converge");
+    let result = engine
+        .run(ContextState::new())
+        .await
+        .expect("should converge");
 
     println!("Converged in {} cycles\n", result.cycles);
 

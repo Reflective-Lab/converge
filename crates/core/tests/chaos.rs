@@ -13,7 +13,7 @@
 //! determinism even under chaotic conditions.
 
 use converge_core::{
-    AgentEffect, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+    AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
     suggestors::SeedSuggestor,
 };
 use std::sync::{Arc, Mutex};

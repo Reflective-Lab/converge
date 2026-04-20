@@ -5,8 +5,9 @@
 //!
 //! Shows: Engine, agents, context, facts, and the convergence loop.
 
-use converge_kernel::{Context, Engine};
-use converge_pack::{AgentEffect, Context as ContextView, ContextKey, ProposedFact, Suggestor};
+use converge_kernel::{
+    AgentEffect, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+};
 
 const NO_DEPENDENCIES: [ContextKey; 0] = [];
 const SEED_DEPENDENCIES: [ContextKey; 1] = [ContextKey::Seeds];
@@ -33,11 +34,11 @@ impl Suggestor for SeedOnceSuggestor {
         &NO_DEPENDENCIES
     }
 
-    fn accepts(&self, ctx: &dyn ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn Context) -> bool {
         !ctx.has(ContextKey::Seeds)
     }
 
-    async fn execute(&self, _ctx: &dyn ContextView) -> AgentEffect {
+    async fn execute(&self, _ctx: &dyn Context) -> AgentEffect {
         AgentEffect::with_proposal(
             ProposedFact::new(ContextKey::Seeds, self.id, self.content, self.name)
                 .with_confidence(1.0),
@@ -67,11 +68,11 @@ impl Suggestor for ReactOnceSuggestor {
         &SEED_DEPENDENCIES
     }
 
-    fn accepts(&self, ctx: &dyn ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn Context) -> bool {
         ctx.has(ContextKey::Seeds) && !ctx.has(ContextKey::Hypotheses)
     }
 
-    async fn execute(&self, _ctx: &dyn ContextView) -> AgentEffect {
+    async fn execute(&self, _ctx: &dyn Context) -> AgentEffect {
         AgentEffect::with_proposal(
             ProposedFact::new(ContextKey::Hypotheses, self.id, self.content, self.name)
                 .with_confidence(0.95),
@@ -101,7 +102,10 @@ async fn main() {
     ));
 
     // 3. Run until convergence (fixed point)
-    let result = engine.run(Context::new()).await.expect("should converge");
+    let result = engine
+        .run(ContextState::new())
+        .await
+        .expect("should converge");
 
     // 4. Inspect the outcome
     println!("Converged: {}", result.converged);

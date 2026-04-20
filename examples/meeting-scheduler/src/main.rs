@@ -13,7 +13,9 @@ use converge_domain::{
     WorkingHoursConstraintAgent,
 };
 use converge_experience::{InMemoryExperienceStore, StoreObserver, summarize_events};
-use converge_kernel::{Context, ContextKey, Engine, EventQuery, ExperienceEvent, ExperienceStore};
+use converge_kernel::{
+    ContextKey, ContextState, Engine, EventQuery, ExperienceEvent, ExperienceStore,
+};
 
 fn print_experience_summary(store: &Arc<InMemoryExperienceStore>) {
     let Ok(events) = store.query_events(&EventQuery::default()) else {
@@ -69,7 +71,7 @@ async fn main() {
     engine.register_invariant(RequireValidSlot);
     engine.set_event_observer(Arc::new(StoreObserver::new(experience_store.clone())));
 
-    let mut ctx = Context::new();
+    let mut ctx = ContextState::new();
     let _ = ctx.add_input(
         ContextKey::Seeds,
         "request-1",

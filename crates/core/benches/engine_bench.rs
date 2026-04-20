@@ -12,7 +12,7 @@
 //! Run with: `cargo bench -p converge-core`
 
 use converge_core::{
-    AgentEffect, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+    AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
     suggestors::SeedSuggestor,
 };
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};

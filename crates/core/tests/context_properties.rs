@@ -6,9 +6,7 @@
 //! These tests discover validation gaps and generate evidence for the typed-ID ADR.
 //! Documents current behavior that should be tightened in a future ADR.
 
-use converge_core::{
-    AgentEffect, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
-};
+use converge_core::{AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor};
 
 // ─── Helper: Suggestor that proposes a single fact ───────────────────────────
 

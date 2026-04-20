@@ -4,7 +4,7 @@
 
 use converge_core::suggestors::SeedSuggestor;
 use converge_core::{
-    AgentEffect, Budget, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+    AgentEffect, Budget, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
 };
 use proptest::prelude::*;
 

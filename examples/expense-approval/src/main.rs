@@ -7,11 +7,11 @@
 //! gate decisions projected from flow state.
 
 use converge_kernel::{
-    Context, Engine, EngineHitlPolicy, FlowAction, FlowGateAuthorizer, FlowGateContext,
-    FlowGateInput, FlowGateOutcome, FlowGatePrincipal, FlowGateResource, GateDecision, RunResult,
-    TimeoutAction, TimeoutPolicy,
+    AgentEffect, Context, ContextKey, ContextState, Engine, EngineHitlPolicy, FlowAction,
+    FlowGateAuthorizer, FlowGateContext, FlowGateInput, FlowGateOutcome, FlowGatePrincipal,
+    FlowGateResource, GateDecision, ProposedFact, RunResult, Suggestor, TimeoutAction,
+    TimeoutPolicy,
 };
-use converge_pack::{AgentEffect, Context as ContextView, ContextKey, ProposedFact, Suggestor};
 use converge_policy::PolicyEngine;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -36,7 +36,7 @@ fn expense_amount(expense: &serde_json::Value) -> i64 {
         .unwrap_or(0.0) as i64
 }
 
-fn has_human_approval(ctx: &dyn ContextView) -> bool {
+fn has_human_approval(ctx: &dyn Context) -> bool {
     ctx.get(ContextKey::Proposals)
         .iter()
         .any(|fact| fact.id.ends_with("-approval"))
@@ -96,11 +96,11 @@ impl Suggestor for ExpenseParsingAgent {
         &[ContextKey::Seeds]
     }
 
-    fn accepts(&self, ctx: &dyn ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn Context) -> bool {
         ctx.has(ContextKey::Seeds) && !ctx.has(ContextKey::Strategies)
     }
 
-    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn Context) -> AgentEffect {
         let seeds = ctx.get(ContextKey::Seeds);
         let seed = seeds.first();
 
@@ -136,7 +136,7 @@ impl Suggestor for PolicyValidationAgent {
         &[ContextKey::Strategies]
     }
 
-    fn accepts(&self, ctx: &dyn ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn Context) -> bool {
         ctx.has(ContextKey::Strategies)
             && !ctx
                 .get(ContextKey::Evaluations)
@@ -144,7 +144,7 @@ impl Suggestor for PolicyValidationAgent {
                 .any(|fact| fact.id == "expense-validate-policy")
     }
 
-    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn Context) -> AgentEffect {
         let strategies = ctx.get(ContextKey::Strategies);
         let strategy = strategies.first();
 
@@ -200,7 +200,7 @@ impl Suggestor for ApprovalRoutingAgent {
         &ROUTING_DEPS
     }
 
-    fn accepts(&self, ctx: &dyn ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn Context) -> bool {
         ctx.has(ContextKey::Strategies)
             && ctx
                 .get(ContextKey::Evaluations)
@@ -212,7 +212,7 @@ impl Suggestor for ApprovalRoutingAgent {
                 .any(|fact| fact.id == "expense-approval-routing")
     }
 
-    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn Context) -> AgentEffect {
         let evaluations = ctx.get(ContextKey::Evaluations);
         let strategies = ctx.get(ContextKey::Strategies);
 
@@ -282,7 +282,7 @@ impl Suggestor for CommitDecisionAgent {
         &COMMIT_DEPS
     }
 
-    fn accepts(&self, ctx: &dyn ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn Context) -> bool {
         ctx.has(ContextKey::Strategies)
             && ctx
                 .get(ContextKey::Constraints)
@@ -294,7 +294,7 @@ impl Suggestor for CommitDecisionAgent {
                 .any(|fact| fact.id == "expense-commit-policy")
     }
 
-    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn Context) -> AgentEffect {
         let Some(strategy) = ctx.get(ContextKey::Strategies).first() else {
             return AgentEffect::default();
         };
@@ -356,14 +356,14 @@ impl Suggestor for ApprovalSimulationAgent {
         &[ContextKey::Constraints]
     }
 
-    fn accepts(&self, ctx: &dyn ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn Context) -> bool {
         ctx.get(ContextKey::Constraints)
             .iter()
             .any(|fact| fact.id == "expense-approval-routing")
             && !has_human_approval(ctx)
     }
 
-    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn Context) -> AgentEffect {
         if let Some(c) = ctx
             .get(ContextKey::Constraints)
             .iter()
@@ -434,7 +434,7 @@ async fn main() {
         "receipt_attached": true
     });
 
-    let mut ctx = Context::new();
+    let mut ctx = ContextState::new();
     let _ = ctx.add_input(ContextKey::Seeds, "expense-1", expense.to_string());
 
     println!(

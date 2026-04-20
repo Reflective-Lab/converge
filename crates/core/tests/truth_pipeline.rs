@@ -4,9 +4,7 @@
 // Prove: the engine promotes through the gate, not directly.
 
 use converge_core::suggestors::{ReactOnceSuggestor, SeedSuggestor};
-use converge_core::{
-    AgentEffect, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
-};
+use converge_core::{AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor};
 
 // ── End-to-end: suggestor → proposal → engine promotion → fact ──
 

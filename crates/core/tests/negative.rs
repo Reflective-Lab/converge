@@ -3,7 +3,7 @@
 // Prove: the system rejects invalid input and handles edge cases gracefully.
 
 use converge_core::{
-    AgentEffect, Budget, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+    AgentEffect, Budget, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
 };
 
 // ── Invalid proposals: rejected by promotion gate ──

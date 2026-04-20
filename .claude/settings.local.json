@@ -54,7 +54,23 @@
       "Bash(cargo audit:*)",
       "Bash(cargo run:*)",
       "Read(//Users/kpernyer/dev/work/organism/**)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(chmod +x:*)",
+      "Bash(gh run:*)",
+      "Bash(cat /Users/kpernyer/dev/work/axiom/.github/workflows/*.yml)",
+      "Bash(gh workflow:*)",
+      "Bash(cargo llvm-cov:*)",
+      "Bash(cargo install:*)",
+      "Bash(cargo doc:*)",
+      "Bash(rustup component:*)",
+      "Read(//Users/kpernyer/.claude/projects/-Users-kpernyer-dev-work-converge/636168b9-bad6-40c1-ac6a-c1d02087c72a/subagents/**)",
+      "Bash(TRYBUILD=overwrite cargo test -p converge-pack --test compile_fail)",
+      "Bash(cargo update:*)",
+      "Bash(gh api:*)",
+      "Bash(git reset:*)",
+      "Bash(python3 -c \"import sys,json; print\\(json.loads\\(sys.stdin.read\\(\\).split\\('\\\\\"text\\\\\":'\\)[1].split\\(',\\\\\"type\\\\\"'\\)[0]\\)[:200]\\)\")",
+      "Bash(xargs sed:*)",
+      "Bash(sort -t/ -k3)"
     ]
   }
 }

@@ -1,9 +1,7 @@
 // Additional happy-path tests for the core engine.
 
 use converge_core::suggestors::{ReactOnceSuggestor, SeedSuggestor};
-use converge_core::{
-    AgentEffect, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
-};
+use converge_core::{AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor};
 
 #[tokio::test]
 async fn five_seeds_all_converge() {
