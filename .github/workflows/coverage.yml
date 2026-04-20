@@ -12,6 +12,7 @@ env:
   RUST_VERSION: "1.94.0"
   EXCLUDES: >-
     --exclude converge-remote
+    --exclude converge-runtime
     --exclude example-custom-agent
     --exclude example-meeting-scheduler
     --exclude example-custom-provider
