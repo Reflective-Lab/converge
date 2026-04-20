@@ -11,6 +11,7 @@ pub mod decision;
 pub mod delegation;
 pub mod engine;
 pub mod flow;
+pub mod suggestor;
 pub mod types;
 
 pub const EXPENSE_APPROVAL_POLICY: &str = include_str!("../policies/expense_approval.cedar");
