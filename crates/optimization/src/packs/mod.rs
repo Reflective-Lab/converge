@@ -37,12 +37,17 @@ pub mod backlog_prioritization;
 pub mod bin_packing;
 pub mod budget_allocation;
 pub mod capacity_planning;
+pub mod constraint_programming;
 pub mod facility_location;
+pub mod graph_partitioning;
 pub mod inventory_replenishment;
+pub mod job_shop_scheduling;
 pub mod lead_routing;
 pub mod network_flow;
 pub mod pricing_guardrails;
 pub mod shipping_choice;
+pub mod staff_rostering;
+pub mod traveling_salesman;
 pub mod vehicle_routing;
 pub mod vendor_shortlist;
 
