@@ -754,4 +754,225 @@ mod tests {
         let solver = BackendRequirements::constraint_solver();
         assert_eq!(solver.kind, BackendKind::Optimization);
     }
+
+    #[test]
+    fn preset_reasoning_llm() {
+        let r = BackendRequirements::reasoning_llm();
+        assert_eq!(r.kind, BackendKind::Llm);
+        assert_eq!(r.max_cost_class, CostClass::High);
+        assert_eq!(r.max_latency_ms, 30_000);
+        assert!(
+            r.required_capabilities
+                .contains(&Capability::TextGeneration)
+        );
+        assert!(r.required_capabilities.contains(&Capability::Reasoning));
+    }
+
+    #[test]
+    fn preset_embedding_pipeline() {
+        let r = BackendRequirements::embedding_pipeline();
+        assert_eq!(r.kind, BackendKind::Analytics);
+        assert!(r.required_capabilities.contains(&Capability::Embedding));
+    }
+
+    #[test]
+    fn preset_vector_search() {
+        let r = BackendRequirements::vector_search();
+        assert_eq!(r.kind, BackendKind::Search);
+        assert!(r.required_capabilities.contains(&Capability::VectorSearch));
+    }
+
+    #[test]
+    fn jurisdiction_unrestricted_always_satisfied() {
+        assert!(Jurisdiction::Unrestricted.satisfied_by("US", "US", "SE", "EU"));
+    }
+
+    #[test]
+    fn jurisdiction_trusted_eu() {
+        assert!(Jurisdiction::Trusted.satisfied_by("SE", "EU", "SE", "EU"));
+    }
+
+    #[test]
+    fn jurisdiction_trusted_us_not_trusted() {
+        assert!(!Jurisdiction::Trusted.satisfied_by("US", "US", "SE", "EU"));
+    }
+
+    #[test]
+    fn jurisdiction_trusted_various() {
+        for region in &["CH", "UK", "JP", "CA", "NZ", "IL", "KR", "AR", "UY", "EEA"] {
+            assert!(
+                Jurisdiction::Trusted.satisfied_by("X", region, "Y", "Z"),
+                "expected {region} to be trusted"
+            );
+        }
+    }
+
+    #[test]
+    fn jurisdiction_same_region() {
+        assert!(Jurisdiction::SameRegion.satisfied_by("SE", "EU", "DE", "EU"));
+        assert!(!Jurisdiction::SameRegion.satisfied_by("SE", "EU", "US", "US"));
+    }
+
+    #[test]
+    fn jurisdiction_same_country() {
+        assert!(Jurisdiction::SameCountry.satisfied_by("SE", "EU", "SE", "EU"));
+        assert!(!Jurisdiction::SameCountry.satisfied_by("SE", "EU", "DE", "EU"));
+    }
+
+    #[test]
+    fn latency_class_max_values() {
+        assert_eq!(LatencyClass::Realtime.max_latency_ms(), 100);
+        assert_eq!(LatencyClass::Interactive.max_latency_ms(), 2_000);
+        assert_eq!(LatencyClass::Background.max_latency_ms(), 30_000);
+        assert_eq!(LatencyClass::Batch.max_latency_ms(), 300_000);
+    }
+
+    #[test]
+    fn latency_class_satisfied_by() {
+        assert!(LatencyClass::Realtime.satisfied_by(50));
+        assert!(LatencyClass::Realtime.satisfied_by(100));
+        assert!(!LatencyClass::Realtime.satisfied_by(101));
+
+        assert!(LatencyClass::Interactive.satisfied_by(2_000));
+        assert!(!LatencyClass::Interactive.satisfied_by(2_001));
+    }
+
+    #[test]
+    fn latency_class_ordering() {
+        assert!(LatencyClass::Realtime < LatencyClass::Interactive);
+        assert!(LatencyClass::Interactive < LatencyClass::Background);
+        assert!(LatencyClass::Background < LatencyClass::Batch);
+    }
+
+    #[test]
+    fn data_sovereignty_from_jurisdiction_unrestricted() {
+        assert_eq!(
+            DataSovereignty::from_jurisdiction(Jurisdiction::Unrestricted, "EU"),
+            DataSovereignty::Any
+        );
+    }
+
+    #[test]
+    fn data_sovereignty_from_jurisdiction_trusted() {
+        assert_eq!(
+            DataSovereignty::from_jurisdiction(Jurisdiction::Trusted, "EU"),
+            DataSovereignty::Any
+        );
+    }
+
+    #[test]
+    fn data_sovereignty_from_jurisdiction_same_region_eu() {
+        assert_eq!(
+            DataSovereignty::from_jurisdiction(Jurisdiction::SameRegion, "EU"),
+            DataSovereignty::EU
+        );
+        assert_eq!(
+            DataSovereignty::from_jurisdiction(Jurisdiction::SameRegion, "eea"),
+            DataSovereignty::EU
+        );
+    }
+
+    #[test]
+    fn data_sovereignty_from_jurisdiction_same_region_other() {
+        assert_eq!(
+            DataSovereignty::from_jurisdiction(Jurisdiction::SameRegion, "CH"),
+            DataSovereignty::Switzerland
+        );
+        assert_eq!(
+            DataSovereignty::from_jurisdiction(Jurisdiction::SameRegion, "CN"),
+            DataSovereignty::China
+        );
+        assert_eq!(
+            DataSovereignty::from_jurisdiction(Jurisdiction::SameRegion, "US"),
+            DataSovereignty::US
+        );
+        assert_eq!(
+            DataSovereignty::from_jurisdiction(Jurisdiction::SameRegion, "XX"),
+            DataSovereignty::Any
+        );
+    }
+
+    #[test]
+    fn data_sovereignty_from_jurisdiction_same_country() {
+        assert_eq!(
+            DataSovereignty::from_jurisdiction(Jurisdiction::SameCountry, "SE"),
+            DataSovereignty::OnPremises
+        );
+    }
+
+    #[test]
+    fn cost_class_allowed_contains_self() {
+        for class in [
+            CostClass::Free,
+            CostClass::VeryLow,
+            CostClass::Low,
+            CostClass::Medium,
+            CostClass::High,
+            CostClass::VeryHigh,
+        ] {
+            let allowed = class.allowed_classes();
+            assert!(
+                allowed.contains(&class),
+                "{class:?} should contain itself in allowed_classes"
+            );
+        }
+    }
+
+    #[test]
+    fn cost_class_allowed_counts() {
+        assert_eq!(CostClass::Free.allowed_classes().len(), 1);
+        assert_eq!(CostClass::VeryLow.allowed_classes().len(), 2);
+        assert_eq!(CostClass::Low.allowed_classes().len(), 3);
+        assert_eq!(CostClass::Medium.allowed_classes().len(), 4);
+        assert_eq!(CostClass::High.allowed_classes().len(), 5);
+        assert_eq!(CostClass::VeryHigh.allowed_classes().len(), 6);
+    }
+
+    #[test]
+    fn cost_class_from_tier() {
+        assert_eq!(CostClass::from_tier(CostTier::Minimal), CostClass::Low);
+        assert_eq!(CostClass::from_tier(CostTier::Standard), CostClass::Medium);
+        assert_eq!(CostClass::from_tier(CostTier::Premium), CostClass::VeryHigh);
+    }
+
+    #[test]
+    fn task_complexity_min_quality() {
+        assert!((TaskComplexity::Extraction.min_quality_hint() - 0.5).abs() < f64::EPSILON);
+        assert!((TaskComplexity::Classification.min_quality_hint() - 0.6).abs() < f64::EPSILON);
+        assert!((TaskComplexity::Reasoning.min_quality_hint() - 0.8).abs() < f64::EPSILON);
+        assert!((TaskComplexity::Generation.min_quality_hint() - 0.7).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn task_complexity_requires_reasoning() {
+        assert!(!TaskComplexity::Extraction.requires_reasoning());
+        assert!(!TaskComplexity::Classification.requires_reasoning());
+        assert!(TaskComplexity::Reasoning.requires_reasoning());
+        assert!(!TaskComplexity::Generation.requires_reasoning());
+    }
+
+    #[test]
+    fn agent_requirements_fast_cheap() {
+        let r = AgentRequirements::fast_cheap();
+        assert_eq!(r.max_cost_class, CostClass::VeryLow);
+        assert_eq!(r.max_latency_ms, 2_000);
+        assert!(!r.requires_reasoning);
+    }
+
+    #[test]
+    fn agent_requirements_deep_research() {
+        let r = AgentRequirements::deep_research();
+        assert!(r.requires_reasoning);
+        assert!(r.requires_web_search);
+        assert!(r.min_quality >= 0.9);
+    }
+
+    #[test]
+    fn agent_requirements_with_min_quality_clamped() {
+        let r = AgentRequirements::fast_cheap().with_min_quality(2.0);
+        assert!((r.min_quality - 1.0).abs() < f64::EPSILON);
+
+        let r = AgentRequirements::fast_cheap().with_min_quality(-1.0);
+        assert!(r.min_quality.abs() < f64::EPSILON);
+    }
 }

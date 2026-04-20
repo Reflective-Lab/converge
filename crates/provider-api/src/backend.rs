@@ -150,3 +150,100 @@ pub trait Backend: Send + Sync {
         true
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct MockLlm;
+
+    impl Backend for MockLlm {
+        fn name(&self) -> &str {
+            "mock-llm"
+        }
+        fn kind(&self) -> BackendKind {
+            BackendKind::Llm
+        }
+        fn capabilities(&self) -> Vec<Capability> {
+            vec![Capability::TextGeneration, Capability::Reasoning]
+        }
+    }
+
+    struct OfflinePolicy;
+
+    impl Backend for OfflinePolicy {
+        fn name(&self) -> &str {
+            "local-policy"
+        }
+        fn kind(&self) -> BackendKind {
+            BackendKind::Policy
+        }
+        fn capabilities(&self) -> Vec<Capability> {
+            vec![Capability::AccessControl]
+        }
+        fn supports_replay(&self) -> bool {
+            true
+        }
+        fn requires_network(&self) -> bool {
+            false
+        }
+    }
+
+    #[test]
+    fn provenance_default() {
+        let b = MockLlm;
+        assert_eq!(b.provenance("req-123"), "mock-llm:req-123");
+    }
+
+    #[test]
+    fn has_capability_found() {
+        let b = MockLlm;
+        assert!(b.has_capability(Capability::TextGeneration));
+        assert!(b.has_capability(Capability::Reasoning));
+    }
+
+    #[test]
+    fn has_capability_not_found() {
+        let b = MockLlm;
+        assert!(!b.has_capability(Capability::Embedding));
+        assert!(!b.has_capability(Capability::AccessControl));
+    }
+
+    #[test]
+    fn supports_replay_default_false() {
+        let b = MockLlm;
+        assert!(!b.supports_replay());
+    }
+
+    #[test]
+    fn supports_replay_override() {
+        let b = OfflinePolicy;
+        assert!(b.supports_replay());
+    }
+
+    #[test]
+    fn requires_network_default_true() {
+        let b = MockLlm;
+        assert!(b.requires_network());
+    }
+
+    #[test]
+    fn requires_network_override() {
+        let b = OfflinePolicy;
+        assert!(!b.requires_network());
+    }
+
+    #[test]
+    fn backend_kind_display() {
+        assert_eq!(BackendKind::Llm.to_string(), "llm");
+        assert_eq!(BackendKind::Policy.to_string(), "policy");
+        assert_eq!(BackendKind::Optimization.to_string(), "optimization");
+        assert_eq!(BackendKind::Analytics.to_string(), "analytics");
+        assert_eq!(BackendKind::Search.to_string(), "search");
+        assert_eq!(BackendKind::Storage.to_string(), "storage");
+        assert_eq!(
+            BackendKind::Other("custom".into()).to_string(),
+            "other:custom"
+        );
+    }
+}

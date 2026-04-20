@@ -457,3 +457,183 @@ impl std::fmt::Display for ValidationError {
 }
 
 impl std::error::Error for ValidationError {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn trace_link_local_is_replay_eligible() {
+        let local = FactTraceLink::Local(FactLocalTrace {
+            trace_id: "t1".into(),
+            span_id: "s1".into(),
+            parent_span_id: None,
+            sampled: true,
+        });
+        assert!(local.is_replay_eligible());
+    }
+
+    #[test]
+    fn trace_link_remote_is_not_replay_eligible() {
+        let remote = FactTraceLink::Remote(FactRemoteTrace {
+            system: "datadog".into(),
+            reference: "ref-1".into(),
+            retrieval_auth: None,
+            retention_hint: None,
+        });
+        assert!(!remote.is_replay_eligible());
+    }
+
+    #[cfg(feature = "kernel-authority")]
+    #[test]
+    fn promotion_record_delegates_replay_eligibility() {
+        let local_record = FactPromotionRecord::new(
+            "gate-1",
+            "hash-1",
+            FactActor::new("actor-1", FactActorKind::Human),
+            FactValidationSummary::default(),
+            Vec::new(),
+            FactTraceLink::Local(FactLocalTrace::new("t1", "s1", None, true)),
+            "2026-01-01T00:00:00Z",
+        );
+        assert!(local_record.is_replay_eligible());
+
+        let remote_record = FactPromotionRecord::new(
+            "gate-2",
+            "hash-2",
+            FactActor::new("actor-2", FactActorKind::System),
+            FactValidationSummary::default(),
+            Vec::new(),
+            FactTraceLink::Remote(FactRemoteTrace::new("dd", "ref-1", None, None)),
+            "2026-01-01T00:00:00Z",
+        );
+        assert!(!remote_record.is_replay_eligible());
+    }
+
+    #[cfg(feature = "kernel-authority")]
+    #[test]
+    fn fact_delegates_replay_eligibility() {
+        let fact = kernel_authority::new_fact(ContextKey::Seeds, "f1", "content");
+        assert!(fact.is_replay_eligible());
+    }
+
+    #[test]
+    fn proposed_fact_new_sets_fields() {
+        let pf = ProposedFact::new(ContextKey::Hypotheses, "p1", "my content", "gpt-4");
+        assert_eq!(pf.key, ContextKey::Hypotheses);
+        assert_eq!(pf.id, "p1");
+        assert_eq!(pf.content, "my content");
+        assert_eq!(pf.confidence, 1.0);
+        assert_eq!(pf.provenance, "gpt-4");
+    }
+
+    #[test]
+    fn proposed_fact_with_confidence() {
+        let pf = ProposedFact::new(ContextKey::Signals, "p2", "c", "prov").with_confidence(0.42);
+        assert!((pf.confidence - 0.42).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn validation_error_display() {
+        let err = ValidationError {
+            reason: "bad input".into(),
+        };
+        assert_eq!(err.to_string(), "validation failed: bad input");
+    }
+
+    #[test]
+    fn validation_error_is_std_error() {
+        let err = ValidationError {
+            reason: "test".into(),
+        };
+        let _: &dyn std::error::Error = &err;
+    }
+
+    #[cfg(feature = "kernel-authority")]
+    #[test]
+    fn fact_accessors() {
+        let fact = kernel_authority::new_fact(ContextKey::Constraints, "f2", "body");
+        assert_eq!(fact.key(), ContextKey::Constraints);
+        assert_eq!(fact.id, "f2");
+        assert_eq!(fact.content, "body");
+        assert_eq!(fact.created_at(), "1970-01-01T00:00:00Z");
+        assert_eq!(fact.promotion_record().gate_id(), "kernel-authority");
+    }
+
+    #[cfg(feature = "kernel-authority")]
+    #[test]
+    fn fact_actor_accessors() {
+        let actor = FactActor::new("agent-x", FactActorKind::Suggestor);
+        assert_eq!(actor.id(), "agent-x");
+        assert_eq!(actor.kind(), FactActorKind::Suggestor);
+    }
+
+    #[cfg(feature = "kernel-authority")]
+    #[test]
+    fn validation_summary_accessors() {
+        let vs = FactValidationSummary::new(
+            vec!["check-a".into()],
+            vec!["check-b".into()],
+            vec!["warn-c".into()],
+        );
+        assert_eq!(vs.checks_passed(), &["check-a"]);
+        assert_eq!(vs.checks_skipped(), &["check-b"]);
+        assert_eq!(vs.warnings(), &["warn-c"]);
+    }
+
+    #[cfg(feature = "kernel-authority")]
+    #[test]
+    fn local_trace_accessors() {
+        let lt = FactLocalTrace::new("trace-1", "span-1", Some("parent-1".into()), false);
+        assert_eq!(lt.trace_id(), "trace-1");
+        assert_eq!(lt.span_id(), "span-1");
+        assert_eq!(lt.parent_span_id(), Some("parent-1"));
+        assert!(!lt.sampled());
+    }
+
+    #[cfg(feature = "kernel-authority")]
+    #[test]
+    fn remote_trace_accessors() {
+        let rt = FactRemoteTrace::new("sys", "ref", Some("auth".into()), Some("30d".into()));
+        assert_eq!(rt.system(), "sys");
+        assert_eq!(rt.reference(), "ref");
+        assert_eq!(rt.retrieval_auth(), Some("auth"));
+        assert_eq!(rt.retention_hint(), Some("30d"));
+    }
+
+    mod prop {
+        use super::*;
+        use proptest::prelude::*;
+
+        fn arb_context_key() -> impl Strategy<Value = ContextKey> {
+            prop_oneof![
+                Just(ContextKey::Seeds),
+                Just(ContextKey::Hypotheses),
+                Just(ContextKey::Strategies),
+                Just(ContextKey::Constraints),
+                Just(ContextKey::Signals),
+                Just(ContextKey::Competitors),
+                Just(ContextKey::Evaluations),
+                Just(ContextKey::Proposals),
+                Just(ContextKey::Diagnostic),
+            ]
+        }
+
+        proptest! {
+            #[test]
+            fn proposed_fact_always_constructible(
+                key in arb_context_key(),
+                id in "[a-z]{1,20}",
+                content in ".*",
+                prov in "[a-z0-9-]{1,30}",
+            ) {
+                let pf = ProposedFact::new(key, id.clone(), content.clone(), prov.clone());
+                prop_assert_eq!(pf.key, key);
+                prop_assert_eq!(&pf.id, &id);
+                prop_assert_eq!(&pf.content, &content);
+                prop_assert_eq!(&pf.provenance, &prov);
+                prop_assert!((pf.confidence - 1.0).abs() < f64::EPSILON);
+            }
+        }
+    }
+}

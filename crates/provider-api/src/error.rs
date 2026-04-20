@@ -200,3 +200,147 @@ impl std::fmt::Display for BackendErrorKind {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_sets_retryable_from_kind() {
+        let err = BackendError::new(BackendErrorKind::RateLimit, "slow down");
+        assert_eq!(err.kind, BackendErrorKind::RateLimit);
+        assert_eq!(err.message, "slow down");
+        assert!(err.is_retryable());
+
+        let err = BackendError::new(BackendErrorKind::InvalidRequest, "bad");
+        assert!(!err.is_retryable());
+    }
+
+    #[test]
+    fn with_retryable_overrides_default() {
+        let err = BackendError::with_retryable(BackendErrorKind::InvalidRequest, "retry me", true);
+        assert!(err.is_retryable());
+
+        let err = BackendError::with_retryable(BackendErrorKind::RateLimit, "no retry", false);
+        assert!(!err.is_retryable());
+    }
+
+    #[test]
+    fn convenience_auth() {
+        let err = BackendError::auth("denied");
+        assert_eq!(err.kind, BackendErrorKind::Authentication);
+        assert!(!err.is_retryable());
+    }
+
+    #[test]
+    fn convenience_rate_limit() {
+        let err = BackendError::rate_limit("quota exceeded");
+        assert_eq!(err.kind, BackendErrorKind::RateLimit);
+        assert!(err.is_retryable());
+    }
+
+    #[test]
+    fn convenience_invalid_request() {
+        let err = BackendError::invalid_request("missing field");
+        assert_eq!(err.kind, BackendErrorKind::InvalidRequest);
+        assert!(!err.is_retryable());
+    }
+
+    #[test]
+    fn convenience_unavailable() {
+        let err = BackendError::unavailable("down");
+        assert_eq!(err.kind, BackendErrorKind::Unavailable);
+        assert!(err.is_retryable());
+    }
+
+    #[test]
+    fn convenience_network() {
+        let err = BackendError::network("connection refused");
+        assert_eq!(err.kind, BackendErrorKind::Network);
+        assert!(err.is_retryable());
+    }
+
+    #[test]
+    fn convenience_backend() {
+        let err = BackendError::backend("500");
+        assert_eq!(err.kind, BackendErrorKind::BackendError);
+        assert!(!err.is_retryable());
+    }
+
+    #[test]
+    fn convenience_parse() {
+        let err = BackendError::parse("invalid json");
+        assert_eq!(err.kind, BackendErrorKind::ParseError);
+        assert!(!err.is_retryable());
+    }
+
+    #[test]
+    fn convenience_timeout() {
+        let err = BackendError::timeout("10s elapsed");
+        assert_eq!(err.kind, BackendErrorKind::Timeout);
+        assert!(err.is_retryable());
+    }
+
+    #[test]
+    fn convenience_unsupported() {
+        let err = BackendError::unsupported(&Capability::ImageUnderstanding);
+        assert_eq!(err.kind, BackendErrorKind::UnsupportedCapability);
+        assert!(!err.is_retryable());
+        assert!(err.message.contains("ImageUnderstanding"));
+    }
+
+    #[test]
+    fn convenience_resource_exhausted() {
+        let err = BackendError::resource_exhausted("out of memory");
+        assert_eq!(err.kind, BackendErrorKind::ResourceExhausted);
+        assert!(!err.is_retryable());
+    }
+
+    #[test]
+    fn kind_is_retryable() {
+        assert!(!BackendErrorKind::Authentication.is_retryable());
+        assert!(BackendErrorKind::RateLimit.is_retryable());
+        assert!(!BackendErrorKind::InvalidRequest.is_retryable());
+        assert!(BackendErrorKind::Unavailable.is_retryable());
+        assert!(BackendErrorKind::Network.is_retryable());
+        assert!(!BackendErrorKind::BackendError.is_retryable());
+        assert!(!BackendErrorKind::ParseError.is_retryable());
+        assert!(BackendErrorKind::Timeout.is_retryable());
+        assert!(!BackendErrorKind::UnsupportedCapability.is_retryable());
+        assert!(!BackendErrorKind::ResourceExhausted.is_retryable());
+        assert!(!BackendErrorKind::Configuration.is_retryable());
+    }
+
+    #[test]
+    fn kind_display() {
+        assert_eq!(
+            BackendErrorKind::Authentication.to_string(),
+            "authentication"
+        );
+        assert_eq!(BackendErrorKind::RateLimit.to_string(), "rate_limit");
+        assert_eq!(
+            BackendErrorKind::InvalidRequest.to_string(),
+            "invalid_request"
+        );
+        assert_eq!(BackendErrorKind::Unavailable.to_string(), "unavailable");
+        assert_eq!(BackendErrorKind::Network.to_string(), "network");
+        assert_eq!(BackendErrorKind::BackendError.to_string(), "backend_error");
+        assert_eq!(BackendErrorKind::ParseError.to_string(), "parse_error");
+        assert_eq!(BackendErrorKind::Timeout.to_string(), "timeout");
+        assert_eq!(
+            BackendErrorKind::UnsupportedCapability.to_string(),
+            "unsupported_capability"
+        );
+        assert_eq!(
+            BackendErrorKind::ResourceExhausted.to_string(),
+            "resource_exhausted"
+        );
+        assert_eq!(BackendErrorKind::Configuration.to_string(), "configuration");
+    }
+
+    #[test]
+    fn backend_error_display() {
+        let err = BackendError::new(BackendErrorKind::Timeout, "operation timed out");
+        assert_eq!(err.to_string(), "timeout: operation timed out");
+    }
+}

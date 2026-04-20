@@ -233,3 +233,184 @@ impl<T: ChatBackend> DynChatBackend for T {
         Box::pin(ChatBackend::chat(self, req))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn response_format_default_structured_is_yaml() {
+        assert_eq!(ResponseFormat::default_structured(), ResponseFormat::Yaml);
+    }
+
+    #[test]
+    fn response_format_fallback() {
+        assert_eq!(ResponseFormat::Text.fallback(), None);
+        assert_eq!(ResponseFormat::Json.fallback(), None);
+        assert_eq!(ResponseFormat::Yaml.fallback(), Some(ResponseFormat::Json));
+        assert_eq!(ResponseFormat::Toml.fallback(), Some(ResponseFormat::Json));
+        assert_eq!(
+            ResponseFormat::Markdown.fallback(),
+            Some(ResponseFormat::Json)
+        );
+    }
+
+    #[test]
+    fn response_format_system_instruction_text_is_none() {
+        assert!(ResponseFormat::Text.system_instruction().is_none());
+    }
+
+    #[test]
+    fn response_format_system_instruction_json() {
+        let instr = ResponseFormat::Json.system_instruction().unwrap();
+        assert!(instr.contains("JSON"));
+    }
+
+    #[test]
+    fn response_format_system_instruction_yaml() {
+        let instr = ResponseFormat::Yaml.system_instruction().unwrap();
+        assert!(instr.contains("YAML"));
+    }
+
+    #[test]
+    fn response_format_system_instruction_toml() {
+        let instr = ResponseFormat::Toml.system_instruction().unwrap();
+        assert!(instr.contains("TOML"));
+    }
+
+    #[test]
+    fn response_format_system_instruction_markdown() {
+        let instr = ResponseFormat::Markdown.system_instruction().unwrap();
+        assert!(instr.contains("Markdown"));
+    }
+
+    #[test]
+    fn response_format_default_is_text() {
+        assert_eq!(ResponseFormat::default(), ResponseFormat::Text);
+    }
+
+    #[test]
+    fn chat_role_variants_exist() {
+        let _system = ChatRole::System;
+        let _user = ChatRole::User;
+        let _assistant = ChatRole::Assistant;
+        let _tool = ChatRole::Tool;
+    }
+
+    #[test]
+    fn llm_error_display_rate_limited() {
+        let err = LlmError::RateLimited {
+            retry_after: Duration::from_secs(30),
+            message: Some("too many requests".into()),
+        };
+        let s = err.to_string();
+        assert!(s.contains("rate limited"));
+        assert!(s.contains("too many requests"));
+    }
+
+    #[test]
+    fn llm_error_display_rate_limited_no_message() {
+        let err = LlmError::RateLimited {
+            retry_after: Duration::from_secs(5),
+            message: None,
+        };
+        let s = err.to_string();
+        assert!(s.contains("rate limited"));
+        assert!(!s.contains(":"));
+    }
+
+    #[test]
+    fn llm_error_display_timeout() {
+        let err = LlmError::Timeout {
+            elapsed: Duration::from_secs(10),
+            deadline: Duration::from_secs(5),
+        };
+        let s = err.to_string();
+        assert!(s.contains("timeout"));
+        assert!(s.contains("deadline"));
+    }
+
+    #[test]
+    fn llm_error_display_auth_denied() {
+        let err = LlmError::AuthDenied {
+            message: "bad key".into(),
+        };
+        assert!(err.to_string().contains("authentication denied"));
+    }
+
+    #[test]
+    fn llm_error_display_invalid_request() {
+        let err = LlmError::InvalidRequest {
+            message: "missing model".into(),
+        };
+        assert!(err.to_string().contains("invalid request"));
+    }
+
+    #[test]
+    fn llm_error_display_model_not_found() {
+        let err = LlmError::ModelNotFound {
+            model: "gpt-5".into(),
+        };
+        assert!(err.to_string().contains("gpt-5"));
+    }
+
+    #[test]
+    fn llm_error_display_context_length() {
+        let err = LlmError::ContextLengthExceeded {
+            max_tokens: 4096,
+            request_tokens: 8000,
+        };
+        let s = err.to_string();
+        assert!(s.contains("8000"));
+        assert!(s.contains("4096"));
+    }
+
+    #[test]
+    fn llm_error_display_content_filtered() {
+        let err = LlmError::ContentFiltered {
+            reason: "safety".into(),
+        };
+        assert!(err.to_string().contains("safety"));
+    }
+
+    #[test]
+    fn llm_error_display_response_format_mismatch() {
+        let err = LlmError::ResponseFormatMismatch {
+            expected: ResponseFormat::Json,
+            message: "got yaml".into(),
+        };
+        let s = err.to_string();
+        assert!(s.contains("format mismatch"));
+        assert!(s.contains("got yaml"));
+    }
+
+    #[test]
+    fn llm_error_display_provider_error_with_code() {
+        let err = LlmError::ProviderError {
+            message: "internal".into(),
+            code: Some("500".into()),
+        };
+        let s = err.to_string();
+        assert!(s.contains("provider error"));
+        assert!(s.contains("500"));
+    }
+
+    #[test]
+    fn llm_error_display_provider_error_no_code() {
+        let err = LlmError::ProviderError {
+            message: "oops".into(),
+            code: None,
+        };
+        let s = err.to_string();
+        assert!(s.contains("oops"));
+        assert!(!s.contains("code"));
+    }
+
+    #[test]
+    fn llm_error_display_network() {
+        let err = LlmError::NetworkError {
+            message: "dns failed".into(),
+        };
+        assert!(err.to_string().contains("dns failed"));
+    }
+}

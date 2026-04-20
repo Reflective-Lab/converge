@@ -57,3 +57,64 @@ pub trait Context: Send + Sync {
         self.get(key).len()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct MockContext {
+        facts: std::collections::HashMap<ContextKey, Vec<Fact>>,
+    }
+
+    impl MockContext {
+        fn empty() -> Self {
+            Self {
+                facts: std::collections::HashMap::new(),
+            }
+        }
+    }
+
+    impl Context for MockContext {
+        fn has(&self, key: ContextKey) -> bool {
+            self.facts.get(&key).is_some_and(|v| !v.is_empty())
+        }
+
+        fn get(&self, key: ContextKey) -> &[Fact] {
+            self.facts.get(&key).map_or(&[], Vec::as_slice)
+        }
+    }
+
+    #[test]
+    fn get_proposals_default_returns_empty() {
+        let ctx = MockContext::empty();
+        assert!(ctx.get_proposals(ContextKey::Seeds).is_empty());
+        assert!(ctx.get_proposals(ContextKey::Hypotheses).is_empty());
+    }
+
+    #[test]
+    fn count_default_delegates_to_get() {
+        let ctx = MockContext::empty();
+        assert_eq!(ctx.count(ContextKey::Seeds), 0);
+    }
+
+    #[test]
+    fn has_returns_false_for_empty() {
+        let ctx = MockContext::empty();
+        assert!(!ctx.has(ContextKey::Seeds));
+    }
+
+    #[cfg(feature = "kernel-authority")]
+    #[test]
+    fn count_reflects_facts() {
+        use crate::fact::kernel_authority;
+
+        let mut ctx = MockContext::empty();
+        ctx.facts.insert(
+            ContextKey::Seeds,
+            vec![kernel_authority::new_fact(ContextKey::Seeds, "f1", "a")],
+        );
+        assert_eq!(ctx.count(ContextKey::Seeds), 1);
+        assert!(ctx.has(ContextKey::Seeds));
+        assert!(!ctx.has(ContextKey::Hypotheses));
+    }
+}

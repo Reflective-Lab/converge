@@ -118,3 +118,49 @@ impl std::fmt::Display for Capability {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn display_text_generation() {
+        assert_eq!(Capability::TextGeneration.to_string(), "TextGeneration");
+    }
+
+    #[test]
+    fn display_reasoning() {
+        assert_eq!(Capability::Reasoning.to_string(), "Reasoning");
+    }
+
+    #[test]
+    fn display_embedding() {
+        assert_eq!(Capability::Embedding.to_string(), "Embedding");
+    }
+
+    #[test]
+    fn display_access_control() {
+        assert_eq!(Capability::AccessControl.to_string(), "AccessControl");
+    }
+
+    #[test]
+    fn display_vector_search() {
+        assert_eq!(Capability::VectorSearch.to_string(), "VectorSearch");
+    }
+
+    #[test]
+    fn display_other_variant() {
+        assert_eq!(
+            Capability::Other("custom-cap".into()).to_string(),
+            "other:custom-cap"
+        );
+    }
+
+    #[test]
+    fn equality() {
+        assert_eq!(Capability::Reasoning, Capability::Reasoning);
+        assert_ne!(Capability::Reasoning, Capability::Embedding);
+        assert_eq!(Capability::Other("x".into()), Capability::Other("x".into()));
+        assert_ne!(Capability::Other("x".into()), Capability::Other("y".into()));
+    }
+}

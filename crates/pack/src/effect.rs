@@ -55,3 +55,106 @@ impl AgentEffect {
         keys
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn proposal(key: ContextKey, id: &str) -> ProposedFact {
+        ProposedFact::new(key, id, "content", "test")
+    }
+
+    #[test]
+    fn empty_effect_is_empty() {
+        let e = AgentEffect::empty();
+        assert!(e.is_empty());
+        assert!(e.proposals.is_empty());
+    }
+
+    #[test]
+    fn with_proposal_single() {
+        let e = AgentEffect::with_proposal(proposal(ContextKey::Seeds, "p1"));
+        assert!(!e.is_empty());
+        assert_eq!(e.proposals.len(), 1);
+        assert_eq!(e.proposals[0].id, "p1");
+    }
+
+    #[test]
+    fn with_proposals_multiple() {
+        let e = AgentEffect::with_proposals(vec![
+            proposal(ContextKey::Seeds, "p1"),
+            proposal(ContextKey::Hypotheses, "p2"),
+        ]);
+        assert_eq!(e.proposals.len(), 2);
+    }
+
+    #[test]
+    fn is_empty_false_for_nonempty() {
+        let e = AgentEffect::with_proposal(proposal(ContextKey::Signals, "x"));
+        assert!(!e.is_empty());
+    }
+
+    #[test]
+    fn affected_keys_deduplicates_and_sorts() {
+        let e = AgentEffect::with_proposals(vec![
+            proposal(ContextKey::Signals, "a"),
+            proposal(ContextKey::Seeds, "b"),
+            proposal(ContextKey::Signals, "c"),
+            proposal(ContextKey::Seeds, "d"),
+            proposal(ContextKey::Hypotheses, "e"),
+        ]);
+        let keys = e.affected_keys();
+        assert_eq!(keys.len(), 3);
+        // Sorted by Ord impl
+        for window in keys.windows(2) {
+            assert!(window[0] <= window[1]);
+        }
+        // No duplicates
+        let mut deduped = keys.clone();
+        deduped.dedup();
+        assert_eq!(keys, deduped);
+    }
+
+    #[test]
+    fn affected_keys_empty_for_empty_effect() {
+        let e = AgentEffect::empty();
+        assert!(e.affected_keys().is_empty());
+    }
+
+    mod prop {
+        use super::*;
+        use proptest::prelude::*;
+
+        fn arb_context_key() -> impl Strategy<Value = ContextKey> {
+            prop_oneof![
+                Just(ContextKey::Seeds),
+                Just(ContextKey::Hypotheses),
+                Just(ContextKey::Strategies),
+                Just(ContextKey::Constraints),
+                Just(ContextKey::Signals),
+                Just(ContextKey::Competitors),
+                Just(ContextKey::Evaluations),
+                Just(ContextKey::Proposals),
+                Just(ContextKey::Diagnostic),
+            ]
+        }
+
+        proptest! {
+            #[test]
+            fn affected_keys_never_has_duplicates(
+                keys in proptest::collection::vec(arb_context_key(), 0..50),
+            ) {
+                let proposals: Vec<ProposedFact> = keys
+                    .iter()
+                    .enumerate()
+                    .map(|(i, &k)| ProposedFact::new(k, format!("p{i}"), "c", "prov"))
+                    .collect();
+                let effect = AgentEffect::with_proposals(proposals);
+                let result = effect.affected_keys();
+                let mut deduped = result.clone();
+                deduped.dedup();
+                prop_assert_eq!(result, deduped);
+            }
+        }
+    }
+}
