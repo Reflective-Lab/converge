@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/Reflective-Lab/converge/actions/workflows/ci.yml/badge.svg)](https://github.com/Reflective-Lab/converge/actions/workflows/ci.yml)
 [![Security](https://github.com/Reflective-Lab/converge/actions/workflows/security.yml/badge.svg)](https://github.com/Reflective-Lab/converge/actions/workflows/security.yml)
+![coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/kpernyer/0fa611de897a736cb134400aa56e05f3/raw/converge-coverage.json)
 [![Crates.io](https://img.shields.io/crates/v/converge-pack.svg)](https://crates.io/crates/converge-pack)
 [![docs.rs](https://docs.rs/converge-pack/badge.svg)](https://docs.rs/converge-pack)
 [![dependency status](https://deps.rs/repo/github/Reflective-Lab/converge/status.svg)](https://deps.rs/repo/github/Reflective-Lab/converge)
