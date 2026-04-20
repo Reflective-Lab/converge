@@ -249,6 +249,180 @@ mod tests {
     }
 
     #[test]
+    fn feature_vector_new_multi_row() {
+        let fv = FeatureVector::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [2, 3]).unwrap();
+        assert_eq!(fv.rows(), 2);
+        assert_eq!(fv.cols(), 3);
+        assert_eq!(fv.data.len(), 6);
+    }
+
+    #[test]
+    fn feature_vector_new_rejects_mismatched_length() {
+        assert!(FeatureVector::new(vec![1.0, 2.0, 3.0], [2, 2]).is_err());
+        assert!(FeatureVector::new(vec![], [1, 1]).is_err());
+        assert!(FeatureVector::new(vec![1.0], [0, 1]).is_err());
+    }
+
+    #[test]
+    fn feature_vector_new_empty() {
+        let fv = FeatureVector::new(vec![], [0, 0]).unwrap();
+        assert_eq!(fv.rows(), 0);
+        assert_eq!(fv.cols(), 0);
+        assert!(fv.data.is_empty());
+    }
+
+    #[test]
+    fn feature_vector_new_zero_cols() {
+        let fv = FeatureVector::new(vec![], [5, 0]).unwrap();
+        assert_eq!(fv.rows(), 5);
+        assert_eq!(fv.cols(), 0);
+    }
+
+    #[test]
+    fn feature_vector_row_creates_single_row() {
+        let fv = FeatureVector::row(vec![10.0, 20.0, 30.0]);
+        assert_eq!(fv.rows(), 1);
+        assert_eq!(fv.cols(), 3);
+        assert_eq!(fv.data, vec![10.0, 20.0, 30.0]);
+    }
+
+    #[test]
+    fn feature_vector_row_empty() {
+        let fv = FeatureVector::row(vec![]);
+        assert_eq!(fv.rows(), 1);
+        assert_eq!(fv.cols(), 0);
+        assert!(fv.data.is_empty());
+    }
+
+    #[test]
+    fn feature_vector_row_single_element() {
+        let fv = FeatureVector::row(vec![42.0]);
+        assert_eq!(fv.rows(), 1);
+        assert_eq!(fv.cols(), 1);
+        assert_eq!(fv.data, vec![42.0]);
+    }
+
+    #[test]
+    fn feature_columns_construction() {
+        let fc = FeatureColumns {
+            left: "price".to_string(),
+            right: "quantity".to_string(),
+        };
+        assert_eq!(fc.left, "price");
+        assert_eq!(fc.right, "quantity");
+    }
+
+    #[test]
+    fn feature_columns_roundtrip_serde() {
+        let fc = FeatureColumns {
+            left: "a".to_string(),
+            right: "b".to_string(),
+        };
+        let json = serde_json::to_string(&fc).unwrap();
+        let deserialized: FeatureColumns = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.left, "a");
+        assert_eq!(deserialized.right, "b");
+    }
+
+    #[test]
+    fn feature_vector_roundtrip_serde() {
+        let fv = FeatureVector::new(vec![1.0, 2.0, 3.0, 4.0], [2, 2]).unwrap();
+        let json = serde_json::to_string(&fv).unwrap();
+        let deserialized: FeatureVector = serde_json::from_str(&json).unwrap();
+        assert_eq!(fv, deserialized);
+    }
+
+    #[test]
+    fn feature_agent_new_without_columns() {
+        let agent = FeatureAgent::new(None);
+        assert!(agent.source_path.is_none());
+        assert!(agent.columns.is_none());
+    }
+
+    #[test]
+    fn feature_agent_with_columns() {
+        let agent = FeatureAgent::new(None).with_columns("x", "y");
+        let cols = agent.columns.unwrap();
+        assert_eq!(cols.left, "x");
+        assert_eq!(cols.right, "y");
+    }
+
+    #[test]
+    fn feature_agent_with_source_path() {
+        let agent = FeatureAgent::new(Some(PathBuf::from("/tmp/data.csv")));
+        assert_eq!(agent.source_path.unwrap(), PathBuf::from("/tmp/data.csv"));
+    }
+
+    #[test]
+    fn is_numeric_dtype_covers_all_numeric_types() {
+        let numeric = [
+            DataType::Int8,
+            DataType::Int16,
+            DataType::Int32,
+            DataType::Int64,
+            DataType::UInt8,
+            DataType::UInt16,
+            DataType::UInt32,
+            DataType::UInt64,
+            DataType::Float32,
+            DataType::Float64,
+        ];
+        for dt in &numeric {
+            assert!(is_numeric_dtype(dt), "{dt:?} should be numeric");
+        }
+    }
+
+    #[test]
+    fn is_numeric_dtype_rejects_non_numeric() {
+        assert!(!is_numeric_dtype(&DataType::String));
+        assert!(!is_numeric_dtype(&DataType::Boolean));
+        assert!(!is_numeric_dtype(&DataType::Date));
+    }
+
+    #[test]
+    fn compute_features_rejects_empty_dataframe() {
+        let df = df![
+            "a" => Vec::<f32>::new(),
+            "b" => Vec::<f32>::new(),
+        ]
+        .unwrap();
+        let cols = FeatureColumns {
+            left: "a".into(),
+            right: "b".into(),
+        };
+        assert!(compute_features_from_df(&df, Some(&cols)).is_err());
+    }
+
+    #[test]
+    fn compute_features_rejects_missing_column() {
+        let df = df!["a" => [1.0f32]].unwrap();
+        let cols = FeatureColumns {
+            left: "a".into(),
+            right: "missing".into(),
+        };
+        assert!(compute_features_from_df(&df, Some(&cols)).is_err());
+    }
+
+    #[test]
+    fn compute_features_rejects_insufficient_numeric_columns() {
+        let df = df!["text" => ["a", "b"]].unwrap();
+        assert!(compute_features_from_df(&df, None).is_err());
+    }
+
+    proptest! {
+        #[test]
+        fn feature_vector_shape_invariant(
+            rows in 0usize..50,
+            cols in 0usize..50,
+        ) {
+            let len = rows.saturating_mul(cols);
+            let data = vec![0.0f32; len];
+            let fv = FeatureVector::new(data, [rows, cols]).unwrap();
+            prop_assert_eq!(fv.rows() * fv.cols(), fv.data.len());
+        }
+    }
+
+    #[test]
     fn compute_features_from_df_uses_named_columns() {
         let df = df![
             "a" => [2.0f32, 3.0],

@@ -22,3 +22,26 @@ pub fn build(path: &Path) -> Result<Arc<dyn ObjectStore>, StorageError> {
 
     Ok(Arc::new(store))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn build_creates_missing_directory() {
+        let dir = tempfile::tempdir().unwrap();
+        let nested = dir.path().join("a/b/c");
+        assert!(!nested.exists());
+
+        let store = build(&nested).unwrap();
+        assert!(nested.exists());
+        assert!(Arc::strong_count(&store) == 1);
+    }
+
+    #[test]
+    fn build_succeeds_on_existing_directory() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = build(dir.path()).unwrap();
+        assert!(Arc::strong_count(&store) == 1);
+    }
+}

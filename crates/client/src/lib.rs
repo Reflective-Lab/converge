@@ -217,14 +217,13 @@ pub mod messages {
 
 #[cfg(test)]
 mod tests {
-    use super::messages;
-    use super::v1::{PauseRunRequest, SubscribeRequest, client_message};
+    use super::*;
 
     #[test]
     fn pause_message_wraps_the_expected_variant() {
         let message = messages::pause(
             "pause-1",
-            PauseRunRequest {
+            v1::PauseRunRequest {
                 run_id: "run-123".to_string(),
                 reason: Some("operator requested pause".to_string()),
             },
@@ -232,7 +231,7 @@ mod tests {
 
         assert_eq!(message.request_id, "pause-1");
         match message.message {
-            Some(client_message::Message::Pause(request)) => {
+            Some(v1::client_message::Message::Pause(request)) => {
                 assert_eq!(request.run_id, "run-123");
             }
             other => panic!("unexpected message variant: {other:?}"),
@@ -243,7 +242,7 @@ mod tests {
     fn subscribe_message_wraps_the_expected_variant() {
         let message = messages::subscribe(
             "sub-1",
-            SubscribeRequest {
+            v1::SubscribeRequest {
                 job_id: None,
                 run_id: Some("run-123".to_string()),
                 correlation_id: None,
@@ -254,11 +253,235 @@ mod tests {
 
         assert_eq!(message.request_id, "sub-1");
         match message.message {
-            Some(client_message::Message::Subscribe(request)) => {
+            Some(v1::client_message::Message::Subscribe(request)) => {
                 assert_eq!(request.run_id.as_deref(), Some("run-123"));
                 assert_eq!(request.since_sequence, 42);
             }
             other => panic!("unexpected message variant: {other:?}"),
         }
+    }
+
+    #[test]
+    fn submit_job_message_wraps_the_expected_variant() {
+        let message = messages::submit_job(
+            "submit-1",
+            v1::SubmitJobRequest {
+                idempotency_key: "key-1".to_string(),
+                blueprint_id: "bp-42".to_string(),
+                pack_ids: vec!["pack-a".to_string()],
+                seeds: vec![],
+                budget: None,
+                correlation_id: Some("corr-1".to_string()),
+                parent_trace_id: None,
+            },
+        );
+
+        assert_eq!(message.request_id, "submit-1");
+        match message.message {
+            Some(v1::client_message::Message::SubmitJob(request)) => {
+                assert_eq!(request.blueprint_id, "bp-42");
+                assert_eq!(request.idempotency_key, "key-1");
+                assert_eq!(request.pack_ids, vec!["pack-a"]);
+                assert_eq!(request.correlation_id.as_deref(), Some("corr-1"));
+            }
+            other => panic!("unexpected message variant: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn cancel_job_message_wraps_the_expected_variant() {
+        let message = messages::cancel_job(
+            "cancel-1",
+            v1::CancelJobRequest {
+                job_id: "job-99".to_string(),
+                reason: Some("no longer needed".to_string()),
+            },
+        );
+
+        assert_eq!(message.request_id, "cancel-1");
+        match message.message {
+            Some(v1::client_message::Message::CancelJob(request)) => {
+                assert_eq!(request.job_id, "job-99");
+                assert_eq!(request.reason.as_deref(), Some("no longer needed"));
+            }
+            other => panic!("unexpected message variant: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn submit_observation_message_wraps_the_expected_variant() {
+        let message = messages::submit_observation(
+            "obs-1",
+            v1::SubmitObservationRequest {
+                run_id: "run-7".to_string(),
+                key: "temperature".to_string(),
+                payload: None,
+                target_truth_id: Some("truth-1".to_string()),
+                idempotency_key: "idem-1".to_string(),
+            },
+        );
+
+        assert_eq!(message.request_id, "obs-1");
+        match message.message {
+            Some(v1::client_message::Message::SubmitObservation(request)) => {
+                assert_eq!(request.run_id, "run-7");
+                assert_eq!(request.key, "temperature");
+                assert_eq!(request.target_truth_id.as_deref(), Some("truth-1"));
+            }
+            other => panic!("unexpected message variant: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn approve_message_wraps_the_expected_variant() {
+        let message = messages::approve(
+            "approve-1",
+            v1::ApproveProposalRequest {
+                run_id: "run-5".to_string(),
+                proposal_id: "prop-3".to_string(),
+                comment: Some("looks good".to_string()),
+            },
+        );
+
+        assert_eq!(message.request_id, "approve-1");
+        match message.message {
+            Some(v1::client_message::Message::Approve(request)) => {
+                assert_eq!(request.run_id, "run-5");
+                assert_eq!(request.proposal_id, "prop-3");
+                assert_eq!(request.comment.as_deref(), Some("looks good"));
+            }
+            other => panic!("unexpected message variant: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn reject_message_wraps_the_expected_variant() {
+        let message = messages::reject(
+            "reject-1",
+            v1::RejectProposalRequest {
+                run_id: "run-5".to_string(),
+                proposal_id: "prop-3".to_string(),
+                reason: "insufficient evidence".to_string(),
+            },
+        );
+
+        assert_eq!(message.request_id, "reject-1");
+        match message.message {
+            Some(v1::client_message::Message::Reject(request)) => {
+                assert_eq!(request.run_id, "run-5");
+                assert_eq!(request.proposal_id, "prop-3");
+                assert_eq!(request.reason, "insufficient evidence");
+            }
+            other => panic!("unexpected message variant: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn resume_message_wraps_the_expected_variant() {
+        let message = messages::resume(
+            "resume-1",
+            v1::ResumeRunRequest {
+                run_id: "run-8".to_string(),
+            },
+        );
+
+        assert_eq!(message.request_id, "resume-1");
+        match message.message {
+            Some(v1::client_message::Message::Resume(request)) => {
+                assert_eq!(request.run_id, "run-8");
+            }
+            other => panic!("unexpected message variant: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn update_budget_message_wraps_the_expected_variant() {
+        let message = messages::update_budget(
+            "budget-1",
+            v1::UpdateBudgetRequest {
+                run_id: "run-10".to_string(),
+                budget: None,
+            },
+        );
+
+        assert_eq!(message.request_id, "budget-1");
+        match message.message {
+            Some(v1::client_message::Message::UpdateBudget(request)) => {
+                assert_eq!(request.run_id, "run-10");
+            }
+            other => panic!("unexpected message variant: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn unsubscribe_message_wraps_the_expected_variant() {
+        let message = messages::unsubscribe(
+            "unsub-1",
+            v1::UnsubscribeRequest {
+                job_id: Some("job-1".to_string()),
+                run_id: None,
+                correlation_id: None,
+            },
+        );
+
+        assert_eq!(message.request_id, "unsub-1");
+        match message.message {
+            Some(v1::client_message::Message::Unsubscribe(request)) => {
+                assert_eq!(request.job_id.as_deref(), Some("job-1"));
+                assert!(request.run_id.is_none());
+            }
+            other => panic!("unexpected message variant: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn resume_from_message_wraps_the_expected_variant() {
+        let message = messages::resume_from(
+            "resume-from-1",
+            v1::ResumeFromSequenceRequest {
+                sequence: 100,
+                allow_snapshot: true,
+            },
+        );
+
+        assert_eq!(message.request_id, "resume-from-1");
+        match message.message {
+            Some(v1::client_message::Message::ResumeFrom(request)) => {
+                assert_eq!(request.sequence, 100);
+                assert!(request.allow_snapshot);
+            }
+            other => panic!("unexpected message variant: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn ping_message_wraps_the_expected_variant() {
+        let message = messages::ping(
+            "ping-1",
+            v1::Ping {
+                client_time_ns: 1_700_000_000_000,
+            },
+        );
+
+        assert_eq!(message.request_id, "ping-1");
+        match message.message {
+            Some(v1::client_message::Message::Ping(request)) => {
+                assert_eq!(request.client_time_ns, 1_700_000_000_000);
+            }
+            other => panic!("unexpected message variant: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn client_error_invalid_endpoint_display() {
+        let err = ClientError::InvalidEndpoint("bad uri".to_string());
+        assert_eq!(err.to_string(), "invalid endpoint: bad uri");
+    }
+
+    #[test]
+    fn client_error_status_from_conversion() {
+        let status = tonic::Status::not_found("missing");
+        let err: ClientError = status.into();
+        assert!(err.to_string().contains("missing"));
     }
 }
