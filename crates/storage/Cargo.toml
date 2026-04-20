@@ -27,5 +27,8 @@ s3 = ["object_store/aws"]
 gcs = ["object_store/gcp"]
 all-backends = ["local", "s3", "gcs"]
 
+[dev-dependencies]
+tempfile.workspace = true
+
 [lints]
 workspace = true
