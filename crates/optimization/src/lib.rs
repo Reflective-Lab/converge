@@ -44,6 +44,7 @@ pub mod packs;
 pub mod provider;
 pub mod scheduling;
 pub mod setcover;
+pub mod suggestor;
 
 #[cfg(feature = "sat")]
 pub mod cp;
