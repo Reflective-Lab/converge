@@ -218,10 +218,10 @@ impl StreamingEvent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use converge_core::{Context, ContextKey, Engine};
+    use converge_core::{ContextKey, ContextState, Engine};
 
     async fn promoted_fact(key: ContextKey, id: &str, content: &str) -> Fact {
-        let mut ctx = Context::new();
+        let mut ctx = ContextState::new();
         let _ = ctx.add_input(key, id, content);
         Engine::new()
             .run(ctx)

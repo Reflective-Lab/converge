@@ -33,14 +33,14 @@ struct AskSource {
     content: String,
 }
 
-fn parse_question(ctx: &dyn converge_core::ContextView) -> Option<String> {
+fn parse_question(ctx: &dyn converge_core::Context) -> Option<String> {
     ctx.get(ContextKey::Seeds)
         .iter()
         .find(|seed| seed.id == QUESTION_SEED_ID)
         .map(|seed| seed.content.clone())
 }
 
-fn parse_sources(ctx: &dyn converge_core::ContextView) -> Vec<AskSource> {
+fn parse_sources(ctx: &dyn converge_core::Context) -> Vec<AskSource> {
     ctx.get(ContextKey::Seeds)
         .iter()
         .filter(|seed| seed.id.starts_with(SOURCE_SEED_PREFIX))
@@ -102,7 +102,7 @@ impl Suggestor for AskConvergeAgent {
         &[ContextKey::Seeds]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         let has_question = parse_question(ctx).is_some();
         let has_answer = ctx
             .get(ContextKey::Strategies)
@@ -111,7 +111,7 @@ impl Suggestor for AskConvergeAgent {
         has_question && !has_answer
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let question = match parse_question(ctx) {
             Some(question) => question,
             None => return AgentEffect::empty(),
@@ -146,7 +146,7 @@ impl Invariant for GroundedAnswerInvariant {
         InvariantClass::Semantic
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         for fact in ctx.get(ContextKey::Strategies) {
             if fact.id != ANSWER_ID {
                 continue;
@@ -187,7 +187,7 @@ impl Invariant for RecallNotEvidenceInvariant {
         InvariantClass::Semantic
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         for fact in ctx.get(ContextKey::Strategies) {
             if fact.id != ANSWER_ID {
                 continue;
@@ -217,10 +217,10 @@ impl Invariant for RecallNotEvidenceInvariant {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use converge_core::{Context, Engine};
+    use converge_core::{ContextState, Engine};
 
-    fn promoted_context(entries: &[(ContextKey, &str, &str)]) -> Context {
-        let mut ctx = Context::new();
+    fn promoted_context(entries: &[(ContextKey, &str, &str)]) -> ContextState {
+        let mut ctx = ContextState::new();
         for (key, id, content) in entries {
             ctx.add_input(*key, *id, *content).unwrap();
         }

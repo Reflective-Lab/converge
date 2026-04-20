@@ -6,7 +6,7 @@
 use serde::Serialize;
 use thiserror::Error;
 
-use crate::context::Context;
+use crate::context::ContextState;
 use crate::gates::StopReason;
 use crate::invariant::InvariantClass;
 
@@ -30,7 +30,7 @@ pub enum ConvergeError {
         /// Reason for the violation.
         reason: String,
         /// Final context state (including diagnostic facts). Boxed to reduce error size.
-        context: Box<Context>,
+        context: Box<ContextState>,
     },
 
     /// Suggestor execution failed.
@@ -49,14 +49,14 @@ pub enum ConvergeError {
         /// New conflicting content.
         new: String,
         /// Final context state. Boxed to reduce error size.
-        context: Box<Context>,
+        context: Box<ContextState>,
     },
 }
 
 impl ConvergeError {
     /// Returns a reference to the context if this error variant carries one.
     #[must_use]
-    pub fn context(&self) -> Option<&Context> {
+    pub fn context(&self) -> Option<&ContextState> {
         match self {
             Self::InvariantViolation { context, .. } | Self::Conflict { context, .. } => {
                 Some(context)
@@ -97,8 +97,8 @@ impl ConvergeError {
 mod tests {
     use super::*;
 
-    fn empty_context() -> Context {
-        Context::default()
+    fn empty_context() -> ContextState {
+        ContextState::default()
     }
 
     #[test]

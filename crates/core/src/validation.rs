@@ -126,11 +126,11 @@ impl Suggestor for ValidationAgent {
         &[]
     }
 
-    fn accepts(&self, ctx: &dyn crate::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn crate::Context) -> bool {
         ContextKey::iter().any(|key| !ctx.get_proposals(key).is_empty())
     }
 
-    async fn execute(&self, ctx: &dyn crate::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn crate::Context) -> AgentEffect {
         let mut diagnostics = Vec::new();
 
         for key in ContextKey::iter() {

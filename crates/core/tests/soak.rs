@@ -11,7 +11,8 @@
 //! Run with: `cargo test -- --include-ignored soak --nocapture`
 
 use converge_core::{
-    AgentEffect, Context, ContextKey, Engine, ProposedFact, Suggestor, suggestors::SeedSuggestor,
+    AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+    suggestors::SeedSuggestor,
 };
 
 /// Proposer that creates a single proposal per execution.
@@ -27,11 +28,11 @@ impl Suggestor for SimpleScaleProposer {
         &[]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         !ctx.has(ContextKey::Hypotheses)
     }
 
-    async fn execute(&self, _ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
         AgentEffect::with_proposal(ProposedFact::new(
             ContextKey::Hypotheses,
             "h-0",
@@ -60,7 +61,7 @@ async fn soak_engine_high_cycle_count() {
 
     engine.register_suggestor(SimpleScaleProposer);
 
-    let result = engine.run(Context::new()).await.expect("should run");
+    let result = engine.run(ContextState::new()).await.expect("should run");
 
     // Verify engine either converged or hit budget
     assert!(result.converged || result.cycles == cycles);
@@ -94,7 +95,7 @@ async fn soak_concurrent_engine_runs() {
         let handle = tokio::spawn(async {
             let mut engine = Engine::new();
             engine.register_suggestor(SeedSuggestor::new("seed", "test data"));
-            engine.run(Context::new()).await
+            engine.run(ContextState::new()).await
         });
         handles.push(handle);
     }
@@ -159,7 +160,7 @@ async fn soak_throughput_latencies() {
 
         let mut engine = Engine::new();
         engine.register_suggestor(SeedSuggestor::new("seed", "test"));
-        let _ = engine.run(Context::new()).await;
+        let _ = engine.run(ContextState::new()).await;
 
         latencies.push(start.elapsed().as_micros() as u64);
     }
@@ -203,7 +204,7 @@ async fn soak_memory_stability() {
     for _ in 0..iterations {
         let mut engine = Engine::new();
         engine.register_suggestor(SeedSuggestor::new("seed", "test data"));
-        let _ = engine.run(Context::new()).await;
+        let _ = engine.run(ContextState::new()).await;
     }
 
     let rss_after = read_rss_kb().unwrap_or(0);

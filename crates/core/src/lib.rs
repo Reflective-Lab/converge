@@ -14,7 +14,7 @@
 //! ## Quick Start
 //!
 //! ```ignore
-//! use converge_core::{Context, ContextKey, Engine};
+//! use converge_core::{ContextState, ContextKey, Engine};
 //! use converge_core::suggestors::{ReactOnceSuggestor, SeedSuggestor};
 //!
 //! // Create engine and register suggestors
@@ -23,7 +23,7 @@
 //! engine.register_suggestor(ReactOnceSuggestor::new("hyp-1", "derived insight"));
 //!
 //! // Run until convergence (async)
-//! let result = engine.run(Context::new()).await.expect("should converge");
+//! let result = engine.run(ContextState::new()).await.expect("should converge");
 //!
 //! // Inspect results
 //! assert!(result.converged);
@@ -217,12 +217,11 @@ pub mod types;
 pub mod validation;
 
 pub use agent::{Suggestor, SuggestorId};
-pub use context::{Context, ContextKey, Fact, ProposedFact, ValidationError};
+pub use context::{ContextKey, ContextState, Fact, ProposedFact, ValidationError};
 pub use effect::AgentEffect;
 
-/// Re-export the Context trait from converge-pack.
-/// Suggestor and Invariant implementations use `&dyn ContextView` in their signatures.
-pub use converge_pack::Context as ContextView;
+/// Re-export the Context trait from converge-pack as its canonical name.
+pub use converge_pack::Context;
 pub use engine::{
     Budget, ConvergeResult, Engine, EngineHitlPolicy, ExperienceEventObserver, HitlPause,
     RunResult, StreamingCallback, TypesRunHooks,

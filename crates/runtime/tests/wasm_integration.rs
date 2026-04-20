@@ -11,7 +11,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use converge_core::{Context, Engine};
+use converge_core::{ContextState, Engine};
 use converge_runtime::wasm::contract::*;
 use converge_runtime::wasm::engine::WasmEngine;
 use converge_runtime::wasm::integration::{load_and_register, register_wasm_invariants};
@@ -290,7 +290,7 @@ async fn wasm_and_native_invariants_coexist() {
     .unwrap();
 
     // Both invariants should be registered
-    let ctx = Context::new();
+    let ctx = ContextState::new();
     let result = engine.run(ctx).await;
     assert!(result.is_ok());
 }
@@ -313,7 +313,7 @@ async fn acceptance_violation_rejects_convergence() {
     )
     .unwrap();
 
-    let ctx = Context::new();
+    let ctx = ContextState::new();
     let result = engine.run(ctx).await;
 
     // The acceptance invariant always fails → engine returns InvariantViolation
@@ -550,7 +550,7 @@ fn fuel_exhaustion_returns_violation() {
     match adapter {
         Ok(inv) => {
             // If adapter creation succeeds, check should fail
-            let result = converge_core::Invariant::check(&inv, &Context::new());
+            let result = converge_core::Invariant::check(&inv, &ContextState::new());
             assert!(result.is_violated());
         }
         Err(_) => {} // Expected: not enough fuel even for manifest read

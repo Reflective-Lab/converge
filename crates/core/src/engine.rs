@@ -19,7 +19,7 @@ use strum::IntoEnumIterator;
 use tracing::{Instrument, debug, info, info_span, warn};
 
 use crate::agent::{Suggestor, SuggestorId};
-use crate::context::{Context, ContextKey, Fact, ProposedFact, ValidationError};
+use crate::context::{ContextKey, ContextState, Fact, ProposedFact, ValidationError};
 use crate::effect::AgentEffect;
 use crate::error::ConvergeError;
 use crate::experience_store::ExperienceEvent;
@@ -147,7 +147,7 @@ impl EngineHitlPolicy {
 #[derive(Debug)]
 pub struct ConvergeResult {
     /// Final context state.
-    pub context: Context,
+    pub context: ContextState,
     /// Number of cycles executed.
     pub cycles: u32,
     /// Whether convergence was reached (vs budget exhaustion).
@@ -170,7 +170,7 @@ pub struct HitlPause {
     /// The gate request to present to the human.
     pub request: GateRequest,
     /// Saved context at time of pause.
-    pub context: Context,
+    pub context: ContextState,
     /// Cycle at which convergence was paused.
     pub cycle: u32,
     /// The proposal awaiting approval.
@@ -332,7 +332,7 @@ impl Engine {
     /// Like `run()`, but returns `RunResult` which can represent
     /// either completion or a HITL pause. When paused, call `resume()`
     /// with the human's decision to continue.
-    pub async fn run_with_hitl(&mut self, context: Context) -> RunResult {
+    pub async fn run_with_hitl(&mut self, context: ContextState) -> RunResult {
         self.run_inner(context).await
     }
 
@@ -505,7 +505,7 @@ impl Engine {
     /// Run the engine with budgets and active packs derived from a typed intent.
     pub async fn run_with_types_intent(
         &mut self,
-        context: Context,
+        context: ContextState,
         intent: &TypesRootIntent,
     ) -> Result<ConvergeResult, ConvergeError> {
         self.run_with_types_intent_and_hooks(context, intent, TypesRunHooks::default())
@@ -515,7 +515,7 @@ impl Engine {
     /// Run the engine with a typed intent plus run-scoped observers/evaluators.
     pub async fn run_with_types_intent_and_hooks(
         &mut self,
-        context: Context,
+        context: ContextState,
         intent: &TypesRootIntent,
         hooks: TypesRunHooks,
     ) -> Result<ConvergeResult, ConvergeError> {
@@ -566,14 +566,14 @@ impl Engine {
     /// Returns `ConvergeError::BudgetExhausted` if:
     /// - `max_cycles` is exceeded
     /// - `max_facts` is exceeded
-    pub async fn run(&mut self, context: Context) -> Result<ConvergeResult, ConvergeError> {
+    pub async fn run(&mut self, context: ContextState) -> Result<ConvergeResult, ConvergeError> {
         let observer = self.event_observer.clone();
         self.run_observed(context, observer.as_ref()).await
     }
 
     async fn run_observed(
         &mut self,
-        context: Context,
+        context: ContextState,
         event_observer: Option<&Arc<dyn ExperienceEventObserver>>,
     ) -> Result<ConvergeResult, ConvergeError> {
         async {
@@ -717,7 +717,7 @@ impl Engine {
     }
 
     /// Finds suggestors eligible to run based on dirty keys and `accepts()`.
-    fn find_eligible(&self, context: &Context, dirty_keys: &[ContextKey]) -> Vec<SuggestorId> {
+    fn find_eligible(&self, context: &ContextState, dirty_keys: &[ContextKey]) -> Vec<SuggestorId> {
         let mut candidates: HashSet<SuggestorId> = HashSet::new();
 
         // Unique dirty keys to avoid redundant lookups
@@ -765,7 +765,7 @@ impl Engine {
     /// Use `converge-runtime` with an `Executor` implementation for parallel execution.
     async fn execute_agents(
         &self,
-        context: &Context,
+        context: &ContextState,
         eligible: &[SuggestorId],
     ) -> Vec<(SuggestorId, AgentEffect)> {
         let mut results = Vec::with_capacity(eligible.len());
@@ -1040,7 +1040,7 @@ impl Engine {
     /// Counts total facts in context.
     #[allow(clippy::unused_self)] // Keeps API consistent
     #[allow(clippy::cast_possible_truncation)] // Budget is u32, context won't exceed
-    fn count_facts(&self, context: &Context) -> u32 {
+    fn count_facts(&self, context: &dyn crate::Context) -> u32 {
         ContextKey::iter()
             .map(|key| context.get(key).len() as u32)
             .sum()
@@ -1065,7 +1065,7 @@ impl Engine {
     }
 
     /// Inner convergence loop that returns `RunResult` (supports HITL pause).
-    async fn run_inner(&mut self, context: Context) -> RunResult {
+    async fn run_inner(&mut self, context: ContextState) -> RunResult {
         async {
             let mut tracked = TrackedContext::new(context);
             let mut cycles: u32 = 0;
@@ -1203,7 +1203,7 @@ impl Engine {
     /// Continue convergence from a specific cycle after HITL resume.
     async fn continue_convergence(
         &mut self,
-        context: Context,
+        context: ContextState,
         from_cycle: u32,
         dirty_keys: Vec<ContextKey>,
     ) -> RunResult {
@@ -1693,7 +1693,7 @@ mod tests {
     async fn engine_emits_tracing_logs() {
         let mut engine = Engine::new();
         engine.register_suggestor(SeedSuggestor);
-        let _ = engine.run(Context::new()).await.unwrap();
+        let _ = engine.run(ContextState::new()).await.unwrap();
 
         assert!(logs_contain("Starting convergence cycle"));
         assert!(logs_contain("Merged effects"));
@@ -1704,7 +1704,7 @@ mod tests {
     async fn converge_result_carries_integrity_proof() {
         let mut engine = Engine::new();
         engine.register_suggestor(SeedSuggestor);
-        let result = engine.run(Context::new()).await.unwrap();
+        let result = engine.run(ContextState::new()).await.unwrap();
 
         assert!(
             result.integrity.clock_time > 0,
@@ -1717,12 +1717,12 @@ mod tests {
     async fn different_inputs_produce_different_merkle_roots() {
         let mut engine = Engine::new();
         engine.register_suggestor(SeedSuggestor);
-        let r1 = engine.run(Context::new()).await.unwrap();
+        let r1 = engine.run(ContextState::new()).await.unwrap();
 
         let mut engine2 = Engine::new();
         engine2.register_suggestor(ReactOnceSuggestor);
         engine2.register_suggestor(SeedSuggestor);
-        let r2 = engine2.run(Context::new()).await.unwrap();
+        let r2 = engine2.run(ContextState::new()).await.unwrap();
 
         assert_ne!(
             r1.integrity.merkle_root, r2.integrity.merkle_root,
@@ -1743,11 +1743,11 @@ mod tests {
             &[] // No dependencies = runs first cycle
         }
 
-        fn accepts(&self, ctx: &dyn crate::ContextView) -> bool {
+        fn accepts(&self, ctx: &dyn crate::Context) -> bool {
             !ctx.has(ContextKey::Seeds)
         }
 
-        async fn execute(&self, _ctx: &dyn crate::ContextView) -> AgentEffect {
+        async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
             AgentEffect::with_proposal(proposal(
                 ContextKey::Seeds,
                 "seed-1",
@@ -1770,11 +1770,11 @@ mod tests {
             &[ContextKey::Seeds]
         }
 
-        fn accepts(&self, ctx: &dyn crate::ContextView) -> bool {
+        fn accepts(&self, ctx: &dyn crate::Context) -> bool {
             ctx.has(ContextKey::Seeds) && !ctx.has(ContextKey::Hypotheses)
         }
 
-        async fn execute(&self, _ctx: &dyn crate::ContextView) -> AgentEffect {
+        async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
             AgentEffect::with_proposal(proposal(
                 ContextKey::Hypotheses,
                 "hyp-1",
@@ -1796,11 +1796,11 @@ mod tests {
             &[]
         }
 
-        fn accepts(&self, ctx: &dyn crate::ContextView) -> bool {
+        fn accepts(&self, ctx: &dyn crate::Context) -> bool {
             !ctx.has(ContextKey::Seeds)
         }
 
-        async fn execute(&self, _ctx: &dyn crate::ContextView) -> AgentEffect {
+        async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
             AgentEffect::with_proposal(ProposedFact {
                 key: ContextKey::Seeds,
                 id: "seed-1".into(),
@@ -1829,7 +1829,7 @@ mod tests {
     struct BlockedCriterionEvaluator;
 
     impl CriterionEvaluator for SeedCriterionEvaluator {
-        fn evaluate(&self, criterion: &Criterion, context: &Context) -> CriterionResult {
+        fn evaluate(&self, criterion: &Criterion, context: &dyn crate::Context) -> CriterionResult {
             if criterion.id == "seed.present" && context.has(ContextKey::Seeds) {
                 CriterionResult::Met {
                     evidence: vec![crate::FactId::new("seed-1")],
@@ -1843,7 +1843,11 @@ mod tests {
     }
 
     impl CriterionEvaluator for BlockedCriterionEvaluator {
-        fn evaluate(&self, _criterion: &Criterion, _context: &Context) -> CriterionResult {
+        fn evaluate(
+            &self,
+            _criterion: &Criterion,
+            _context: &dyn crate::Context,
+        ) -> CriterionResult {
             CriterionResult::Blocked {
                 reason: "human approval required".to_string(),
                 approval_ref: Some("approval:test".to_string()),
@@ -1856,7 +1860,10 @@ mod tests {
         let mut engine = Engine::new();
         engine.register_suggestor(SeedSuggestor);
 
-        let result = engine.run(Context::new()).await.expect("should converge");
+        let result = engine
+            .run(ContextState::new())
+            .await
+            .expect("should converge");
 
         assert!(result.converged);
         assert_eq!(result.cycles, 2); // Cycle 1: emit seed, Cycle 2: no eligible agents
@@ -1869,7 +1876,10 @@ mod tests {
         engine.register_suggestor(SeedSuggestor);
         engine.register_suggestor(ReactOnceSuggestor);
 
-        let result = engine.run(Context::new()).await.expect("should converge");
+        let result = engine
+            .run(ContextState::new())
+            .await
+            .expect("should converge");
 
         assert!(result.converged);
         assert!(result.context.has(ContextKey::Seeds));
@@ -1882,7 +1892,10 @@ mod tests {
             let mut engine = Engine::new();
             engine.register_suggestor(SeedSuggestor);
             engine.register_suggestor(ReactOnceSuggestor);
-            engine.run(Context::new()).await.expect("should converge")
+            engine
+                .run(ContextState::new())
+                .await
+                .expect("should converge")
         };
 
         let r1 = run().await;
@@ -1914,7 +1927,7 @@ mod tests {
 
         let result = engine
             .run_with_types_intent_and_hooks(
-                Context::new(),
+                ContextState::new(),
                 &intent,
                 TypesRunHooks {
                     criterion_evaluator: Some(Arc::new(SeedCriterionEvaluator)),
@@ -1948,7 +1961,7 @@ mod tests {
         let observer = Arc::new(TestObserver::default());
         let _ = engine
             .run_with_types_intent_and_hooks(
-                Context::new(),
+                ContextState::new(),
                 &intent,
                 TypesRunHooks {
                     criterion_evaluator: Some(Arc::new(SeedCriterionEvaluator)),
@@ -1982,7 +1995,7 @@ mod tests {
         let observer = Arc::new(TestObserver::default());
         engine.set_event_observer(observer.clone());
 
-        let mut context = Context::new();
+        let mut context = ContextState::new();
         context
             .add_fact(crate::context::new_fact(
                 ContextKey::Seeds,
@@ -2020,7 +2033,7 @@ mod tests {
 
         let result = engine
             .run_with_types_intent_and_hooks(
-                Context::new(),
+                ContextState::new(),
                 &intent,
                 TypesRunHooks {
                     criterion_evaluator: Some(Arc::new(BlockedCriterionEvaluator)),
@@ -2059,11 +2072,11 @@ mod tests {
                 &[]
             }
 
-            fn accepts(&self, _ctx: &dyn crate::ContextView) -> bool {
+            fn accepts(&self, _ctx: &dyn crate::Context) -> bool {
                 true // Always wants to run
             }
 
-            async fn execute(&self, _ctx: &dyn crate::ContextView) -> AgentEffect {
+            async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
                 let n = self.counter.fetch_add(1, Ordering::SeqCst);
                 AgentEffect::with_proposal(proposal(
                     ContextKey::Seeds,
@@ -2082,7 +2095,7 @@ mod tests {
             counter: AtomicU32::new(0),
         });
 
-        let result = engine.run(Context::new()).await;
+        let result = engine.run(ContextState::new()).await;
 
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -2104,11 +2117,11 @@ mod tests {
                 &[]
             }
 
-            fn accepts(&self, _ctx: &dyn crate::ContextView) -> bool {
+            fn accepts(&self, _ctx: &dyn crate::Context) -> bool {
                 true
             }
 
-            async fn execute(&self, ctx: &dyn crate::ContextView) -> AgentEffect {
+            async fn execute(&self, ctx: &dyn crate::Context) -> AgentEffect {
                 let n = ctx.get(ContextKey::Seeds).len();
                 AgentEffect::with_proposals(
                     (0..10)
@@ -2131,7 +2144,7 @@ mod tests {
         });
         engine.register_suggestor(FloodAgent);
 
-        let result = engine.run(Context::new()).await;
+        let result = engine.run(ContextState::new()).await;
 
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -2153,11 +2166,11 @@ mod tests {
                 &[ContextKey::Strategies]
             }
 
-            fn accepts(&self, _ctx: &dyn crate::ContextView) -> bool {
+            fn accepts(&self, _ctx: &dyn crate::Context) -> bool {
                 true
             }
 
-            async fn execute(&self, _ctx: &dyn crate::ContextView) -> AgentEffect {
+            async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
                 AgentEffect::with_proposal(proposal(
                     ContextKey::Constraints,
                     "constraint-1",
@@ -2171,7 +2184,10 @@ mod tests {
         engine.register_suggestor(SeedSuggestor); // Emits to Seeds
         engine.register_suggestor(StrategyAgent); // Only watches Strategies
 
-        let result = engine.run(Context::new()).await.expect("should converge");
+        let result = engine
+            .run(ContextState::new())
+            .await
+            .expect("should converge");
 
         // SeedSuggestor runs, but StrategyAgent never runs because
         // Seeds changed, not Strategies
@@ -2192,11 +2208,11 @@ mod tests {
             &[]
         }
 
-        fn accepts(&self, _ctx: &dyn crate::ContextView) -> bool {
+        fn accepts(&self, _ctx: &dyn crate::Context) -> bool {
             true
         }
 
-        async fn execute(&self, _ctx: &dyn crate::ContextView) -> AgentEffect {
+        async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
             AgentEffect::empty()
         }
     }
@@ -2214,11 +2230,11 @@ mod tests {
             &[ContextKey::Seeds]
         }
 
-        fn accepts(&self, _ctx: &dyn crate::ContextView) -> bool {
+        fn accepts(&self, _ctx: &dyn crate::Context) -> bool {
             true
         }
 
-        async fn execute(&self, _ctx: &dyn crate::ContextView) -> AgentEffect {
+        async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
             AgentEffect::empty()
         }
     }
@@ -2228,7 +2244,7 @@ mod tests {
         let mut engine = Engine::new();
         let always_id = engine.register_suggestor(AlwaysAgent);
         let watcher_id = engine.register_suggestor(SeedWatcher);
-        let ctx = Context::new();
+        let ctx = ContextState::new();
 
         let eligible = engine.find_eligible(&ctx, &[]);
         assert_eq!(eligible, vec![always_id]);
@@ -2250,11 +2266,11 @@ mod tests {
             &[ContextKey::Seeds, ContextKey::Hypotheses]
         }
 
-        fn accepts(&self, _ctx: &dyn crate::ContextView) -> bool {
+        fn accepts(&self, _ctx: &dyn crate::Context) -> bool {
             true
         }
 
-        async fn execute(&self, _ctx: &dyn crate::ContextView) -> AgentEffect {
+        async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
             AgentEffect::empty()
         }
     }
@@ -2263,7 +2279,7 @@ mod tests {
     fn find_eligible_deduplicates_agents() {
         let mut engine = Engine::new();
         let multi_id = engine.register_suggestor(MultiDepAgent);
-        let ctx = Context::new();
+        let ctx = ContextState::new();
 
         let eligible = engine.find_eligible(&ctx, &[ContextKey::Seeds, ContextKey::Hypotheses]);
         assert_eq!(eligible, vec![multi_id]);
@@ -2277,7 +2293,7 @@ mod tests {
         let global_id = engine.register_suggestor(AlwaysAgent);
         engine.set_active_packs(["pack-a"]);
 
-        let eligible = engine.find_eligible(&Context::new(), &[]);
+        let eligible = engine.find_eligible(&ContextState::new(), &[]);
         assert_eq!(eligible, vec![pack_a_id, global_id]);
     }
 
@@ -2297,11 +2313,11 @@ mod tests {
             &[]
         }
 
-        fn accepts(&self, _ctx: &dyn crate::ContextView) -> bool {
+        fn accepts(&self, _ctx: &dyn crate::Context) -> bool {
             true
         }
 
-        async fn execute(&self, _ctx: &dyn crate::ContextView) -> AgentEffect {
+        async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
             AgentEffect::with_proposal(proposal(
                 ContextKey::Seeds,
                 self.fact_id,
@@ -2322,7 +2338,7 @@ mod tests {
             name: "AgentB",
             fact_id: "b",
         });
-        let mut tracked = TrackedContext::new(Context::new());
+        let mut tracked = TrackedContext::new(ContextState::new());
 
         let effect_a =
             AgentEffect::with_proposal(proposal(ContextKey::Seeds, "a", "first", "AgentA"));
@@ -2367,7 +2383,7 @@ mod tests {
             InvariantClass::Structural
         }
 
-        fn check(&self, ctx: &dyn crate::ContextView) -> InvariantResult {
+        fn check(&self, ctx: &dyn crate::Context) -> InvariantResult {
             for fact in ctx.get(ContextKey::Seeds) {
                 if fact.content.contains(self.forbidden) {
                     return InvariantResult::Violated(Violation::with_facts(
@@ -2392,7 +2408,7 @@ mod tests {
             InvariantClass::Semantic
         }
 
-        fn check(&self, ctx: &dyn crate::ContextView) -> InvariantResult {
+        fn check(&self, ctx: &dyn crate::Context) -> InvariantResult {
             let seeds = ctx.get(ContextKey::Seeds).len();
             let hyps = ctx.get(ContextKey::Hypotheses).len();
             // Semantic rule: can't have seeds without hypotheses for more than one cycle
@@ -2417,7 +2433,7 @@ mod tests {
             InvariantClass::Acceptance
         }
 
-        fn check(&self, ctx: &dyn crate::ContextView) -> InvariantResult {
+        fn check(&self, ctx: &dyn crate::Context) -> InvariantResult {
             let seeds = ctx.get(ContextKey::Seeds).len();
             if seeds < 2 {
                 return InvariantResult::Violated(Violation::new(format!(
@@ -2436,7 +2452,7 @@ mod tests {
             forbidden: "initial", // SeedSuggestor emits "initial seed"
         });
 
-        let result = engine.run(Context::new()).await;
+        let result = engine.run(ContextState::new()).await;
 
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -2457,7 +2473,7 @@ mod tests {
         engine.register_suggestor(SeedSuggestor);
         engine.register_invariant(RequireBalance);
 
-        let result = engine.run(Context::new()).await;
+        let result = engine.run(ContextState::new()).await;
 
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -2478,7 +2494,7 @@ mod tests {
         engine.register_suggestor(ReactOnceSuggestor); // Add hypotheses to pass semantic
         engine.register_invariant(RequireMultipleSeeds);
 
-        let result = engine.run(Context::new()).await;
+        let result = engine.run(ContextState::new()).await;
 
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -2515,12 +2531,12 @@ mod tests {
                 &[]
             }
 
-            fn accepts(&self, ctx: &dyn crate::ContextView) -> bool {
+            fn accepts(&self, ctx: &dyn crate::Context) -> bool {
                 // Only propose once
                 !ctx.has(ContextKey::Hypotheses)
             }
 
-            async fn execute(&self, _ctx: &dyn crate::ContextView) -> AgentEffect {
+            async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
                 AgentEffect {
                     proposals: vec![ProposedFact {
                         key: ContextKey::Hypotheses,
@@ -2545,7 +2561,7 @@ mod tests {
                 InvariantClass::Structural
             }
 
-            fn check(&self, ctx: &dyn crate::ContextView) -> InvariantResult {
+            fn check(&self, ctx: &dyn crate::Context) -> InvariantResult {
                 for key in ContextKey::iter() {
                     for fact in ctx.get(key) {
                         if fact.content.contains("INJECTED") {
@@ -2567,7 +2583,7 @@ mod tests {
         engine.register_suggestor(MaliciousLlmAgent);
         engine.register_invariant(RejectInjectedContent);
 
-        let result = engine.run(Context::new()).await;
+        let result = engine.run(ContextState::new()).await;
 
         // The engine MUST reject this — the malicious proposal was promoted
         // to a fact, but the structural invariant caught it.
@@ -2606,11 +2622,11 @@ mod tests {
                 &[]
             }
 
-            fn accepts(&self, ctx: &dyn crate::ContextView) -> bool {
+            fn accepts(&self, ctx: &dyn crate::Context) -> bool {
                 !ctx.has(ContextKey::Hypotheses)
             }
 
-            async fn execute(&self, _ctx: &dyn crate::ContextView) -> AgentEffect {
+            async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
                 AgentEffect {
                     proposals: vec![ProposedFact {
                         key: ContextKey::Hypotheses,
@@ -2627,7 +2643,7 @@ mod tests {
         engine.register_suggestor(BadConfidenceAgent);
 
         let result = engine
-            .run(Context::new())
+            .run(ContextState::new())
             .await
             .expect("should converge (proposal silently rejected)");
 
@@ -2653,11 +2669,11 @@ mod tests {
                 &[]
             }
 
-            fn accepts(&self, ctx: &dyn crate::ContextView) -> bool {
+            fn accepts(&self, ctx: &dyn crate::Context) -> bool {
                 !ctx.has(ContextKey::Hypotheses)
             }
 
-            async fn execute(&self, _ctx: &dyn crate::ContextView) -> AgentEffect {
+            async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
                 AgentEffect {
                     proposals: vec![ProposedFact {
                         key: ContextKey::Hypotheses,
@@ -2674,7 +2690,7 @@ mod tests {
         engine.register_suggestor(EmptyContentAgent);
 
         let result = engine
-            .run(Context::new())
+            .run(ContextState::new())
             .await
             .expect("should converge (proposal silently rejected)");
 
@@ -2700,11 +2716,11 @@ mod tests {
                 &[]
             }
 
-            fn accepts(&self, ctx: &dyn crate::ContextView) -> bool {
+            fn accepts(&self, ctx: &dyn crate::Context) -> bool {
                 !ctx.has(ContextKey::Hypotheses)
             }
 
-            async fn execute(&self, _ctx: &dyn crate::ContextView) -> AgentEffect {
+            async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
                 AgentEffect {
                     proposals: vec![ProposedFact {
                         key: ContextKey::Hypotheses,
@@ -2720,7 +2736,10 @@ mod tests {
         let mut engine = Engine::new();
         engine.register_suggestor(LegitLlmAgent);
 
-        let result = engine.run(Context::new()).await.expect("should converge");
+        let result = engine
+            .run(ContextState::new())
+            .await
+            .expect("should converge");
 
         assert!(result.converged);
         assert!(result.context.has(ContextKey::Hypotheses));
@@ -2744,11 +2763,11 @@ mod tests {
                 &[]
             }
 
-            fn accepts(&self, ctx: &dyn crate::ContextView) -> bool {
+            fn accepts(&self, ctx: &dyn crate::Context) -> bool {
                 !ctx.has(ContextKey::Seeds)
             }
 
-            async fn execute(&self, _ctx: &dyn crate::ContextView) -> AgentEffect {
+            async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
                 AgentEffect::with_proposals(vec![
                     proposal(ContextKey::Seeds, "seed-1", "good content", self.name()),
                     proposal(
@@ -2774,11 +2793,11 @@ mod tests {
                 &[ContextKey::Seeds]
             }
 
-            fn accepts(&self, ctx: &dyn crate::ContextView) -> bool {
+            fn accepts(&self, ctx: &dyn crate::Context) -> bool {
                 ctx.has(ContextKey::Seeds) && !ctx.has(ContextKey::Hypotheses)
             }
 
-            async fn execute(&self, _ctx: &dyn crate::ContextView) -> AgentEffect {
+            async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
                 AgentEffect::with_proposal(proposal(
                     ContextKey::Hypotheses,
                     "hyp-1",
@@ -2800,7 +2819,7 @@ mod tests {
                 InvariantClass::Semantic
             }
 
-            fn check(&self, _ctx: &dyn crate::ContextView) -> InvariantResult {
+            fn check(&self, _ctx: &dyn crate::Context) -> InvariantResult {
                 InvariantResult::Ok
             }
         }
@@ -2816,7 +2835,7 @@ mod tests {
         engine.register_invariant(AlwaysSatisfied); // Semantic that passes
         engine.register_invariant(RequireMultipleSeeds);
 
-        let result = engine.run(Context::new()).await;
+        let result = engine.run(ContextState::new()).await;
 
         assert!(result.is_ok());
         let result = result.unwrap();
@@ -2842,11 +2861,11 @@ mod tests {
             &[]
         }
 
-        fn accepts(&self, ctx: &dyn crate::ContextView) -> bool {
+        fn accepts(&self, ctx: &dyn crate::Context) -> bool {
             !ctx.has(ContextKey::Hypotheses)
         }
 
-        async fn execute(&self, _ctx: &dyn crate::ContextView) -> AgentEffect {
+        async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
             AgentEffect::with_proposal(ProposedFact {
                 key: ContextKey::Hypotheses,
                 id: "prop-1".into(),
@@ -2868,7 +2887,7 @@ mod tests {
             timeout: TimeoutPolicy::default(),
         });
 
-        let result = engine.run_with_hitl(Context::new()).await;
+        let result = engine.run_with_hitl(ContextState::new()).await;
 
         match result {
             RunResult::HitlPause(pause) => {
@@ -2891,7 +2910,7 @@ mod tests {
             timeout: TimeoutPolicy::default(),
         });
 
-        let result = engine.run_with_hitl(Context::new()).await;
+        let result = engine.run_with_hitl(ContextState::new()).await;
 
         match result {
             RunResult::Complete(Ok(r)) => {
@@ -2914,7 +2933,7 @@ mod tests {
             timeout: TimeoutPolicy::default(),
         });
 
-        let result = engine.run_with_hitl(Context::new()).await;
+        let result = engine.run_with_hitl(ContextState::new()).await;
 
         match result {
             RunResult::HitlPause(pause) => {
@@ -2935,7 +2954,7 @@ mod tests {
             timeout: TimeoutPolicy::default(),
         });
 
-        let result = engine.run_with_hitl(Context::new()).await;
+        let result = engine.run_with_hitl(ContextState::new()).await;
         let pause = match result {
             RunResult::HitlPause(p) => *p,
             RunResult::Complete(_) => panic!("Expected HITL pause"),
@@ -2968,7 +2987,7 @@ mod tests {
             timeout: TimeoutPolicy::default(),
         });
 
-        let result = engine.run_with_hitl(Context::new()).await;
+        let result = engine.run_with_hitl(ContextState::new()).await;
         let pause = match result {
             RunResult::HitlPause(p) => *p,
             RunResult::Complete(_) => panic!("Expected HITL pause"),
@@ -3000,7 +3019,7 @@ mod tests {
         engine.register_suggestor(ProposingAgent);
         // No HITL policy set
 
-        let result = engine.run_with_hitl(Context::new()).await;
+        let result = engine.run_with_hitl(ContextState::new()).await;
 
         match result {
             RunResult::Complete(Ok(r)) => {

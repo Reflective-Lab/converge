@@ -41,7 +41,7 @@ impl Eval for MeetingScheduleFeasibilityEval {
         &[ContextKey::Strategies, ContextKey::Constraints]
     }
 
-    fn evaluate(&self, ctx: &dyn converge_core::ContextView) -> EvalResult {
+    fn evaluate(&self, ctx: &dyn converge_core::Context) -> EvalResult {
         let strategies = ctx.get(ContextKey::Strategies);
         let constraints = ctx.get(ContextKey::Constraints);
 
@@ -133,7 +133,7 @@ impl Eval for InvoiceAccuracyEval {
         &[ContextKey::Proposals]
     }
 
-    fn evaluate(&self, ctx: &dyn converge_core::ContextView) -> EvalResult {
+    fn evaluate(&self, ctx: &dyn converge_core::Context) -> EvalResult {
         let proposals = ctx.get(ContextKey::Proposals);
         let invoices: Vec<_> = proposals
             .iter()
@@ -203,7 +203,7 @@ impl Eval for PaymentReconciliationEval {
         &[ContextKey::Proposals]
     }
 
-    fn evaluate(&self, ctx: &dyn converge_core::ContextView) -> EvalResult {
+    fn evaluate(&self, ctx: &dyn converge_core::Context) -> EvalResult {
         let proposals = ctx.get(ContextKey::Proposals);
         let payments: Vec<_> = proposals
             .iter()
@@ -269,7 +269,7 @@ impl Eval for PromiseFulfillmentEval {
         &[ContextKey::Proposals]
     }
 
-    fn evaluate(&self, ctx: &dyn converge_core::ContextView) -> EvalResult {
+    fn evaluate(&self, ctx: &dyn converge_core::Context) -> EvalResult {
         let proposals = ctx.get(ContextKey::Proposals);
         let promises: Vec<_> = proposals
             .iter()
@@ -332,7 +332,7 @@ impl Eval for ScopeCreepDetectionEval {
         &[ContextKey::Proposals, ContextKey::Signals]
     }
 
-    fn evaluate(&self, ctx: &dyn converge_core::ContextView) -> EvalResult {
+    fn evaluate(&self, ctx: &dyn converge_core::Context) -> EvalResult {
         let proposals = ctx.get(ContextKey::Proposals);
         let scope_changes: Vec<_> = proposals
             .iter()
@@ -393,7 +393,7 @@ impl Eval for AccessComplianceEval {
         &[ContextKey::Proposals]
     }
 
-    fn evaluate(&self, ctx: &dyn converge_core::ContextView) -> EvalResult {
+    fn evaluate(&self, ctx: &dyn converge_core::Context) -> EvalResult {
         let proposals = ctx.get(ContextKey::Proposals);
         let terminated: Vec<_> = proposals
             .iter()
@@ -461,7 +461,7 @@ impl Eval for AuditCoverageEval {
         &[ContextKey::Proposals]
     }
 
-    fn evaluate(&self, ctx: &dyn converge_core::ContextView) -> EvalResult {
+    fn evaluate(&self, ctx: &dyn converge_core::Context) -> EvalResult {
         let proposals = ctx.get(ContextKey::Proposals);
         let actions: Vec<_> = proposals
             .iter()
@@ -522,7 +522,7 @@ impl Eval for RbacEnforcementEval {
         &[ContextKey::Proposals]
     }
 
-    fn evaluate(&self, ctx: &dyn converge_core::ContextView) -> EvalResult {
+    fn evaluate(&self, ctx: &dyn converge_core::Context) -> EvalResult {
         let proposals = ctx.get(ContextKey::Proposals);
         let access_attempts: Vec<_> = proposals
             .iter()
@@ -591,7 +591,7 @@ impl Eval for MetricDefinitionQualityEval {
         &[ContextKey::Proposals]
     }
 
-    fn evaluate(&self, ctx: &dyn converge_core::ContextView) -> EvalResult {
+    fn evaluate(&self, ctx: &dyn converge_core::Context) -> EvalResult {
         let proposals = ctx.get(ContextKey::Proposals);
         let metrics: Vec<_> = proposals
             .iter()
@@ -657,7 +657,7 @@ impl Eval for DashboardSourceEval {
         &[ContextKey::Proposals]
     }
 
-    fn evaluate(&self, ctx: &dyn converge_core::ContextView) -> EvalResult {
+    fn evaluate(&self, ctx: &dyn converge_core::Context) -> EvalResult {
         let proposals = ctx.get(ContextKey::Proposals);
         let dashboards: Vec<_> = proposals
             .iter()
@@ -705,10 +705,10 @@ impl Eval for DashboardSourceEval {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use converge_core::{Context, Engine};
+    use converge_core::{ContextState, Engine};
 
-    fn promoted_context(entries: &[(ContextKey, &str, &str)]) -> Context {
-        let mut ctx = Context::new();
+    fn promoted_context(entries: &[(ContextKey, &str, &str)]) -> ContextState {
+        let mut ctx = ContextState::new();
         for (key, id, content) in entries {
             ctx.add_input(*key, *id, *content).unwrap();
         }

@@ -50,17 +50,14 @@ pub const LEDGER_PREFIX: &str = "ledger:";
 /// Prefix for period facts
 pub const PERIOD_PREFIX: &str = "period:";
 
-fn invoice_issue_request_exists(ctx: &dyn converge_core::ContextView, invoice_id: &str) -> bool {
+fn invoice_issue_request_exists(ctx: &dyn converge_core::Context, invoice_id: &str) -> bool {
     let request_id = format!("{INVOICE_PREFIX}issue_request:{invoice_id}");
     ctx.get(ContextKey::Proposals)
         .iter()
         .any(|fact| fact.id == request_id)
 }
 
-fn invoice_issue_final_output_exists(
-    ctx: &dyn converge_core::ContextView,
-    invoice_id: &str,
-) -> bool {
+fn invoice_issue_final_output_exists(ctx: &dyn converge_core::Context, invoice_id: &str) -> bool {
     let issued_id = format!("{INVOICE_PREFIX}issued:{invoice_id}");
     let rejected_id = format!("{INVOICE_PREFIX}issue_rejected:{invoice_id}");
 
@@ -69,14 +66,14 @@ fn invoice_issue_final_output_exists(
         .any(|fact| fact.id == issued_id || fact.id == rejected_id)
 }
 
-fn period_close_request_exists(ctx: &dyn converge_core::ContextView, period_id: &str) -> bool {
+fn period_close_request_exists(ctx: &dyn converge_core::Context, period_id: &str) -> bool {
     let request_id = format!("{PERIOD_PREFIX}close_request:{period_id}");
     ctx.get(ContextKey::Proposals)
         .iter()
         .any(|fact| fact.id == request_id)
 }
 
-fn period_close_final_output_exists(ctx: &dyn converge_core::ContextView, period_id: &str) -> bool {
+fn period_close_final_output_exists(ctx: &dyn converge_core::Context, period_id: &str) -> bool {
     let closed_id = format!("{PERIOD_PREFIX}closed:{period_id}");
     let rejected_id = format!("{PERIOD_PREFIX}close_rejected:{period_id}");
 
@@ -110,7 +107,7 @@ impl Suggestor for InvoiceCreatorAgent {
         &[ContextKey::Seeds]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         // Accept when we have triggers but haven't created invoices yet
         let has_triggers = ctx.get(ContextKey::Seeds).iter().any(|f| {
             f.content.contains("deal.closed_won")
@@ -124,7 +121,7 @@ impl Suggestor for InvoiceCreatorAgent {
         has_triggers && !has_invoices
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let triggers = ctx.get(ContextKey::Seeds);
         let mut facts = Vec::new();
 
@@ -187,7 +184,7 @@ impl Suggestor for InvoiceIssuerAgent {
         &[ContextKey::Proposals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.get(ContextKey::Proposals).iter().any(|invoice| {
             invoice.id.starts_with(INVOICE_PREFIX)
                 && invoice.content.contains("\"state\":\"ready_to_issue\"")
@@ -195,7 +192,7 @@ impl Suggestor for InvoiceIssuerAgent {
         })
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let proposals = ctx.get(ContextKey::Proposals);
         let mut facts = Vec::new();
 
@@ -334,14 +331,14 @@ impl Suggestor for PaymentAllocatorAgent {
         &[ContextKey::Proposals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         // Accept when we have unallocated payments
         ctx.get(ContextKey::Proposals).iter().any(|p| {
             p.id.starts_with(PAYMENT_PREFIX) && p.content.contains("\"state\":\"unallocated\"")
         })
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let proposals = ctx.get(ContextKey::Proposals);
         let payments: Vec<_> = proposals
             .iter()
@@ -398,7 +395,7 @@ impl Suggestor for ReconciliationMatcherAgent {
         &[ContextKey::Signals, ContextKey::Proposals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         // Accept when we have bank transactions (signals) and no ledger entries yet
         let has_bank_txns = ctx
             .get(ContextKey::Signals)
@@ -411,7 +408,7 @@ impl Suggestor for ReconciliationMatcherAgent {
         has_bank_txns && !has_ledger
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let signals = ctx.get(ContextKey::Signals);
         let proposals = ctx.get(ContextKey::Proposals);
 
@@ -467,7 +464,7 @@ impl Suggestor for OverdueDetectorAgent {
         &[ContextKey::Proposals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         // Check for open/partial invoices past due date
         ctx.get(ContextKey::Proposals).iter().any(|inv| {
             inv.id.starts_with(INVOICE_PREFIX)
@@ -477,7 +474,7 @@ impl Suggestor for OverdueDetectorAgent {
         })
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let proposals = ctx.get(ContextKey::Proposals);
         let mut facts = Vec::new();
 
@@ -542,7 +539,7 @@ impl Suggestor for PeriodCloserAgent {
         &[ContextKey::Proposals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         // Accept when period is in "closing" state and all reconciliation complete
         ctx.get(ContextKey::Proposals).iter().any(|period| {
             period.id.starts_with(PERIOD_PREFIX)
@@ -551,7 +548,7 @@ impl Suggestor for PeriodCloserAgent {
         })
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let proposals = ctx.get(ContextKey::Proposals);
         let mut facts = Vec::new();
 
@@ -662,7 +659,7 @@ impl Invariant for InvoiceHasCustomerInvariant {
         InvariantClass::Structural
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         for invoice in ctx.get(ContextKey::Proposals).iter() {
             if invoice.id.starts_with(INVOICE_PREFIX) && !invoice.content.contains("customer_id") {
                 return InvariantResult::Violated(Violation::with_facts(
@@ -688,7 +685,7 @@ impl Invariant for PaymentAllocationCompleteInvariant {
         InvariantClass::Semantic
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         // Check that paid invoices have allocations summing to total
         for invoice in ctx.get(ContextKey::Proposals).iter() {
             if invoice.id.starts_with(INVOICE_PREFIX)
@@ -715,7 +712,7 @@ impl Invariant for ClosedPeriodReadonlyInvariant {
         InvariantClass::Acceptance
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         // Check that facts in closed periods have override references
         for period in ctx.get(ContextKey::Proposals).iter() {
             if period.id.starts_with(PERIOD_PREFIX)
@@ -735,14 +732,14 @@ impl Invariant for ClosedPeriodReadonlyInvariant {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use converge_core::{Context, Engine};
+    use converge_core::{ContextState, Engine};
 
     #[tokio::test]
     async fn invoice_creator_produces_draft() {
         let mut engine = Engine::new();
         engine.register_suggestor(InvoiceCreatorAgent);
 
-        let mut ctx = Context::new();
+        let mut ctx = ContextState::new();
         let _ = ctx.add_input(
             ContextKey::Seeds,
             "trigger:deal.closed_won:deal_123",
@@ -765,7 +762,7 @@ mod tests {
         let mut engine = Engine::new();
         engine.register_suggestor(InvoiceIssuerAgent::default());
 
-        let mut ctx = Context::new();
+        let mut ctx = ContextState::new();
         let _ = ctx.add_input(
             ContextKey::Proposals,
             "invoice:draft:deal_123",
@@ -793,7 +790,7 @@ mod tests {
         let mut engine = Engine::new();
         engine.register_suggestor(InvoiceIssuerAgent::default());
 
-        let mut ctx = Context::new();
+        let mut ctx = ContextState::new();
         let _ = ctx.add_input(
             ContextKey::Proposals,
             "invoice:draft:deal_123",
@@ -824,7 +821,7 @@ mod tests {
         let mut engine = Engine::new();
         engine.register_suggestor(PeriodCloserAgent::default());
 
-        let mut ctx = Context::new();
+        let mut ctx = ContextState::new();
         let _ = ctx.add_input(
             ContextKey::Proposals,
             "period:2026-03",

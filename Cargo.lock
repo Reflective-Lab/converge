@@ -2542,7 +2542,9 @@ name = "converge-optimization"
 version = "3.4.0"
 dependencies = [
  "approx",
+ "async-trait",
  "bitvec",
+ "converge-pack",
  "criterion",
  "indexmap 2.14.0",
  "num-traits",
@@ -2556,6 +2558,7 @@ dependencies = [
  "serde_json",
  "smallvec",
  "thiserror 2.0.18",
+ "tokio",
  "tracing",
  "varisat",
 ]
@@ -2565,6 +2568,7 @@ name = "converge-pack"
 version = "3.4.0"
 dependencies = [
  "async-trait",
+ "proptest",
  "serde",
  "serde_json",
  "strum 0.26.3",
@@ -2576,11 +2580,13 @@ dependencies = [
 name = "converge-policy"
 version = "3.4.0"
 dependencies = [
+ "async-trait",
  "axum 0.8.9",
  "base64 0.22.1",
  "cedar-policy",
  "ciborium",
  "converge-core",
+ "converge-pack",
  "ed25519-dalek",
  "proptest",
  "serde",
@@ -2712,6 +2718,7 @@ dependencies = [
  "futures",
  "object_store 0.13.2",
  "serde",
+ "tempfile",
  "thiserror 2.0.18",
  "tokio",
  "toml 0.8.23",

@@ -9,7 +9,7 @@ use axum::{
     extract::{Json, Path, State},
     routing::{get, post},
 };
-use converge_core::{Context, ContextKey, Engine};
+use converge_core::{ContextKey, ContextState, Engine};
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use tracing::{info, info_span};
@@ -310,7 +310,7 @@ pub async fn handle_job(
     // TODO: Properly deserialize RootIntent and create Context
     // For now, use empty context
     let _context_data = context_data;
-    let context = Context::new();
+    let context = ContextState::new();
 
     let result = engine.run(context).await.map_err(RuntimeError::Converge)?;
 
@@ -683,7 +683,7 @@ pub async fn run_job(
 
         // Create context from seeds
         let _seeds = seeds;
-        let context = Context::new();
+        let context = ContextState::new();
 
         let result = engine.run(context).await.map_err(RuntimeError::Converge);
 

@@ -53,13 +53,13 @@ impl Suggestor for MetricRegistrarAgent {
         &[ContextKey::Seeds]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.get(ContextKey::Seeds)
             .iter()
             .any(|s| s.content.contains("metric.define") || s.content.contains("metric.update"))
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let triggers = ctx.get(ContextKey::Seeds);
         let mut facts = Vec::new();
 
@@ -102,13 +102,13 @@ impl Suggestor for SourceConnectorAgent {
         &[ContextKey::Seeds]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.get(ContextKey::Seeds)
             .iter()
             .any(|s| s.content.contains("source.register") || s.content.contains("source.connect"))
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let triggers = ctx.get(ContextKey::Seeds);
         let mut facts = Vec::new();
 
@@ -151,13 +151,13 @@ impl Suggestor for PipelineCoordinatorAgent {
         &[ContextKey::Signals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.get(ContextKey::Signals)
             .iter()
             .any(|s| s.id.starts_with(SOURCE_PREFIX) && s.content.contains("\"state\":\"healthy\""))
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let signals = ctx.get(ContextKey::Signals);
         let mut facts = Vec::new();
 
@@ -200,13 +200,13 @@ impl Suggestor for DataValidatorAgent {
         &[ContextKey::Proposals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.get(ContextKey::Proposals).iter().any(|p| {
             p.id.starts_with(PIPELINE_PREFIX) && p.content.contains("\"state\":\"succeeded\"")
         })
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let proposals = ctx.get(ContextKey::Proposals);
         let mut facts = Vec::new();
 
@@ -250,13 +250,13 @@ impl Suggestor for AnomalyDetectorAgent {
         &[ContextKey::Evaluations]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.get(ContextKey::Evaluations).iter().any(|e| {
             e.id.starts_with(VALIDATION_PREFIX) && e.content.contains("\"schema_valid\":true")
         })
     }
 
-    async fn execute(&self, _ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
         // In real implementation, would analyze data for anomalies
         // For now, creates a placeholder showing no anomalies detected
         AgentEffect::with_proposal(crate::proposal(
@@ -289,13 +289,13 @@ impl Suggestor for DashboardBuilderAgent {
         &[ContextKey::Seeds]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.get(ContextKey::Seeds).iter().any(|s| {
             s.content.contains("dashboard.create") || s.content.contains("dashboard.update")
         })
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let triggers = ctx.get(ContextKey::Seeds);
         let mut facts = Vec::new();
 
@@ -338,13 +338,13 @@ impl Suggestor for ReportGeneratorAgent {
         &[ContextKey::Seeds]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.get(ContextKey::Seeds)
             .iter()
             .any(|s| s.content.contains("report.generate") || s.content.contains("report.schedule"))
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let triggers = ctx.get(ContextKey::Seeds);
         let mut facts = Vec::new();
 
@@ -387,14 +387,14 @@ impl Suggestor for AlertEvaluatorAgent {
         &[ContextKey::Evaluations]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         // Check if there are anomalies that need alerting
         ctx.get(ContextKey::Evaluations).iter().any(|e| {
             e.id.starts_with(ANOMALY_PREFIX) && e.content.contains("\"anomalies_detected\"")
         })
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let evaluations = ctx.get(ContextKey::Evaluations);
         let mut facts = Vec::new();
 
@@ -435,13 +435,13 @@ impl Suggestor for FreshnessMonitorAgent {
         &[ContextKey::Signals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.get(ContextKey::Signals)
             .iter()
             .any(|s| s.id.starts_with(SOURCE_PREFIX))
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let signals = ctx.get(ContextKey::Signals);
         let mut facts = Vec::new();
 
@@ -482,7 +482,7 @@ impl Suggestor for MetricCalculatorAgent {
         &[ContextKey::Proposals, ContextKey::Evaluations]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         let has_metrics = ctx
             .get(ContextKey::Proposals)
             .iter()
@@ -494,7 +494,7 @@ impl Suggestor for MetricCalculatorAgent {
         has_metrics && has_validation
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let proposals = ctx.get(ContextKey::Proposals);
         let mut facts = Vec::new();
 
@@ -539,7 +539,7 @@ impl Invariant for MetricDefinitionVersionedInvariant {
         InvariantClass::Structural
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         for metric in ctx.get(ContextKey::Proposals).iter() {
             if metric.id.starts_with(METRIC_PREFIX) && !metric.content.contains("\"version\"") {
                 return InvariantResult::Violated(Violation::with_facts(
@@ -565,7 +565,7 @@ impl Invariant for DashboardCitesSourcesInvariant {
         InvariantClass::Structural
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         for dashboard in ctx.get(ContextKey::Proposals).iter() {
             if dashboard.id.starts_with(DASHBOARD_PREFIX)
                 && dashboard.content.contains("\"state\":\"published\"")
@@ -594,7 +594,7 @@ impl Invariant for AlertHasOwnerInvariant {
         InvariantClass::Structural
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         for alert in ctx.get(ContextKey::Proposals).iter() {
             if alert.id.starts_with(ALERT_PREFIX)
                 && alert.content.contains("\"state\":\"active\"")
@@ -623,7 +623,7 @@ impl Invariant for DataFreshnessInvariant {
         InvariantClass::Semantic
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         for check in ctx.get(ContextKey::Evaluations).iter() {
             if check.content.contains("\"type\":\"freshness_check\"")
                 && check.content.contains("\"is_fresh\":false")

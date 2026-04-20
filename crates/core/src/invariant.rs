@@ -16,7 +16,7 @@
 //!
 //! ```
 //! use converge_core::invariant::{Invariant, InvariantClass, InvariantResult};
-//! use converge_core::{Context, ContextView};
+//! use converge_core::Context;
 //!
 //! struct NoEmptyFacts;
 //!
@@ -24,7 +24,7 @@
 //!     fn name(&self) -> &str { "no_empty_facts" }
 //!     fn class(&self) -> InvariantClass { InvariantClass::Structural }
 //!
-//!     fn check(&self, ctx: &dyn ContextView) -> InvariantResult {
+//!     fn check(&self, ctx: &dyn Context) -> InvariantResult {
 //!         // Check logic here
 //!         InvariantResult::Ok
 //!     }
@@ -34,7 +34,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::context::Context;
+use crate::context::ContextState;
 
 /// The class of an invariant determines when it's checked and how violations are handled.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -115,7 +115,7 @@ pub trait Invariant: Send + Sync {
     fn class(&self) -> InvariantClass;
 
     /// Check the invariant against the current context.
-    fn check(&self, ctx: &dyn crate::ContextView) -> InvariantResult;
+    fn check(&self, ctx: &dyn crate::Context) -> InvariantResult;
 }
 
 /// Unique identifier for a registered invariant.
@@ -168,7 +168,11 @@ impl InvariantRegistry {
     /// # Errors
     ///
     /// Returns `InvariantError` if any invariant of the given class is violated.
-    pub fn check_class(&self, class: InvariantClass, ctx: &Context) -> Result<(), InvariantError> {
+    pub fn check_class(
+        &self,
+        class: InvariantClass,
+        ctx: &ContextState,
+    ) -> Result<(), InvariantError> {
         let ids = self.by_class.get(&class).map_or(&[][..], Vec::as_slice);
 
         for &id in ids {
@@ -190,7 +194,7 @@ impl InvariantRegistry {
     /// # Errors
     ///
     /// Returns `InvariantError` if any structural invariant is violated.
-    pub fn check_structural(&self, ctx: &Context) -> Result<(), InvariantError> {
+    pub fn check_structural(&self, ctx: &ContextState) -> Result<(), InvariantError> {
         self.check_class(InvariantClass::Structural, ctx)
     }
 
@@ -199,7 +203,7 @@ impl InvariantRegistry {
     /// # Errors
     ///
     /// Returns `InvariantError` if any semantic invariant is violated.
-    pub fn check_semantic(&self, ctx: &Context) -> Result<(), InvariantError> {
+    pub fn check_semantic(&self, ctx: &ContextState) -> Result<(), InvariantError> {
         self.check_class(InvariantClass::Semantic, ctx)
     }
 
@@ -208,7 +212,7 @@ impl InvariantRegistry {
     /// # Errors
     ///
     /// Returns `InvariantError` if any acceptance invariant is violated.
-    pub fn check_acceptance(&self, ctx: &Context) -> Result<(), InvariantError> {
+    pub fn check_acceptance(&self, ctx: &ContextState) -> Result<(), InvariantError> {
         self.check_class(InvariantClass::Acceptance, ctx)
     }
 }
@@ -253,7 +257,7 @@ mod tests {
             InvariantClass::Acceptance
         }
 
-        fn check(&self, ctx: &dyn crate::ContextView) -> InvariantResult {
+        fn check(&self, ctx: &dyn crate::Context) -> InvariantResult {
             if ctx.has(ContextKey::Seeds) {
                 InvariantResult::Ok
             } else {
@@ -274,7 +278,7 @@ mod tests {
             InvariantClass::Structural
         }
 
-        fn check(&self, ctx: &dyn crate::ContextView) -> InvariantResult {
+        fn check(&self, ctx: &dyn crate::Context) -> InvariantResult {
             for key in &[
                 ContextKey::Seeds,
                 ContextKey::Hypotheses,
@@ -310,7 +314,7 @@ mod tests {
         let mut registry = InvariantRegistry::new();
         registry.register(RequireSeeds);
 
-        let mut ctx = Context::new();
+        let mut ctx = ContextState::new();
         let _ = ctx.add_fact(crate::context::new_fact(ContextKey::Seeds, "s1", "value"));
 
         assert!(registry.check_acceptance(&ctx).is_ok());
@@ -321,7 +325,7 @@ mod tests {
         let mut registry = InvariantRegistry::new();
         registry.register(RequireSeeds);
 
-        let ctx = Context::new();
+        let ctx = ContextState::new();
         let result = registry.check_acceptance(&ctx);
 
         assert!(result.is_err());
@@ -335,7 +339,7 @@ mod tests {
         let mut registry = InvariantRegistry::new();
         registry.register(NoEmptyContent);
 
-        let mut ctx = Context::new();
+        let mut ctx = ContextState::new();
         let _ = ctx.add_fact(crate::context::new_fact(ContextKey::Seeds, "bad", "   ")); // Empty after trim
 
         let result = registry.check_structural(&ctx);
@@ -355,7 +359,7 @@ mod tests {
         registry.register(RequireSeeds); // Acceptance
         registry.register(NoEmptyContent); // Structural
 
-        let ctx = Context::new();
+        let ctx = ContextState::new();
 
         // Structural passes (no facts to check)
         assert!(registry.check_structural(&ctx).is_ok());

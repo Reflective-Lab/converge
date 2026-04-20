@@ -76,12 +76,12 @@ impl Suggestor for InferenceAgent {
         &[ContextKey::Proposals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         // Run if there are proposals (features) but no hypothesis yet
         ctx.has(ContextKey::Proposals) && !ctx.has(ContextKey::Hypotheses)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         // 1. Find the feature proposal
         // In reality, filtered by provenance "polars-engine"
         let _proposals = ctx.get(ContextKey::Proposals); // wait, ctx.get returns Fact, but proposals are ProposedFacts?

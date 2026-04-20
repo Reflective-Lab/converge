@@ -63,7 +63,7 @@ impl Suggestor for EvalExecutionAgent {
         ]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         // Run if:
         // 1. We have strategies or other eval inputs
         // 2. We haven't already run evals (idempotency check)
@@ -86,7 +86,7 @@ impl Suggestor for EvalExecutionAgent {
         !has_existing
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         // Get dirty keys from context (simplified: use all keys with data)
         let dirty_keys: Vec<ContextKey> = [
             ContextKey::Strategies,
@@ -125,10 +125,10 @@ impl Suggestor for EvalExecutionAgent {
 mod tests {
     use super::*;
     use crate::evals::MeetingScheduleFeasibilityEval;
-    use converge_core::{Context, Engine};
+    use converge_core::{ContextState, Engine};
 
-    fn promoted_context(entries: &[(ContextKey, &str, &str)]) -> Context {
-        let mut ctx = Context::new();
+    fn promoted_context(entries: &[(ContextKey, &str, &str)]) -> ContextState {
+        let mut ctx = ContextState::new();
         for (key, id, content) in entries {
             ctx.add_input(*key, *id, *content).unwrap();
         }

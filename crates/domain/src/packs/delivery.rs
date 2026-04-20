@@ -45,7 +45,7 @@ impl Suggestor for PromiseCreatorAgent {
         &[ContextKey::Seeds]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.get(ContextKey::Seeds)
             .iter()
             .any(|s| s.content.contains("deal.closed_won"))
@@ -55,7 +55,7 @@ impl Suggestor for PromiseCreatorAgent {
                 .any(|p| p.id.starts_with(PROMISE_PREFIX))
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let triggers = ctx.get(ContextKey::Seeds);
         let mut facts = Vec::new();
 
@@ -95,13 +95,13 @@ impl Suggestor for ScopeExtractorAgent {
         &[ContextKey::Proposals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.get(ContextKey::Proposals)
             .iter()
             .any(|p| p.id.starts_with(PROMISE_PREFIX) && p.content.contains("\"state\":\"draft\""))
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let proposals = ctx.get(ContextKey::Proposals);
         let mut facts = Vec::new();
 
@@ -143,7 +143,7 @@ impl Suggestor for WorkBreakdownAgent {
         &[ContextKey::Proposals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         let has_scope = ctx
             .get(ContextKey::Proposals)
             .iter()
@@ -155,7 +155,7 @@ impl Suggestor for WorkBreakdownAgent {
         has_scope && !has_tasks
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let proposals = ctx.get(ContextKey::Proposals);
         let mut facts = Vec::new();
 
@@ -195,13 +195,13 @@ impl Suggestor for BlockerDetectorAgent {
         &[ContextKey::Proposals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.get(ContextKey::Proposals)
             .iter()
             .any(|t| t.id.starts_with(TASK_PREFIX) && t.content.contains("\"blocked\":true"))
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let proposals = ctx.get(ContextKey::Proposals);
         let mut facts = Vec::new();
 
@@ -241,13 +241,13 @@ impl Suggestor for BlockerRouterAgent {
         &[ContextKey::Proposals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.get(ContextKey::Proposals)
             .iter()
             .any(|b| b.id.starts_with(BLOCKER_PREFIX) && b.content.contains("\"state\":\"raised\""))
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let proposals = ctx.get(ContextKey::Proposals);
         let mut facts = Vec::new();
 
@@ -289,7 +289,7 @@ impl Suggestor for RiskAssessorAgent {
         &[ContextKey::Proposals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         let has_promises = ctx
             .get(ContextKey::Proposals)
             .iter()
@@ -301,7 +301,7 @@ impl Suggestor for RiskAssessorAgent {
         has_promises && !has_risks
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let proposals = ctx.get(ContextKey::Proposals);
         let blocker_count = proposals
             .iter()
@@ -354,7 +354,7 @@ impl Suggestor for StatusAggregatorAgent {
         &[ContextKey::Proposals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         let has_promises = ctx
             .get(ContextKey::Proposals)
             .iter()
@@ -366,7 +366,7 @@ impl Suggestor for StatusAggregatorAgent {
         has_promises && has_tasks
     }
 
-    async fn execute(&self, _ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
         // Aggregates status - simplified implementation
         AgentEffect::empty()
     }
@@ -386,13 +386,13 @@ impl Suggestor for AcceptanceRequestorAgent {
         &[ContextKey::Proposals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.get(ContextKey::Proposals)
             .iter()
             .any(|p| p.id.starts_with(PROMISE_PREFIX) && p.content.contains("\"state\":\"review\""))
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let proposals = ctx.get(ContextKey::Proposals);
         let mut facts = Vec::new();
 
@@ -433,13 +433,13 @@ impl Suggestor for PostmortemSchedulerAgent {
         &[ContextKey::Proposals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.get(ContextKey::Proposals).iter().any(|p| {
             p.id.starts_with(PROMISE_PREFIX) && p.content.contains("\"state\":\"completed\"")
         })
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let proposals = ctx.get(ContextKey::Proposals);
         let mut facts = Vec::new();
 
@@ -483,7 +483,7 @@ impl Invariant for PromiseHasDealInvariant {
         InvariantClass::Structural
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         for promise in ctx.get(ContextKey::Proposals).iter() {
             if promise.id.starts_with(PROMISE_PREFIX) && !promise.content.contains("\"deal_id\":") {
                 return InvariantResult::Violated(Violation::with_facts(
@@ -509,7 +509,7 @@ impl Invariant for BlockerHasResolutionPathInvariant {
         InvariantClass::Semantic
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         let proposals = ctx.get(ContextKey::Proposals);
 
         for blocker in proposals.iter() {
@@ -549,7 +549,7 @@ impl Invariant for ScopeChangeRequiresApprovalInvariant {
         InvariantClass::Acceptance
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         for scope in ctx.get(ContextKey::Proposals).iter() {
             if scope.id.starts_with(SCOPE_PREFIX) && scope.content.contains("\"change_type\":") {
                 // Scope has been modified - check for approval
@@ -580,7 +580,7 @@ impl Invariant for CompletedPromiseHasAcceptanceInvariant {
         InvariantClass::Acceptance
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         let proposals = ctx.get(ContextKey::Proposals);
 
         for promise in proposals.iter() {
@@ -615,10 +615,10 @@ impl Invariant for CompletedPromiseHasAcceptanceInvariant {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use converge_core::{Context, Engine};
+    use converge_core::{ContextState, Engine};
 
-    fn promoted_context(entries: &[(ContextKey, &str, &str)]) -> Context {
-        let mut ctx = Context::new();
+    fn promoted_context(entries: &[(ContextKey, &str, &str)]) -> ContextState {
+        let mut ctx = ContextState::new();
         for (key, id, content) in entries {
             let _ = ctx.add_input(*key, *id, *content);
         }

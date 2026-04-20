@@ -19,11 +19,11 @@ const RISK_FACT_ID: &str = "form_filler:risk_classification";
 const FILL_PLAN_FACT_ID: &str = "form_filler:fill_plan";
 const PROPOSAL_PREFIX: &str = "form_filler:proposed_field:";
 
-fn has_fact(ctx: &dyn converge_core::ContextView, key: ContextKey, id: &str) -> bool {
+fn has_fact(ctx: &dyn converge_core::Context, key: ContextKey, id: &str) -> bool {
     ctx.get(key).iter().any(|fact| fact.id == id)
 }
 
-fn parse_form_request(ctx: &dyn converge_core::ContextView) -> Option<FormRequestSeed> {
+fn parse_form_request(ctx: &dyn converge_core::Context) -> Option<FormRequestSeed> {
     ctx.get(ContextKey::Seeds)
         .iter()
         .find(|seed| seed.id == FORM_REQUEST_SEED_ID)
@@ -88,11 +88,11 @@ impl Suggestor for FormSchemaAgent {
         &[ContextKey::Seeds]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.has(ContextKey::Seeds) && !has_fact(ctx, ContextKey::Signals, SCHEMA_FACT_ID)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let request = match parse_form_request(ctx) {
             Some(request) => request,
             None => return AgentEffect::empty(),
@@ -125,11 +125,11 @@ impl Suggestor for FieldMappingAgent {
         &[ContextKey::Signals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.has(ContextKey::Signals) && !has_fact(ctx, ContextKey::Hypotheses, MAPPINGS_FACT_ID)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let schema = ctx
             .get(ContextKey::Signals)
             .iter()
@@ -172,12 +172,12 @@ impl Suggestor for NormalizationAgent {
         &[ContextKey::Hypotheses]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.has(ContextKey::Hypotheses)
             && !has_fact(ctx, ContextKey::Hypotheses, NORMALIZED_FACT_ID)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let mappings = ctx
             .get(ContextKey::Hypotheses)
             .iter()
@@ -218,12 +218,12 @@ impl Suggestor for CompletenessAgent {
         &[ContextKey::Hypotheses]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.has(ContextKey::Hypotheses)
             && !has_fact(ctx, ContextKey::Constraints, COMPLETENESS_FACT_ID)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let normalized = ctx
             .get(ContextKey::Hypotheses)
             .iter()
@@ -262,11 +262,11 @@ impl Suggestor for RiskClassifierAgent {
         &[ContextKey::Signals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.has(ContextKey::Signals) && !has_fact(ctx, ContextKey::Constraints, RISK_FACT_ID)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let schema = ctx
             .get(ContextKey::Signals)
             .iter()
@@ -306,13 +306,13 @@ impl Suggestor for FillPlanAgent {
         &[ContextKey::Signals, ContextKey::Constraints]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.has(ContextKey::Signals)
             && ctx.has(ContextKey::Constraints)
             && !has_fact(ctx, ContextKey::Strategies, FILL_PLAN_FACT_ID)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let schema = ctx
             .get(ContextKey::Signals)
             .iter()
@@ -374,11 +374,11 @@ impl Suggestor for ProposalEmitterAgent {
         &[ContextKey::Hypotheses, ContextKey::Signals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.has(ContextKey::Hypotheses) && ctx.has(ContextKey::Signals)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let normalized = ctx
             .get(ContextKey::Hypotheses)
             .iter()
@@ -460,7 +460,7 @@ mod tests {
 
         struct FakeCtx(HashMap<ContextKey, Vec<converge_core::Fact>>);
 
-        impl converge_core::ContextView for FakeCtx {
+        impl converge_core::Context for FakeCtx {
             fn has(&self, key: ContextKey) -> bool {
                 self.0.get(&key).is_some_and(|v| !v.is_empty())
             }
@@ -479,7 +479,7 @@ mod tests {
 
         struct FakeCtx(HashMap<ContextKey, Vec<converge_core::Fact>>);
 
-        impl converge_core::ContextView for FakeCtx {
+        impl converge_core::Context for FakeCtx {
             fn has(&self, key: ContextKey) -> bool {
                 self.0.get(&key).is_some_and(|v| !v.is_empty())
             }

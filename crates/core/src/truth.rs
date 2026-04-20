@@ -71,7 +71,7 @@ pub struct CriterionOutcome {
 /// Application-provided boundary for evaluating success criteria.
 pub trait CriterionEvaluator: Send + Sync {
     /// Evaluate a criterion against the converged context.
-    fn evaluate(&self, criterion: &Criterion, context: &Context) -> CriterionResult;
+    fn evaluate(&self, criterion: &Criterion, context: &dyn Context) -> CriterionResult;
 }
 
 /// Application-provided truth catalog boundary.

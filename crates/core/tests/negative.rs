@@ -2,7 +2,9 @@
 //
 // Prove: the system rejects invalid input and handles edge cases gracefully.
 
-use converge_core::{AgentEffect, Budget, Context, ContextKey, Engine, ProposedFact, Suggestor};
+use converge_core::{
+    AgentEffect, Budget, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+};
 
 // ── Invalid proposals: rejected by promotion gate ──
 
@@ -22,10 +24,10 @@ impl Suggestor for BadProposalAgent {
     fn dependencies(&self) -> &[ContextKey] {
         &[]
     }
-    fn accepts(&self, _ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, _ctx: &dyn converge_core::Context) -> bool {
         true
     }
-    async fn execute(&self, _ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
         AgentEffect::with_proposal(ProposedFact {
             key: self.key,
             id: self.id.to_string(),
@@ -48,7 +50,7 @@ async fn nan_confidence_rejected() {
     });
 
     let result = engine
-        .run(Context::new())
+        .run(ContextState::new())
         .await
         .expect("should converge (proposal rejected, no facts)");
 
@@ -68,7 +70,7 @@ async fn infinite_confidence_rejected() {
     });
 
     let result = engine
-        .run(Context::new())
+        .run(ContextState::new())
         .await
         .expect("should converge (proposal rejected)");
 
@@ -88,7 +90,7 @@ async fn negative_confidence_rejected() {
     });
 
     let result = engine
-        .run(Context::new())
+        .run(ContextState::new())
         .await
         .expect("should converge (proposal rejected)");
 
@@ -108,7 +110,7 @@ async fn empty_content_rejected() {
     });
 
     let result = engine
-        .run(Context::new())
+        .run(ContextState::new())
         .await
         .expect("should converge (proposal rejected)");
 
@@ -128,7 +130,7 @@ async fn whitespace_only_content_rejected() {
     });
 
     let result = engine
-        .run(Context::new())
+        .run(ContextState::new())
         .await
         .expect("should converge (proposal rejected)");
 
@@ -141,7 +143,10 @@ async fn whitespace_only_content_rejected() {
 #[tokio::test]
 async fn zero_suggestors_converges_immediately() {
     let mut engine = Engine::new();
-    let result = engine.run(Context::new()).await.expect("should converge");
+    let result = engine
+        .run(ContextState::new())
+        .await
+        .expect("should converge");
 
     assert!(result.converged);
     assert_eq!(result.cycles, 1);
@@ -159,10 +164,10 @@ async fn budget_exhaustion_terminates() {
         fn dependencies(&self) -> &[ContextKey] {
             &[]
         }
-        fn accepts(&self, _ctx: &dyn converge_core::ContextView) -> bool {
+        fn accepts(&self, _ctx: &dyn converge_core::Context) -> bool {
             true
         }
-        async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+        async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
             let count = ctx.get(ContextKey::Seeds).len();
             AgentEffect::with_proposal(ProposedFact::new(
                 ContextKey::Seeds,
@@ -179,7 +184,7 @@ async fn budget_exhaustion_terminates() {
     });
     engine.register_suggestor(InfiniteProposer);
 
-    let result = engine.run(Context::new()).await;
+    let result = engine.run(ContextState::new()).await;
     assert!(result.is_err());
     assert!(matches!(
         result.unwrap_err(),
@@ -199,10 +204,10 @@ async fn max_facts_budget_terminates() {
         fn dependencies(&self) -> &[ContextKey] {
             &[]
         }
-        fn accepts(&self, _ctx: &dyn converge_core::ContextView) -> bool {
+        fn accepts(&self, _ctx: &dyn converge_core::Context) -> bool {
             true
         }
-        async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+        async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
             let n = ctx.get(ContextKey::Seeds).len();
             let proposals: Vec<ProposedFact> = (0..10)
                 .map(|i| {
@@ -224,7 +229,7 @@ async fn max_facts_budget_terminates() {
     });
     engine.register_suggestor(FloodAgent);
 
-    let result = engine.run(Context::new()).await;
+    let result = engine.run(ContextState::new()).await;
     assert!(result.is_err());
     assert!(matches!(
         result.unwrap_err(),

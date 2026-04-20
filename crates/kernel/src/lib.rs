@@ -13,13 +13,11 @@ pub use converge_core::gates::{
     FlowGatePrincipal, FlowGateResource,
 };
 pub use converge_core::{
-    Budget, Context, ConvergeError, ConvergeResult, Criterion, CriterionEvaluator,
+    Budget, Context, ContextState, ConvergeError, ConvergeResult, Criterion, CriterionEvaluator,
     CriterionOutcome, CriterionResult, DecisionStep, Engine, EngineHitlPolicy, EventQuery,
     ExperienceEvent, ExperienceEventEnvelope, ExperienceEventKind, ExperienceEventObserver,
     ExperienceStore, HitlPause, IntegrityProof, Invariant, InvariantClass, InvariantResult,
     LamportClock, MerkleRoot, RunResult, StreamingCallback, SuggestorId, TypesBudgets,
     TypesIntentId, TypesIntentKind, TypesRootIntent, TypesRunHooks,
 };
-pub use converge_pack::{
-    AgentEffect, Context as ContextView, ContextKey, Fact, ProposedFact, Suggestor, ValidationError,
-};
+pub use converge_pack::{AgentEffect, ContextKey, Fact, ProposedFact, Suggestor, ValidationError};

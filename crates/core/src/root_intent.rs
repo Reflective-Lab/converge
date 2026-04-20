@@ -39,7 +39,7 @@
 //! assert!(intent.validate().is_ok());
 //! ```
 
-use crate::context::{Context, ContextKey, Fact};
+use crate::context::{ContextKey, ContextState, Fact};
 use crate::types::IntentId;
 use std::time::Duration;
 
@@ -282,7 +282,7 @@ pub enum SuccessCriterion {
 impl SuccessCriterion {
     /// Checks if this criterion is satisfied by the context.
     #[must_use]
-    pub fn is_satisfied(&self, ctx: &Context) -> bool {
+    pub fn is_satisfied(&self, ctx: &ContextState) -> bool {
         match self {
             Self::AtLeastOneViableStrategy => {
                 // Check for at least one strategy with a positive evaluation
@@ -362,13 +362,13 @@ impl SuccessCriteria {
 
     /// Checks if all required criteria are satisfied.
     #[must_use]
-    pub fn is_satisfied(&self, ctx: &Context) -> bool {
+    pub fn is_satisfied(&self, ctx: &ContextState) -> bool {
         self.required.iter().all(|c| c.is_satisfied(ctx))
     }
 
     /// Returns unsatisfied required criteria.
     #[must_use]
-    pub fn unsatisfied(&self, ctx: &Context) -> Vec<&SuccessCriterion> {
+    pub fn unsatisfied(&self, ctx: &ContextState) -> Vec<&SuccessCriterion> {
         self.required
             .iter()
             .filter(|c| !c.is_satisfied(ctx))
@@ -377,7 +377,7 @@ impl SuccessCriteria {
 
     /// Returns unsatisfied optional criteria.
     #[must_use]
-    pub fn unsatisfied_optional(&self, ctx: &Context) -> Vec<&SuccessCriterion> {
+    pub fn unsatisfied_optional(&self, ctx: &ContextState) -> Vec<&SuccessCriterion> {
         self.optional
             .iter()
             .filter(|c| !c.is_satisfied(ctx))
@@ -662,7 +662,7 @@ impl RootIntent {
 
     /// Checks if success criteria are satisfied by the context.
     #[must_use]
-    pub fn is_successful(&self, ctx: &Context) -> bool {
+    pub fn is_successful(&self, ctx: &ContextState) -> bool {
         self.success_criteria.is_satisfied(ctx)
     }
 }
@@ -713,7 +713,7 @@ mod tests {
 
     #[test]
     fn success_criteria_checks_satisfaction() {
-        let mut ctx = Context::new();
+        let mut ctx = ContextState::new();
         ctx.add_fact(crate::context::new_fact(
             ContextKey::Strategies,
             "strat-1",
@@ -734,7 +734,7 @@ mod tests {
 
     #[test]
     fn success_criteria_reports_unsatisfied() {
-        let ctx = Context::new();
+        let ctx = ContextState::new();
         let criteria = SuccessCriteria::new().require(SuccessCriterion::MinimumStrategies(2));
 
         assert!(!criteria.is_satisfied(&ctx));
@@ -815,7 +815,7 @@ mod tests {
         let intent = RootIntent::new(IntentKind::GrowthStrategy)
             .with_success_criterion(SuccessCriterion::MinimumStrategies(1));
 
-        let mut ctx = Context::new();
+        let mut ctx = ContextState::new();
         assert!(!intent.is_successful(&ctx));
 
         ctx.add_fact(crate::context::new_fact(

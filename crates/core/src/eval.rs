@@ -36,7 +36,7 @@
 //!
 //! ```
 //! use converge_core::eval::{Eval, EvalOutcome, EvalResult};
-//! use converge_core::{Context, ContextKey, ContextView};
+//! use converge_core::{Context, ContextKey};
 //!
 //! struct StrategyDiversityEval;
 //!
@@ -44,7 +44,7 @@
 //!     fn name(&self) -> &str { "strategy_diversity" }
 //!     fn description(&self) -> &str { "Ensures at least 3 distinct strategies exist" }
 //!
-//!     fn evaluate(&self, ctx: &dyn ContextView) -> EvalResult {
+//!     fn evaluate(&self, ctx: &dyn Context) -> EvalResult {
 //!         let strategies = ctx.get(ContextKey::Strategies);
 //!         let distinct_count = strategies.len();
 //!
@@ -206,7 +206,7 @@ pub trait Eval: Send + Sync {
     ///
     /// This is pure and side-effect free. The result is stored
     /// as a fact in context by the caller.
-    fn evaluate(&self, ctx: &dyn crate::ContextView) -> EvalResult;
+    fn evaluate(&self, ctx: &dyn crate::Context) -> EvalResult;
 
     /// Optional: Context keys this eval depends on.
     ///
@@ -266,7 +266,7 @@ impl EvalRegistry {
     ///
     /// Results are returned in registration order for determinism.
     #[must_use]
-    pub fn evaluate_all(&self, ctx: &dyn crate::ContextView) -> Vec<EvalResult> {
+    pub fn evaluate_all(&self, ctx: &dyn crate::Context) -> Vec<EvalResult> {
         self.evals.iter().map(|eval| eval.evaluate(ctx)).collect()
     }
 
@@ -276,7 +276,7 @@ impl EvalRegistry {
     #[must_use]
     pub fn evaluate_dependent(
         &self,
-        ctx: &dyn crate::ContextView,
+        ctx: &dyn crate::Context,
         dirty_keys: &[ContextKey],
     ) -> Vec<EvalResult> {
         let mut eval_ids: std::collections::HashSet<EvalId> = std::collections::HashSet::new();
@@ -309,7 +309,7 @@ impl EvalRegistry {
     ///
     /// Panics if the eval ID is out of bounds.
     #[must_use]
-    pub fn evaluate_by_id(&self, id: EvalId, ctx: &dyn crate::ContextView) -> EvalResult {
+    pub fn evaluate_by_id(&self, id: EvalId, ctx: &dyn crate::Context) -> EvalResult {
         self.evals[id.0 as usize].evaluate(ctx)
     }
 }
@@ -317,7 +317,7 @@ impl EvalRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::context::Context;
+    use crate::context::ContextState;
 
     /// Eval that checks if at least one seed exists.
     struct RequireSeedsEval;
@@ -331,7 +331,7 @@ mod tests {
             "Checks if at least one seed exists in context"
         }
 
-        fn evaluate(&self, ctx: &dyn crate::ContextView) -> EvalResult {
+        fn evaluate(&self, ctx: &dyn crate::Context) -> EvalResult {
             let seeds = ctx.get(ContextKey::Seeds);
             let count = seeds.len();
 
@@ -367,7 +367,7 @@ mod tests {
         let mut registry = EvalRegistry::new();
         let id = registry.register(RequireSeedsEval);
 
-        let mut ctx = Context::new();
+        let mut ctx = ContextState::new();
         let _ = ctx.add_fact(crate::context::new_fact(ContextKey::Seeds, "s1", "value"));
 
         let result = registry.evaluate_by_id(id, &ctx);
@@ -380,7 +380,7 @@ mod tests {
         let mut registry = EvalRegistry::new();
         let id = registry.register(RequireSeedsEval);
 
-        let ctx = Context::new();
+        let ctx = ContextState::new();
         let result = registry.evaluate_by_id(id, &ctx);
 
         assert_eq!(result.outcome, EvalOutcome::Fail);

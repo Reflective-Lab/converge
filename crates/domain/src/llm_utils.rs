@@ -9,7 +9,7 @@
 
 use crate::mock::{MockChatBackend, MockResponse};
 use converge_core::{
-    AgentEffect, ContextKey, ContextView, ProposedFact,
+    AgentEffect, Context, ContextKey, ProposedFact,
     model_selection::{AgentRequirements, CostClass},
     prompt::PromptFormat,
     traits::{ChatMessage, ChatRequest, ChatRole, DynChatBackend, ResponseFormat},
@@ -44,12 +44,12 @@ impl converge_core::Suggestor for ChatAgentSuggestor {
         &self.deps
     }
 
-    fn accepts(&self, ctx: &dyn ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn Context) -> bool {
         let result_id = format!("{}-result", self.name);
         !ctx.get(self.target_key).iter().any(|f| f.id == result_id)
     }
 
-    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn Context) -> AgentEffect {
         let context_str = ctx
             .get(self.target_key)
             .iter()

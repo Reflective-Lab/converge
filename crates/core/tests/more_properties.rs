@@ -1,7 +1,9 @@
 // Additional property tests.
 
 use converge_core::suggestors::SeedSuggestor;
-use converge_core::{AgentEffect, Budget, Context, ContextKey, Engine, ProposedFact, Suggestor};
+use converge_core::{
+    AgentEffect, Budget, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+};
 use proptest::prelude::*;
 
 fn rt() -> tokio::runtime::Runtime {
@@ -19,7 +21,7 @@ proptest! {
                 format!("s{i}"), format!("v{i}"),
             ));
         }
-        let result = rt().block_on(engine.run(Context::new())).expect("converges");
+        let result = rt().block_on(engine.run(ContextState::new())).expect("converges");
         prop_assert!(result.context.version() > 0);
     }
 
@@ -33,7 +35,7 @@ proptest! {
                 format!("s{i}"), format!("v{i}"),
             ));
         }
-        let result = rt().block_on(engine.run(Context::new())).expect("converges");
+        let result = rt().block_on(engine.run(ContextState::new())).expect("converges");
         let keys = result.context.all_keys();
         prop_assert!(keys.contains(&ContextKey::Seeds));
     }
@@ -48,7 +50,7 @@ proptest! {
                 format!("seed-{i}"), format!("value-{i}"),
             ));
         }
-        let result = rt().block_on(engine.run(Context::new())).expect("converges");
+        let result = rt().block_on(engine.run(ContextState::new())).expect("converges");
         prop_assert_eq!(result.context.get(ContextKey::Seeds).len(), n);
     }
 
@@ -61,8 +63,8 @@ proptest! {
         impl Suggestor for AlwaysPropose {
             fn name(&self) -> &str { "always" }
             fn dependencies(&self) -> &[ContextKey] { &[] }
-            fn accepts(&self, _: &dyn converge_core::ContextView) -> bool { true }
-            async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+            fn accepts(&self, _: &dyn converge_core::Context) -> bool { true }
+            async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
                 let n = ctx.get(ContextKey::Seeds).len();
                 AgentEffect::with_proposal(ProposedFact::new(
                     ContextKey::Seeds, format!("a{}-{n}", self.0), "v", "always",
@@ -72,7 +74,7 @@ proptest! {
         let mut engine = Engine::with_budget(Budget { max_cycles, max_facts: 1000 });
         engine.register_suggestor(AlwaysPropose(0));
         // Should terminate, might error with budget exhaustion
-        let _ = rt().block_on(engine.run(Context::new()));
+        let _ = rt().block_on(engine.run(ContextState::new()));
     }
 
     #[test]
@@ -84,10 +86,10 @@ proptest! {
         impl Suggestor for ProvenanceSuggestor {
             fn name(&self) -> &str { "prov" }
             fn dependencies(&self) -> &[ContextKey] { &[] }
-            fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+            fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
                 !ctx.has(ContextKey::Seeds)
             }
-            async fn execute(&self, _: &dyn converge_core::ContextView) -> AgentEffect {
+            async fn execute(&self, _: &dyn converge_core::Context) -> AgentEffect {
                 AgentEffect::with_proposal(ProposedFact::new(
                     ContextKey::Seeds, "p1", "content", &self.0,
                 ))
@@ -95,7 +97,7 @@ proptest! {
         }
         let mut engine = Engine::new();
         engine.register_suggestor(ProvenanceSuggestor(provenance));
-        let result = rt().block_on(engine.run(Context::new())).expect("converges");
+        let result = rt().block_on(engine.run(ContextState::new())).expect("converges");
         prop_assert!(result.converged);
         prop_assert_eq!(result.context.get(ContextKey::Seeds).len(), 1);
     }

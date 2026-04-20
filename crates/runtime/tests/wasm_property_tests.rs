@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use proptest::prelude::*;
 
-use converge_core::{Context, Invariant};
+use converge_core::{ContextState, Invariant};
 use converge_runtime::wasm::contract::*;
 use converge_runtime::wasm::engine::WasmEngine;
 use converge_runtime::wasm::store::ModuleStore;
@@ -567,7 +567,7 @@ proptest! {
             WasmQuota::default(),
         ).unwrap();
 
-        let ctx = Context::new();
+        let ctx = ContextState::new();
         let r1 = invariant.check(&ctx);
         let r2 = invariant.check(&ctx);
 

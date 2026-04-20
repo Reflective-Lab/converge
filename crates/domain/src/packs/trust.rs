@@ -36,10 +36,7 @@ pub const VIOLATION_PREFIX: &str = "violation:";
 pub const REMEDIATION_PREFIX: &str = "remediation:";
 pub const REDACTED_PREFIX: &str = "redacted:";
 
-fn contract_execution_request_exists(
-    ctx: &dyn converge_core::ContextView,
-    contract_id: &str,
-) -> bool {
+fn contract_execution_request_exists(ctx: &dyn converge_core::Context, contract_id: &str) -> bool {
     let request_id = format!("contract:execution_request:{contract_id}");
     ctx.get(ContextKey::Proposals)
         .iter()
@@ -47,7 +44,7 @@ fn contract_execution_request_exists(
 }
 
 fn contract_execution_final_output_exists(
-    ctx: &dyn converge_core::ContextView,
+    ctx: &dyn converge_core::Context,
     contract_id: &str,
 ) -> bool {
     let executed_id = format!("contract:executed:{contract_id}");
@@ -78,13 +75,13 @@ impl Suggestor for SessionValidatorAgent {
         &[ContextKey::Seeds]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.get(ContextKey::Seeds)
             .iter()
             .any(|s| s.content.contains("session.token"))
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let triggers = ctx.get(ContextKey::Seeds);
         let mut facts = Vec::new();
 
@@ -128,7 +125,7 @@ impl Suggestor for RbacEnforcerAgent {
         &[ContextKey::Signals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         let has_valid_session = ctx
             .get(ContextKey::Signals)
             .iter()
@@ -140,7 +137,7 @@ impl Suggestor for RbacEnforcerAgent {
         has_valid_session && !has_decisions
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let signals = ctx.get(ContextKey::Signals);
         let mut facts = Vec::new();
 
@@ -184,13 +181,13 @@ impl Suggestor for AuditWriterAgent {
         &[ContextKey::Proposals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.get(ContextKey::Proposals)
             .iter()
             .any(|p| p.id.starts_with(ACCESS_DECISION_PREFIX))
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let proposals = ctx.get(ContextKey::Proposals);
         let mut facts = Vec::new();
 
@@ -233,7 +230,7 @@ impl Suggestor for ProvenanceTrackerAgent {
         &[ContextKey::Proposals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         let has_audit = ctx
             .get(ContextKey::Proposals)
             .iter()
@@ -245,7 +242,7 @@ impl Suggestor for ProvenanceTrackerAgent {
         has_audit && !has_provenance
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let proposals = ctx.get(ContextKey::Proposals);
         let mut facts = Vec::new();
 
@@ -288,7 +285,7 @@ impl Suggestor for ComplianceScannerAgent {
         &[ContextKey::Proposals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         let has_audit = ctx
             .get(ContextKey::Proposals)
             .iter()
@@ -300,7 +297,7 @@ impl Suggestor for ComplianceScannerAgent {
         has_audit && !has_compliance
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let proposals = ctx.get(ContextKey::Proposals);
         let audit_count = proposals
             .iter()
@@ -340,13 +337,13 @@ impl Suggestor for ViolationRemediatorAgent {
         &[ContextKey::Signals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.get(ContextKey::Signals)
             .iter()
             .any(|v| v.id.starts_with(VIOLATION_PREFIX) && v.content.contains("\"state\":\"open\""))
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let signals = ctx.get(ContextKey::Signals);
         let mut facts = Vec::new();
 
@@ -410,7 +407,7 @@ impl Suggestor for ContractExecutionAgent {
         &[ContextKey::Proposals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.get(ContextKey::Proposals).iter().any(|contract| {
             contract.id.starts_with(LEGAL_CONTRACT_PREFIX)
                 && contract.content.contains("\"state\":\"ready_to_execute\"")
@@ -418,7 +415,7 @@ impl Suggestor for ContractExecutionAgent {
         })
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let proposals = ctx.get(ContextKey::Proposals);
         let mut facts = Vec::new();
 
@@ -557,13 +554,13 @@ impl Suggestor for PiiRedactorAgent {
         &[ContextKey::Seeds]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         ctx.get(ContextKey::Seeds)
             .iter()
             .any(|s| s.content.contains("redaction.required"))
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let triggers = ctx.get(ContextKey::Seeds);
         let mut facts = Vec::new();
 
@@ -606,7 +603,7 @@ impl Invariant for AllActionsAuditedInvariant {
         InvariantClass::Acceptance
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         let proposals = ctx.get(ContextKey::Proposals);
         for decision in proposals.iter() {
             if decision.id.starts_with(ACCESS_DECISION_PREFIX) {
@@ -638,7 +635,7 @@ impl Invariant for AuditImmutabilityInvariant {
         InvariantClass::Structural
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         for entry in ctx.get(ContextKey::Proposals).iter() {
             if entry.id.starts_with(AUDIT_PREFIX) && !entry.content.contains("\"immutable\":true") {
                 return InvariantResult::Violated(Violation::with_facts(
@@ -664,7 +661,7 @@ impl Invariant for ViolationsHaveRemediationInvariant {
         InvariantClass::Semantic
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         let proposals = ctx.get(ContextKey::Proposals);
         for violation in ctx.get(ContextKey::Signals).iter() {
             if violation.id.starts_with(VIOLATION_PREFIX)
@@ -711,7 +708,7 @@ impl Invariant for LegalActionsAuditedInvariant {
         InvariantClass::Acceptance
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         let proposals = ctx.get(ContextKey::Proposals);
 
         // Check executed contracts have audit entries
@@ -788,10 +785,10 @@ impl Invariant for LegalActionsAuditedInvariant {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use converge_core::{Context, Engine};
+    use converge_core::{ContextState, Engine};
 
-    fn promoted_context(entries: &[(ContextKey, &str, &str)]) -> Context {
-        let mut ctx = Context::new();
+    fn promoted_context(entries: &[(ContextKey, &str, &str)]) -> ContextState {
+        let mut ctx = ContextState::new();
         for (key, id, content) in entries {
             let _ = ctx.add_input(*key, *id, *content);
         }
@@ -926,7 +923,7 @@ mod tests {
         let mut engine = Engine::new();
         engine.register_suggestor(ContractExecutionAgent::default());
 
-        let mut ctx = Context::new();
+        let mut ctx = ContextState::new();
         let _ = ctx.add_input(
             ContextKey::Proposals,
             "contract:msa:deal-123",
@@ -952,7 +949,7 @@ mod tests {
         let mut engine = Engine::new();
         engine.register_suggestor(ContractExecutionAgent::default());
 
-        let mut ctx = Context::new();
+        let mut ctx = ContextState::new();
         let _ = ctx.add_input(
             ContextKey::Proposals,
             "contract:msa:deal-123",

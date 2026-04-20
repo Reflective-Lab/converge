@@ -68,7 +68,7 @@ pub fn setup_mock_llm_meeting_scheduler(engine: &mut Engine) -> Vec<Arc<MockChat
 #[cfg(test)]
 mod tests {
     use super::*;
-    use converge_core::Context;
+    use converge_core::ContextState;
     use converge_core::suggestors::SeedSuggestor;
 
     #[tokio::test]
@@ -78,7 +78,10 @@ mod tests {
 
         let _providers = setup_mock_llm_meeting_scheduler(&mut engine);
 
-        let result = engine.run(Context::new()).await.expect("should converge");
+        let result = engine
+            .run(ContextState::new())
+            .await
+            .expect("should converge");
 
         assert!(result.converged);
         // LLM agents emit proposals that get promoted to facts on their target keys

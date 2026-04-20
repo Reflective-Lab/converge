@@ -51,7 +51,7 @@
 //! engine.register_suggestor(SolverAgent);
 //! engine.register_suggestor(FeasibilityAgent);
 //!
-//! let result = engine.run(Context::new()).await.expect("should converge");
+//! let result = engine.run(ContextState::new()).await.expect("should converge");
 //!
 //! assert!(result.converged);
 //! assert!(result.context.has(ContextKey::Strategies));
@@ -79,7 +79,7 @@ impl Suggestor for TaskRetrievalAgent {
         &[ContextKey::Seeds]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         // Run once when seeds exist but no task signals yet
         let has_tasks_seed = ctx
             .get(ContextKey::Seeds)
@@ -93,7 +93,7 @@ impl Suggestor for TaskRetrievalAgent {
         has_tasks_seed && !has_task_signals
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let seeds = ctx.get(ContextKey::Seeds);
 
         let mut facts = Vec::new();
@@ -155,7 +155,7 @@ impl Suggestor for ResourceRetrievalAgent {
         &[ContextKey::Seeds]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         // Run once when seeds exist but no resource signals yet
         let has_resources_seed = ctx.get(ContextKey::Seeds).iter().any(|s| {
             s.id == "resources" || s.content.contains("resource") || s.content.contains("vehicle")
@@ -168,7 +168,7 @@ impl Suggestor for ResourceRetrievalAgent {
         has_resources_seed && !has_resource_signals
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let seeds = ctx.get(ContextKey::Seeds);
 
         let mut facts = Vec::new();
@@ -231,7 +231,7 @@ impl Suggestor for ConstraintValidationAgent {
         &[ContextKey::Signals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         // Run when we have both tasks and resources but no constraints yet
         let has_tasks = ctx
             .get(ContextKey::Signals)
@@ -246,7 +246,7 @@ impl Suggestor for ConstraintValidationAgent {
         has_tasks && has_resources && !has_constraints
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let signals = ctx.get(ContextKey::Signals);
 
         let mut facts = Vec::new();
@@ -305,12 +305,12 @@ impl Suggestor for SolverAgent {
         &[ContextKey::Constraints, ContextKey::Signals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         // Run when constraints exist but no assignment strategies yet
         ctx.has(ContextKey::Constraints) && !ctx.has(ContextKey::Strategies)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let signals = ctx.get(ContextKey::Signals);
         let _constraints = ctx.get(ContextKey::Constraints);
 
@@ -412,12 +412,12 @@ impl Suggestor for FeasibilityAgent {
         &[ContextKey::Strategies, ContextKey::Constraints]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         // Run when assignments exist but no evaluations yet
         ctx.has(ContextKey::Strategies) && !ctx.has(ContextKey::Evaluations)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let strategies = ctx.get(ContextKey::Strategies);
         let _constraints = ctx.get(ContextKey::Constraints);
         let signals = ctx.get(ContextKey::Signals);
@@ -534,7 +534,7 @@ impl Invariant for RequireAllTasksAssigned {
         InvariantClass::Acceptance
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         let signals = ctx.get(ContextKey::Signals);
         let strategies = ctx.get(ContextKey::Strategies);
 
@@ -572,7 +572,7 @@ impl Invariant for RequireCapacityRespected {
         InvariantClass::Semantic
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         let signals = ctx.get(ContextKey::Signals);
         let strategies = ctx.get(ContextKey::Strategies);
 
@@ -641,7 +641,7 @@ impl Invariant for RequireValidDefinitions {
         InvariantClass::Structural
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         let signals = ctx.get(ContextKey::Signals);
 
         // Only check when signals exist (pipeline has started producing output)
@@ -670,7 +670,7 @@ impl Invariant for RequireValidDefinitions {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use converge_core::Context;
+    use converge_core::ContextState;
     use converge_core::Engine;
     use converge_core::suggestors::SeedSuggestor;
 
@@ -683,7 +683,10 @@ mod tests {
         ));
         engine.register_suggestor(TaskRetrievalAgent);
 
-        let result = engine.run(Context::new()).await.expect("should converge");
+        let result = engine
+            .run(ContextState::new())
+            .await
+            .expect("should converge");
 
         assert!(result.converged);
         assert!(result.context.has(ContextKey::Signals));
@@ -698,7 +701,10 @@ mod tests {
         engine.register_suggestor(SeedSuggestor::new("resources", "Vehicle 1, Vehicle 2"));
         engine.register_suggestor(ResourceRetrievalAgent);
 
-        let result = engine.run(Context::new()).await.expect("should converge");
+        let result = engine
+            .run(ContextState::new())
+            .await
+            .expect("should converge");
 
         assert!(result.converged);
         let signals = result.context.get(ContextKey::Signals);
@@ -714,7 +720,10 @@ mod tests {
         engine.register_suggestor(ResourceRetrievalAgent);
         engine.register_suggestor(ConstraintValidationAgent);
 
-        let result = engine.run(Context::new()).await.expect("should converge");
+        let result = engine
+            .run(ContextState::new())
+            .await
+            .expect("should converge");
 
         assert!(result.converged);
         assert!(result.context.has(ContextKey::Constraints));
@@ -730,7 +739,10 @@ mod tests {
         engine.register_suggestor(ConstraintValidationAgent);
         engine.register_suggestor(SolverAgent);
 
-        let result = engine.run(Context::new()).await.expect("should converge");
+        let result = engine
+            .run(ContextState::new())
+            .await
+            .expect("should converge");
 
         assert!(result.converged);
         assert!(result.context.has(ContextKey::Strategies));
@@ -750,7 +762,10 @@ mod tests {
         engine.register_suggestor(SolverAgent);
         engine.register_suggestor(FeasibilityAgent);
 
-        let result = engine.run(Context::new()).await.expect("should converge");
+        let result = engine
+            .run(ContextState::new())
+            .await
+            .expect("should converge");
 
         assert!(result.converged);
         assert!(result.context.has(ContextKey::Evaluations));
@@ -773,7 +788,10 @@ mod tests {
             engine.register_suggestor(ConstraintValidationAgent);
             engine.register_suggestor(SolverAgent);
             engine.register_suggestor(FeasibilityAgent);
-            engine.run(Context::new()).await.expect("should converge")
+            engine
+                .run(ContextState::new())
+                .await
+                .expect("should converge")
         };
 
         let r1 = run().await;

@@ -6,7 +6,9 @@
 //! These tests discover validation gaps and generate evidence for the typed-ID ADR.
 //! Documents current behavior that should be tightened in a future ADR.
 
-use converge_core::{AgentEffect, Context, ContextKey, Engine, ProposedFact, Suggestor};
+use converge_core::{
+    AgentEffect, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+};
 
 // ─── Helper: Suggestor that proposes a single fact ───────────────────────────
 
@@ -26,11 +28,11 @@ impl Suggestor for SingleProposalSuggestor {
         &[]
     }
 
-    fn accepts(&self, _ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, _ctx: &dyn converge_core::Context) -> bool {
         true
     }
 
-    async fn execute(&self, _ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
         AgentEffect::with_proposal(ProposedFact::new(
             self.key,
             &self.id,
@@ -55,7 +57,7 @@ async fn evidence_valid_id_roundtrips() {
         content: test_content.clone(),
     });
 
-    let result = engine.run(Context::new()).await;
+    let result = engine.run(ContextState::new()).await;
     assert!(result.is_ok(), "engine should run successfully");
 
     let ctx = result.unwrap().context;
@@ -83,7 +85,7 @@ async fn evidence_empty_id_not_rejected() {
         content: "content".to_string(),
     });
 
-    let result = engine.run(Context::new()).await;
+    let result = engine.run(ContextState::new()).await;
     // Currently accepts empty ID; this should fail after typed-ID validation
     assert!(
         result.is_ok(),
@@ -102,7 +104,7 @@ async fn evidence_null_byte_in_id_not_rejected() {
         content: "content".to_string(),
     });
 
-    let result = engine.run(Context::new()).await;
+    let result = engine.run(ContextState::new()).await;
     // Currently accepts null bytes; this is a security gap
     assert!(
         result.is_ok(),
@@ -121,7 +123,7 @@ async fn evidence_newline_in_id_not_rejected() {
         content: "content".to_string(),
     });
 
-    let result = engine.run(Context::new()).await;
+    let result = engine.run(ContextState::new()).await;
     // Currently accepts newlines; might cause issues in logging/serialization
     assert!(
         result.is_ok(),
@@ -140,7 +142,7 @@ async fn evidence_very_long_id_not_rejected() {
         content: "content".to_string(),
     });
 
-    let result = engine.run(Context::new()).await;
+    let result = engine.run(ContextState::new()).await;
     // Currently accepts very long IDs; should enforce max length (e.g., 256 chars)
     assert!(
         result.is_ok(),
@@ -158,7 +160,7 @@ async fn evidence_whitespace_only_id_not_rejected() {
         content: "content".to_string(),
     });
 
-    let result = engine.run(Context::new()).await;
+    let result = engine.run(ContextState::new()).await;
     // Currently accepts whitespace-only IDs
     assert!(
         result.is_ok(),
@@ -176,7 +178,7 @@ async fn evidence_uppercase_in_id_not_rejected() {
         content: "content".to_string(),
     });
 
-    let result = engine.run(Context::new()).await;
+    let result = engine.run(ContextState::new()).await;
     // Currently accepts uppercase; spec requires lowercase
     assert!(
         result.is_ok(),
@@ -196,7 +198,7 @@ async fn evidence_different_keys_independent() {
         content: "seeds content".to_string(),
     });
 
-    let result = engine.run(Context::new()).await;
+    let result = engine.run(ContextState::new()).await;
     assert!(result.is_ok());
 
     let ctx = result.unwrap().context;
@@ -244,7 +246,7 @@ async fn regression_context_version_increments() {
         content: "content".to_string(),
     });
 
-    let initial_ctx = Context::new();
+    let initial_ctx = ContextState::new();
     let initial_version = initial_ctx.version();
 
     let result = engine.run(initial_ctx).await;

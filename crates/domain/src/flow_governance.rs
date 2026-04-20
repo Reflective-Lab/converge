@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use converge_core::{
-    ContextKey, ContextView, FlowAction, FlowGateAuthorizer, FlowGateContext, FlowGateInput,
+    Context, ContextKey, FlowAction, FlowGateAuthorizer, FlowGateContext, FlowGateInput,
     FlowGatePrincipal, FlowGateResource,
 };
 use converge_policy::{FLOW_GOVERNANCE_POLICY, PolicyEngine};
@@ -14,7 +14,7 @@ pub(crate) fn default_flow_authorizer() -> Arc<dyn FlowGateAuthorizer> {
 }
 
 pub(crate) fn has_approval(
-    ctx: &dyn ContextView,
+    ctx: &dyn Context,
     scope: &str,
     target_id: &str,
     required_role: &str,

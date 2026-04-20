@@ -51,13 +51,13 @@ mod tests {
             &[ContextKey::Seeds]
         }
 
-        fn accepts(&self, ctx: &dyn crate::ContextView) -> bool {
+        fn accepts(&self, ctx: &dyn crate::Context) -> bool {
             !ctx.get(ContextKey::Seeds)
                 .iter()
                 .any(|f| f.id == self.fact_id)
         }
 
-        async fn execute(&self, _ctx: &dyn crate::ContextView) -> AgentEffect {
+        async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
             AgentEffect::with_proposal(crate::ProposedFact::new(
                 ContextKey::Seeds,
                 self.fact_id.clone(),
@@ -72,7 +72,7 @@ mod tests {
         let suggestor = TestSuggestor {
             fact_id: "test-1".into(),
         };
-        let ctx = crate::context::Context::new();
+        let ctx = crate::context::ContextState::new();
         assert!(suggestor.accepts(&ctx));
     }
 
@@ -81,7 +81,7 @@ mod tests {
         let suggestor = TestSuggestor {
             fact_id: "test-1".into(),
         };
-        let mut ctx = crate::context::Context::new();
+        let mut ctx = crate::context::ContextState::new();
         let fact = converge_pack::fact::kernel_authority::new_fact(
             ContextKey::Seeds,
             "test-1",
@@ -96,7 +96,7 @@ mod tests {
         let suggestor = TestSuggestor {
             fact_id: "test-1".into(),
         };
-        let ctx = crate::context::Context::new();
+        let ctx = crate::context::ContextState::new();
         let effect = suggestor.execute(&ctx).await;
         assert_eq!(effect.proposals.len(), 1);
         assert_eq!(effect.proposals[0].id, "test-1");

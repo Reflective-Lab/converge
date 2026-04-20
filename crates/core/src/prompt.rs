@@ -152,7 +152,7 @@ impl PromptContext {
 
     /// Builds context from a Context and dependency keys.
     #[must_use]
-    pub fn from_context(ctx: &dyn crate::ContextView, dependencies: &[ContextKey]) -> Self {
+    pub fn from_context(ctx: &dyn crate::Context, dependencies: &[ContextKey]) -> Self {
         let mut prompt_ctx = Self::new();
         for &key in dependencies {
             let facts = ctx.get(key).to_vec();
@@ -333,7 +333,7 @@ fn escape_string(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::context::Context;
+    use crate::context::ContextState;
 
     #[test]
     fn test_edn_serialization() {
@@ -366,7 +366,7 @@ mod tests {
 
     #[test]
     fn test_context_building() {
-        let mut context = Context::new();
+        let mut context = ContextState::new();
         context
             .add_fact(crate::context::new_fact(
                 ContextKey::Seeds,

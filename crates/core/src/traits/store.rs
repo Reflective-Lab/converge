@@ -10,7 +10,7 @@ use std::future::Future;
 use std::time::Duration;
 
 use super::error::{CapabilityError, ErrorCategory};
-use crate::context::Context;
+use crate::context::ContextState;
 
 // ============================================================================
 // Store Error
@@ -120,7 +120,7 @@ impl CapabilityError for StoreError {
 /// without prescribing a storage backend.
 pub trait ContextStore: Send + Sync {
     /// Future type for loading a context snapshot.
-    type LoadFut<'a>: Future<Output = Result<Option<Context>, StoreError>> + Send + 'a
+    type LoadFut<'a>: Future<Output = Result<Option<ContextState>, StoreError>> + Send + 'a
     where
         Self: 'a;
 
@@ -133,7 +133,11 @@ pub trait ContextStore: Send + Sync {
     fn load_context<'a>(&'a self, scope_id: &'a str) -> Self::LoadFut<'a>;
 
     /// Persist the latest snapshot for a run, tenant, or application-defined scope.
-    fn save_context<'a>(&'a self, scope_id: &'a str, context: &'a Context) -> Self::SaveFut<'a>;
+    fn save_context<'a>(
+        &'a self,
+        scope_id: &'a str,
+        context: &'a ContextState,
+    ) -> Self::SaveFut<'a>;
 }
 
 // ============================================================================
@@ -149,13 +153,13 @@ pub trait DynContextStore: Send + Sync {
     fn load_context<'a>(
         &'a self,
         scope_id: &'a str,
-    ) -> BoxFuture<'a, Result<Option<Context>, StoreError>>;
+    ) -> BoxFuture<'a, Result<Option<ContextState>, StoreError>>;
 
     /// Save a context snapshot.
     fn save_context<'a>(
         &'a self,
         scope_id: &'a str,
-        context: &'a Context,
+        context: &'a ContextState,
     ) -> BoxFuture<'a, Result<(), StoreError>>;
 }
 
@@ -163,14 +167,14 @@ impl<T: ContextStore> DynContextStore for T {
     fn load_context<'a>(
         &'a self,
         scope_id: &'a str,
-    ) -> BoxFuture<'a, Result<Option<Context>, StoreError>> {
+    ) -> BoxFuture<'a, Result<Option<ContextState>, StoreError>> {
         Box::pin(ContextStore::load_context(self, scope_id))
     }
 
     fn save_context<'a>(
         &'a self,
         scope_id: &'a str,
-        context: &'a Context,
+        context: &'a ContextState,
     ) -> BoxFuture<'a, Result<(), StoreError>> {
         Box::pin(ContextStore::save_context(self, scope_id, context))
     }

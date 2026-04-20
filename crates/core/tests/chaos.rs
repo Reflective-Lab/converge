@@ -13,7 +13,8 @@
 //! determinism even under chaotic conditions.
 
 use converge_core::{
-    AgentEffect, Context, ContextKey, Engine, ProposedFact, Suggestor, suggestors::SeedSuggestor,
+    AgentEffect, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+    suggestors::SeedSuggestor,
 };
 use std::sync::{Arc, Mutex};
 
@@ -44,11 +45,11 @@ impl Suggestor for PanicSuggestor {
         &[]
     }
 
-    fn accepts(&self, _ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, _ctx: &dyn converge_core::Context) -> bool {
         true
     }
 
-    async fn execute(&self, _ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
         let current = {
             let mut cycle = self.cycle_counter.lock().unwrap();
             *cycle += 1;
@@ -96,11 +97,11 @@ impl Suggestor for HangingSuggestor {
         &[]
     }
 
-    fn accepts(&self, _ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, _ctx: &dyn converge_core::Context) -> bool {
         true
     }
 
-    async fn execute(&self, _ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
         let current = {
             let mut cycle = self.cycle_counter.lock().unwrap();
             *cycle += 1;
@@ -145,11 +146,11 @@ impl Suggestor for MalformedSuggestor {
         &[]
     }
 
-    fn accepts(&self, _ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, _ctx: &dyn converge_core::Context) -> bool {
         true
     }
 
-    async fn execute(&self, _ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
         match &self.variant {
             MalformedVariant::OverconfidentProposal => {
                 // Proposal with confidence > 1.0 should be rejected
@@ -232,11 +233,11 @@ impl Suggestor for LatencyVarianceSuggestor {
         &[]
     }
 
-    fn accepts(&self, _ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, _ctx: &dyn converge_core::Context) -> bool {
         true
     }
 
-    async fn execute(&self, _ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
         tokio::time::sleep(tokio::time::Duration::from_millis(self.delay_ms)).await;
 
         AgentEffect::with_proposal(ProposedFact::new(
@@ -267,7 +268,7 @@ async fn chaos_panic_on_cycle_2_others_complete() {
     // Should panic; we catch and verify the outcome
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async { engine.run(Context::new()).await })
+        rt.block_on(async { engine.run(ContextState::new()).await })
     }));
 
     // Panic is expected; verify it occurred
@@ -284,7 +285,7 @@ async fn chaos_malformed_overconfident_proposal() {
         variant: MalformedVariant::OverconfidentProposal,
     });
 
-    let result = engine.run(Context::new()).await;
+    let result = engine.run(ContextState::new()).await;
     assert!(
         result.is_ok(),
         "Engine should handle overconfident proposals"
@@ -302,7 +303,7 @@ async fn chaos_malformed_null_byte_id() {
         variant: MalformedVariant::NullByteId,
     });
 
-    let result = engine.run(Context::new()).await;
+    let result = engine.run(ContextState::new()).await;
     assert!(result.is_ok(), "Engine should handle null-byte IDs");
     assert!(result.unwrap().converged);
     println!("✓ Chaos test passed: null-byte ID rejected gracefully");
@@ -317,7 +318,7 @@ async fn chaos_malformed_null_byte_content() {
         variant: MalformedVariant::NullByteContent,
     });
 
-    let result = engine.run(Context::new()).await;
+    let result = engine.run(ContextState::new()).await;
     assert!(result.is_ok(), "Engine should handle null-byte content");
     assert!(result.unwrap().converged);
     println!("✓ Chaos test passed: null-byte content rejected gracefully");
@@ -332,7 +333,7 @@ async fn chaos_malformed_empty_id() {
         variant: MalformedVariant::EmptyId,
     });
 
-    let result = engine.run(Context::new()).await;
+    let result = engine.run(ContextState::new()).await;
     assert!(result.is_ok(), "Engine should handle empty IDs");
     assert!(result.unwrap().converged);
     println!("✓ Chaos test passed: empty ID rejected gracefully");
@@ -347,7 +348,7 @@ async fn chaos_malformed_whitespace_id() {
         variant: MalformedVariant::WhitespaceOnlyId,
     });
 
-    let result = engine.run(Context::new()).await;
+    let result = engine.run(ContextState::new()).await;
     assert!(result.is_ok(), "Engine should handle whitespace-only IDs");
     assert!(result.unwrap().converged);
     println!("✓ Chaos test passed: whitespace-only ID rejected gracefully");
@@ -362,7 +363,7 @@ async fn chaos_malformed_giant_content() {
         variant: MalformedVariant::GiantContent,
     });
 
-    let result = engine.run(Context::new()).await;
+    let result = engine.run(ContextState::new()).await;
     assert!(result.is_ok(), "Engine should handle giant content");
     assert!(result.unwrap().converged);
     println!("✓ Chaos test passed: giant content rejected gracefully");
@@ -379,8 +380,8 @@ async fn chaos_latency_variance_preserves_determinism() {
     engine2.register_suggestor(SeedSuggestor::new("seed", "base"));
     engine2.register_suggestor(LatencyVarianceSuggestor::new(10));
 
-    let result1 = engine1.run(Context::new()).await.unwrap();
-    let result2 = engine2.run(Context::new()).await.unwrap();
+    let result1 = engine1.run(ContextState::new()).await.unwrap();
+    let result2 = engine2.run(ContextState::new()).await.unwrap();
 
     let facts1 = result1
         .context
@@ -423,7 +424,7 @@ async fn chaos_mixed_panic_and_malformed() {
 
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async { engine.run(Context::new()).await })
+        rt.block_on(async { engine.run(ContextState::new()).await })
     }));
 
     // Panic is expected

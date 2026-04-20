@@ -12,7 +12,8 @@
 //! Run with: `cargo bench -p converge-core`
 
 use converge_core::{
-    AgentEffect, Context, ContextKey, Engine, ProposedFact, Suggestor, suggestors::SeedSuggestor,
+    AgentEffect, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+    suggestors::SeedSuggestor,
 };
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 
@@ -26,7 +27,10 @@ fn bench_engine_single_cycle(c: &mut Criterion) {
                 let mut engine = Engine::new();
                 engine.register_suggestor(SeedSuggestor::new("seed-1", "test data"));
 
-                engine.run(Context::new()).await.expect("should converge")
+                engine
+                    .run(ContextState::new())
+                    .await
+                    .expect("should converge")
             })
         });
     });
@@ -50,11 +54,11 @@ fn bench_engine_multi_suggestor(c: &mut Criterion) {
             &[]
         }
 
-        fn accepts(&self, _ctx: &dyn converge_core::ContextView) -> bool {
+        fn accepts(&self, _ctx: &dyn converge_core::Context) -> bool {
             true
         }
 
-        async fn execute(&self, _ctx: &dyn converge_core::ContextView) -> AgentEffect {
+        async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
             AgentEffect::with_proposal(ProposedFact::new(
                 self.key,
                 format!("{}-proposal", self.name),
@@ -81,7 +85,10 @@ fn bench_engine_multi_suggestor(c: &mut Criterion) {
                         });
                     }
 
-                    engine.run(Context::new()).await.expect("should converge")
+                    engine
+                        .run(ContextState::new())
+                        .await
+                        .expect("should converge")
                 })
             });
         });
@@ -107,11 +114,11 @@ fn bench_engine_budget_pressure(c: &mut Criterion) {
             &[]
         }
 
-        fn accepts(&self, _ctx: &dyn converge_core::ContextView) -> bool {
+        fn accepts(&self, _ctx: &dyn converge_core::Context) -> bool {
             true
         }
 
-        async fn execute(&self, _ctx: &dyn converge_core::ContextView) -> AgentEffect {
+        async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
             AgentEffect::with_proposal(ProposedFact::new(
                 self.key,
                 "unlimited-1",
@@ -133,7 +140,7 @@ fn bench_engine_budget_pressure(c: &mut Criterion) {
                     key: ContextKey::Hypotheses,
                 });
 
-                let result = engine.run(Context::new()).await;
+                let result = engine.run(ContextState::new()).await;
                 // Should either converge or hit budget boundary
                 result.ok()
             })
@@ -148,7 +155,7 @@ fn bench_engine_large_context(c: &mut Criterion) {
         b.iter(|| {
             let rt = tokio::runtime::Runtime::new().expect("create runtime");
             rt.block_on(async {
-                let mut ctx = Context::new();
+                let mut ctx = ContextState::new();
 
                 // Pre-seed 1000 facts
                 for i in 0..1000 {

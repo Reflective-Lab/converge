@@ -52,7 +52,7 @@
 //! engine.register_suggestor(SlotOptimizationAgent);
 //! engine.register_suggestor(ConflictDetectionAgent);
 //!
-//! let result = engine.run(Context::new()).await.expect("should converge");
+//! let result = engine.run(ContextState::new()).await.expect("should converge");
 //!
 //! assert!(result.converged);
 //! assert!(result.context.has(ContextKey::Strategies));
@@ -81,12 +81,12 @@ impl Suggestor for AvailabilityRetrievalAgent {
         &[ContextKey::Seeds]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         // Run once when seeds exist but no availability signals yet
         ctx.has(ContextKey::Seeds) && !ctx.has(ContextKey::Signals)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let seeds = ctx.get(ContextKey::Seeds);
 
         // Extract participants from seeds
@@ -155,7 +155,7 @@ impl Suggestor for TimeZoneNormalizationAgent {
         &[ContextKey::Signals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         // Run when availability signals exist but no normalized times yet
         // Check if we have availability signals but haven't normalized
         let has_availability = ctx
@@ -170,7 +170,7 @@ impl Suggestor for TimeZoneNormalizationAgent {
         has_availability && !has_normalized
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let signals = ctx.get(ContextKey::Signals);
 
         let mut facts = Vec::new();
@@ -212,7 +212,7 @@ impl Suggestor for WorkingHoursConstraintAgent {
         &[ContextKey::Signals, ContextKey::Seeds]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         // Run when normalized availability exists but constraints not yet defined
         let has_normalized = ctx
             .get(ContextKey::Signals)
@@ -226,7 +226,7 @@ impl Suggestor for WorkingHoursConstraintAgent {
         has_normalized && !has_constraints
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let signals = ctx.get(ContextKey::Signals);
         let seeds = ctx.get(ContextKey::Seeds);
 
@@ -282,12 +282,12 @@ impl Suggestor for SlotOptimizationAgent {
         &[ContextKey::Constraints, ContextKey::Signals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         // Run when constraints exist but no candidate slots yet
         ctx.has(ContextKey::Constraints) && !ctx.has(ContextKey::Strategies)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let constraints = ctx.get(ContextKey::Constraints);
         let _signals = ctx.get(ContextKey::Signals);
 
@@ -347,12 +347,12 @@ impl Suggestor for ConflictDetectionAgent {
         &[ContextKey::Strategies, ContextKey::Constraints]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
         // Run when candidate slots exist but no evaluations yet
         ctx.has(ContextKey::Strategies) && !ctx.has(ContextKey::Evaluations)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
         let strategies = ctx.get(ContextKey::Strategies);
         let constraints = ctx.get(ContextKey::Constraints);
 
@@ -439,7 +439,7 @@ impl Invariant for RequireValidSlot {
         InvariantClass::Acceptance
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         let evaluations = ctx.get(ContextKey::Evaluations);
 
         // Check if there's at least one valid (non-INFEASIBLE) evaluation
@@ -475,7 +475,7 @@ impl Invariant for RequireParticipantAvailability {
         InvariantClass::Semantic
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         let evaluations = ctx.get(ContextKey::Evaluations);
         let signals = ctx.get(ContextKey::Signals);
 
@@ -533,7 +533,7 @@ impl Invariant for RequirePositiveDuration {
         InvariantClass::Structural
     }
 
-    fn check(&self, ctx: &dyn converge_core::ContextView) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         let seeds = ctx.get(ContextKey::Seeds);
         let constraints = ctx.get(ContextKey::Constraints);
 
@@ -572,7 +572,7 @@ impl Invariant for RequirePositiveDuration {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use converge_core::Context;
+    use converge_core::ContextState;
     use converge_core::Engine;
     use converge_core::suggestors::SeedSuggestor;
 
@@ -582,7 +582,10 @@ mod tests {
         engine.register_suggestor(SeedSuggestor::new("participants", "Alice, Bob, Carol"));
         engine.register_suggestor(AvailabilityRetrievalAgent);
 
-        let result = engine.run(Context::new()).await.expect("should converge");
+        let result = engine
+            .run(ContextState::new())
+            .await
+            .expect("should converge");
 
         assert!(result.converged);
         assert!(result.context.has(ContextKey::Signals));
@@ -598,7 +601,10 @@ mod tests {
         engine.register_suggestor(AvailabilityRetrievalAgent);
         engine.register_suggestor(TimeZoneNormalizationAgent);
 
-        let result = engine.run(Context::new()).await.expect("should converge");
+        let result = engine
+            .run(ContextState::new())
+            .await
+            .expect("should converge");
 
         assert!(result.converged);
         let signals = result.context.get(ContextKey::Signals);
@@ -614,7 +620,10 @@ mod tests {
         engine.register_suggestor(TimeZoneNormalizationAgent);
         engine.register_suggestor(WorkingHoursConstraintAgent);
 
-        let result = engine.run(Context::new()).await.expect("should converge");
+        let result = engine
+            .run(ContextState::new())
+            .await
+            .expect("should converge");
 
         assert!(result.converged);
         assert!(result.context.has(ContextKey::Constraints));
@@ -630,7 +639,10 @@ mod tests {
         engine.register_suggestor(WorkingHoursConstraintAgent);
         engine.register_suggestor(SlotOptimizationAgent);
 
-        let result = engine.run(Context::new()).await.expect("should converge");
+        let result = engine
+            .run(ContextState::new())
+            .await
+            .expect("should converge");
 
         assert!(result.converged);
         assert!(result.context.has(ContextKey::Strategies));
@@ -650,7 +662,10 @@ mod tests {
         engine.register_suggestor(SlotOptimizationAgent);
         engine.register_suggestor(ConflictDetectionAgent);
 
-        let result = engine.run(Context::new()).await.expect("should converge");
+        let result = engine
+            .run(ContextState::new())
+            .await
+            .expect("should converge");
 
         assert!(result.converged);
         assert!(result.context.has(ContextKey::Evaluations));
@@ -671,7 +686,10 @@ mod tests {
             engine.register_suggestor(WorkingHoursConstraintAgent);
             engine.register_suggestor(SlotOptimizationAgent);
             engine.register_suggestor(ConflictDetectionAgent);
-            engine.run(Context::new()).await.expect("should converge")
+            engine
+                .run(ContextState::new())
+                .await
+                .expect("should converge")
         };
 
         let r1 = run().await;

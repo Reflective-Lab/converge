@@ -38,7 +38,7 @@ pub(crate) fn new_fact_with_promotion(
 /// Agents receive `&dyn converge_pack::Context` (immutable) during execution.
 /// Only the engine holds `&mut Context` during the merge phase.
 #[derive(Debug, Default, Clone, serde::Serialize)]
-pub struct Context {
+pub struct ContextState {
     /// Facts stored by their key category.
     facts: HashMap<ContextKey, Vec<Fact>>,
     /// Pending proposals staged for engine validation/promotion.
@@ -51,7 +51,7 @@ pub struct Context {
 
 /// Implement the converge-pack Context trait for the concrete Context struct.
 /// This allows agents to use `&dyn converge_pack::Context`.
-impl converge_pack::Context for Context {
+impl converge_pack::Context for ContextState {
     fn has(&self, key: ContextKey) -> bool {
         self.facts.get(&key).is_some_and(|v| !v.is_empty())
     }
@@ -65,7 +65,7 @@ impl converge_pack::Context for Context {
     }
 }
 
-impl Context {
+impl ContextState {
     /// Creates a new empty context.
     #[must_use]
     pub fn new() -> Self {
@@ -217,14 +217,14 @@ mod tests {
 
     #[test]
     fn empty_context_has_no_facts() {
-        let ctx = Context::new();
+        let ctx = ContextState::new();
         assert!(!ctx.has(ContextKey::Seeds));
         assert_eq!(ctx.version(), 0);
     }
 
     #[test]
     fn adding_fact_increments_version() {
-        let mut ctx = Context::new();
+        let mut ctx = ContextState::new();
         let fact = crate::context::new_fact(ContextKey::Seeds, "seed-1", "initial value");
 
         let changed = ctx.add_fact(fact).expect("should add");
@@ -235,7 +235,7 @@ mod tests {
 
     #[test]
     fn duplicate_fact_does_not_change_context() {
-        let mut ctx = Context::new();
+        let mut ctx = ContextState::new();
         let fact = crate::context::new_fact(ContextKey::Seeds, "seed-1", "initial");
 
         ctx.add_fact(fact.clone()).expect("should add first");
@@ -246,7 +246,7 @@ mod tests {
 
     #[test]
     fn dirty_keys_track_new_facts_and_clear() {
-        let mut ctx = Context::new();
+        let mut ctx = ContextState::new();
         let fact = crate::context::new_fact(ContextKey::Hypotheses, "hyp-1", "value");
 
         ctx.add_fact(fact).expect("should add");
@@ -258,7 +258,7 @@ mod tests {
 
     #[test]
     fn detects_conflict() {
-        let mut ctx = Context::new();
+        let mut ctx = ContextState::new();
         ctx.add_fact(crate::context::new_fact(
             ContextKey::Seeds,
             "fact-1",
@@ -286,7 +286,7 @@ mod tests {
 
     #[test]
     fn adding_proposal_tracks_pending_state() {
-        let mut ctx = Context::new();
+        let mut ctx = ContextState::new();
         let proposal =
             ProposedFact::new(ContextKey::Hypotheses, "hyp-1", "market is growing", "test");
 
@@ -298,7 +298,7 @@ mod tests {
     /// Test that Context implements the converge_pack::Context trait.
     #[test]
     fn context_implements_trait() {
-        let mut ctx = Context::new();
+        let mut ctx = ContextState::new();
         ctx.add_fact(crate::context::new_fact(ContextKey::Seeds, "s1", "hello"))
             .unwrap();
 

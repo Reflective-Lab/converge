@@ -20,7 +20,7 @@
 //! engine.register_suggestor(SeedSuggestor::new("seed-1", "initial value"));
 //! engine.register_suggestor(ReactOnceSuggestor::new("hyp-1", "derived insight"));
 //!
-//! let result = engine.run(Context::new()).await.expect("converges");
+//! let result = engine.run(ContextState::new()).await.expect("converges");
 //! assert!(result.converged);
 //! assert!(result.context.has(ContextKey::Seeds));
 //! assert!(result.context.has(ContextKey::Hypotheses));
@@ -62,14 +62,14 @@ impl Suggestor for SeedSuggestor {
         &[] // No dependencies = eligible on first cycle
     }
 
-    fn accepts(&self, ctx: &dyn crate::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn crate::Context) -> bool {
         // Only run if we haven't contributed yet
         !ctx.get(ContextKey::Seeds)
             .iter()
             .any(|f| f.id == self.fact_id)
     }
 
-    async fn execute(&self, _ctx: &dyn crate::ContextView) -> AgentEffect {
+    async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
         AgentEffect::with_proposal(ProposedFact::new(
             ContextKey::Seeds,
             self.fact_id.clone(),
@@ -111,7 +111,7 @@ impl Suggestor for ReactOnceSuggestor {
         &[ContextKey::Seeds] // Only wake when Seeds change
     }
 
-    fn accepts(&self, ctx: &dyn crate::ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn crate::Context) -> bool {
         // Run if: seeds exist AND we haven't contributed
         ctx.has(ContextKey::Seeds)
             && !ctx
@@ -120,7 +120,7 @@ impl Suggestor for ReactOnceSuggestor {
                 .any(|f| f.id == self.fact_id)
     }
 
-    async fn execute(&self, _ctx: &dyn crate::ContextView) -> AgentEffect {
+    async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
         AgentEffect::with_proposal(ProposedFact::new(
             ContextKey::Hypotheses,
             self.fact_id.clone(),
@@ -133,7 +133,7 @@ impl Suggestor for ReactOnceSuggestor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::context::Context;
+    use crate::context::ContextState;
     use crate::engine::Engine;
 
     #[tokio::test]
@@ -141,7 +141,7 @@ mod tests {
         let mut engine = Engine::new();
         engine.register_suggestor(SeedSuggestor::new("s1", "value"));
 
-        let result = engine.run(Context::new()).await.expect("converges");
+        let result = engine.run(ContextState::new()).await.expect("converges");
 
         assert!(result.converged);
         assert_eq!(result.context.get(ContextKey::Seeds).len(), 1);
@@ -153,7 +153,7 @@ mod tests {
         engine.register_suggestor(SeedSuggestor::new("s1", "seed"));
         engine.register_suggestor(ReactOnceSuggestor::new("h1", "hypothesis"));
 
-        let result = engine.run(Context::new()).await.expect("converges");
+        let result = engine.run(ContextState::new()).await.expect("converges");
 
         assert!(result.converged);
         assert!(result.context.has(ContextKey::Seeds));
@@ -167,7 +167,7 @@ mod tests {
         engine.register_suggestor(SeedSuggestor::new("s2", "second"));
         engine.register_suggestor(SeedSuggestor::new("s3", "third"));
 
-        let result = engine.run(Context::new()).await.expect("converges");
+        let result = engine.run(ContextState::new()).await.expect("converges");
 
         assert!(result.converged);
         assert_eq!(result.context.get(ContextKey::Seeds).len(), 3);
@@ -188,11 +188,11 @@ mod tests {
                 &[ContextKey::Hypotheses]
             }
 
-            fn accepts(&self, ctx: &dyn crate::ContextView) -> bool {
+            fn accepts(&self, ctx: &dyn crate::Context) -> bool {
                 ctx.has(ContextKey::Hypotheses) && !ctx.has(ContextKey::Strategies)
             }
 
-            async fn execute(&self, _ctx: &dyn crate::ContextView) -> AgentEffect {
+            async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
                 AgentEffect::with_proposal(ProposedFact::new(
                     ContextKey::Strategies,
                     "strat-1",
@@ -207,7 +207,7 @@ mod tests {
         engine.register_suggestor(ReactOnceSuggestor::new("h1", "hypothesis"));
         engine.register_suggestor(StrategyAgent);
 
-        let result = engine.run(Context::new()).await.expect("converges");
+        let result = engine.run(ContextState::new()).await.expect("converges");
 
         assert!(result.converged);
         assert!(result.context.has(ContextKey::Seeds));

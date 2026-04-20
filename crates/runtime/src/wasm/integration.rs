@@ -140,7 +140,7 @@ pub fn load_and_register(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use converge_core::Context;
+    use converge_core::ContextState;
     use std::collections::HashMap;
 
     // =========================================================================
@@ -500,7 +500,7 @@ mod tests {
         .unwrap();
 
         // Run engine with context — ok invariant should pass
-        let ctx = Context::new();
+        let ctx = ContextState::new();
         let result = engine.run(ctx).await;
 
         // Engine needs at least one agent to do anything meaningful,
@@ -525,7 +525,7 @@ mod tests {
         .unwrap();
 
         // The violated invariant should cause a convergence failure
-        let ctx = Context::new();
+        let ctx = ContextState::new();
         let result = engine.run(ctx).await;
 
         // The acceptance invariant checks at convergence claim.

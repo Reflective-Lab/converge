@@ -1,6 +1,6 @@
 // Additional negative tests for edge cases.
 
-use converge_core::{AgentEffect, Context, ContextKey, Engine, ProposedFact, Suggestor};
+use converge_core::{AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor};
 
 #[tokio::test]
 async fn confidence_exactly_zero_accepted() {
@@ -13,10 +13,10 @@ async fn confidence_exactly_zero_accepted() {
         fn dependencies(&self) -> &[ContextKey] {
             &[]
         }
-        fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+        fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
             !ctx.has(ContextKey::Seeds)
         }
-        async fn execute(&self, _ctx: &dyn converge_core::ContextView) -> AgentEffect {
+        async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
             AgentEffect::with_proposal(ProposedFact {
                 key: ContextKey::Seeds,
                 id: "zero-1".into(),
@@ -28,7 +28,7 @@ async fn confidence_exactly_zero_accepted() {
     }
     let mut engine = Engine::new();
     engine.register_suggestor(ZeroConfSuggestor);
-    let result = engine.run(Context::new()).await.expect("converges");
+    let result = engine.run(ContextState::new()).await.expect("converges");
     assert!(result.converged);
     assert!(result.context.has(ContextKey::Seeds));
 }
@@ -37,7 +37,7 @@ async fn confidence_exactly_zero_accepted() {
 async fn confidence_exactly_one_accepted() {
     let mut engine = Engine::new();
     engine.register_suggestor(converge_core::suggestors::SeedSuggestor::new("s1", "v"));
-    let result = engine.run(Context::new()).await.expect("converges");
+    let result = engine.run(ContextState::new()).await.expect("converges");
     assert!(result.converged);
 }
 
@@ -52,10 +52,10 @@ async fn confidence_slightly_above_one_rejected() {
         fn dependencies(&self) -> &[ContextKey] {
             &[]
         }
-        fn accepts(&self, _ctx: &dyn converge_core::ContextView) -> bool {
+        fn accepts(&self, _ctx: &dyn converge_core::Context) -> bool {
             true
         }
-        async fn execute(&self, _ctx: &dyn converge_core::ContextView) -> AgentEffect {
+        async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
             AgentEffect::with_proposal(ProposedFact {
                 key: ContextKey::Seeds,
                 id: "over-1".into(),
@@ -68,7 +68,7 @@ async fn confidence_slightly_above_one_rejected() {
     let mut engine = Engine::new();
     engine.register_suggestor(OverConfSuggestor);
     let result = engine
-        .run(Context::new())
+        .run(ContextState::new())
         .await
         .expect("converges with rejection");
     assert!(!result.context.has(ContextKey::Seeds));
@@ -85,16 +85,16 @@ async fn suggestor_that_never_accepts_produces_no_facts() {
         fn dependencies(&self) -> &[ContextKey] {
             &[]
         }
-        fn accepts(&self, _ctx: &dyn converge_core::ContextView) -> bool {
+        fn accepts(&self, _ctx: &dyn converge_core::Context) -> bool {
             false
         }
-        async fn execute(&self, _ctx: &dyn converge_core::ContextView) -> AgentEffect {
+        async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
             panic!("should never be called")
         }
     }
     let mut engine = Engine::new();
     engine.register_suggestor(NeverAccepts);
-    let result = engine.run(Context::new()).await.expect("converges");
+    let result = engine.run(ContextState::new()).await.expect("converges");
     assert!(result.converged);
 }
 
@@ -109,10 +109,10 @@ async fn empty_proposal_id_still_works() {
         fn dependencies(&self) -> &[ContextKey] {
             &[]
         }
-        fn accepts(&self, ctx: &dyn converge_core::ContextView) -> bool {
+        fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
             !ctx.has(ContextKey::Seeds)
         }
-        async fn execute(&self, _ctx: &dyn converge_core::ContextView) -> AgentEffect {
+        async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
             AgentEffect::with_proposal(ProposedFact {
                 key: ContextKey::Seeds,
                 id: String::new(),
@@ -125,6 +125,6 @@ async fn empty_proposal_id_still_works() {
     let mut engine = Engine::new();
     engine.register_suggestor(EmptyIdSuggestor);
     // Should still converge — empty ID is valid at the pack level
-    let result = engine.run(Context::new()).await.expect("converges");
+    let result = engine.run(ContextState::new()).await.expect("converges");
     assert!(result.converged);
 }

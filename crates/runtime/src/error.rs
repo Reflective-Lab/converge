@@ -333,12 +333,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_invariant_violation_returns_unprocessable_entity() {
-        use converge_core::{Context, invariant::InvariantClass};
+        use converge_core::{ContextState, invariant::InvariantClass};
         let converge_err = ConvergeError::InvariantViolation {
             name: "test_invariant".to_string(),
             class: InvariantClass::Structural,
             reason: "failed check".to_string(),
-            context: Box::new(Context::new()),
+            context: Box::new(ContextState::new()),
         };
         let error = RuntimeError::Converge(converge_err);
         let response = error.into_response();
@@ -363,12 +363,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_converge_conflict_returns_conflict() {
-        use converge_core::Context;
+        use converge_core::ContextState;
         let converge_err = ConvergeError::Conflict {
             id: "fact-1".to_string(),
             existing: "value1".to_string(),
             new: "value2".to_string(),
-            context: Box::new(Context::new()),
+            context: Box::new(ContextState::new()),
         };
         let error = RuntimeError::Converge(converge_err);
         let response = error.into_response();

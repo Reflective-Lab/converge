@@ -34,7 +34,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::context::{Context, ContextKey, Fact};
+use crate::context::{ContextKey, ContextState, Fact};
 
 // ============================================================================
 // Lamport Clock
@@ -261,7 +261,7 @@ impl MerkleRoot {
     ///
     /// Facts are hashed in deterministic order (by key, then by position).
     #[must_use]
-    pub fn from_context(ctx: &Context) -> Self {
+    pub fn from_context(ctx: &ContextState) -> Self {
         let mut all_hashes: Vec<ContentHash> = Vec::new();
         let mut keys: Vec<_> = ctx.all_keys();
         keys.sort();
@@ -292,7 +292,7 @@ impl MerkleRoot {
 #[derive(Debug, Clone, Serialize)]
 pub struct TrackedContext {
     /// The underlying context.
-    pub context: Context,
+    pub context: ContextState,
     /// Lamport clock for causal ordering.
     pub clock: LamportClock,
     /// Cached Merkle root (invalidated on changes).
@@ -304,7 +304,7 @@ pub struct TrackedContext {
 impl TrackedContext {
     /// Creates a new tracked context wrapping an existing context.
     #[must_use]
-    pub fn new(context: Context) -> Self {
+    pub fn new(context: ContextState) -> Self {
         let mut tracked = Self {
             context,
             clock: LamportClock::new(),
@@ -318,7 +318,7 @@ impl TrackedContext {
     /// Creates an empty tracked context.
     #[must_use]
     pub fn empty() -> Self {
-        Self::new(Context::new())
+        Self::new(ContextState::new())
     }
 
     /// Returns the current Lamport clock time.

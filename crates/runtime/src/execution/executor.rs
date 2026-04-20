@@ -7,7 +7,7 @@
 //! Provides a builder pattern for configuring and running convergence jobs.
 
 use converge_core::suggestors::SeedSuggestor;
-use converge_core::{Budget, Context, ContextKey, ConvergeResult, Engine, ExperienceStore};
+use converge_core::{Budget, ContextKey, ContextState, ConvergeResult, Engine, ExperienceStore};
 use converge_experience::{InMemoryExperienceStore, StoreObserver};
 use serde::Serialize;
 use std::sync::Arc;
@@ -28,7 +28,7 @@ pub struct ExecutionResult {
     /// Number of cycles executed.
     pub cycles: u32,
     /// Final context.
-    pub context: Context,
+    pub context: ContextState,
     /// Execution duration in milliseconds.
     pub duration_ms: u64,
     /// Fact counts by key.
@@ -252,7 +252,7 @@ impl JobExecutor {
             register_pack_agents(&mut engine, &self.pack_id, &self.llm_config)?;
 
             // Create context and run
-            let context = Context::new();
+            let context = ContextState::new();
             let result = engine.run(context).await.map_err(RuntimeError::Converge)?;
 
             let duration_ms = start.elapsed().as_millis() as u64;
@@ -317,7 +317,7 @@ impl JobExecutor {
                 engine.set_streaming(callback.clone());
 
                 // Create context and run
-                let context = Context::new();
+                let context = ContextState::new();
                 let result = engine.run(context).await;
 
                 let duration_ms = start.elapsed().as_millis() as u64;
@@ -400,7 +400,7 @@ mod tests {
 
     #[test]
     fn test_execution_result_from_converge_result() {
-        let mut context = Context::new();
+        let mut context = ContextState::new();
         let _ = context.add_input(ContextKey::Seeds, "test", "content");
         let runtime = tokio::runtime::Runtime::new().unwrap();
         let context = runtime

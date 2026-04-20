@@ -13,7 +13,7 @@
 
 use std::sync::Arc;
 
-use converge_core::{Context, ContextKey, InvariantClass, InvariantResult, Violation};
+use converge_core::{ContextKey, ContextState, InvariantClass, InvariantResult, Violation};
 use strum::IntoEnumIterator;
 
 use super::contract::*;
@@ -26,7 +26,7 @@ use super::engine::{CompiledModule, WasmEngine};
 /// iteration but will be empty in practice since the engine doesn't expose
 /// them to invariant checks. The `parse_context_key` function in the
 /// `convert` module blocks them on the way back.
-pub fn context_to_guest(ctx: &Context, cycle: u32) -> GuestContext {
+pub fn context_to_guest(ctx: &dyn converge_core::Context, cycle: u32) -> GuestContext {
     let mut facts = std::collections::HashMap::new();
 
     for key in ContextKey::iter() {
@@ -159,7 +159,7 @@ impl converge_core::Invariant for WasmInvariant {
             .unwrap_or(InvariantClass::Semantic)
     }
 
-    fn check(&self, ctx: &Context) -> InvariantResult {
+    fn check(&self, ctx: &dyn converge_core::Context) -> InvariantResult {
         let guest_ctx = context_to_guest(ctx, 0);
         let capabilities = self.manifest.capabilities.clone();
 
@@ -188,7 +188,7 @@ impl converge_core::Invariant for WasmInvariant {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use converge_core::{Context, ContextKey, Fact};
+    use converge_core::{ContextKey, ContextState, Fact};
     use std::collections::HashMap;
 
     /// Build the WAT for an invariant that always returns ok.
@@ -337,15 +337,15 @@ mod tests {
         Arc::new(WasmEngine::new().unwrap())
     }
 
-    fn promoted_context(entries: &[(ContextKey, &str, &str)]) -> Context {
-        let mut ctx = Context::new();
+    fn promoted_context(entries: &[(ContextKey, &str, &str)]) -> ContextState {
+        let mut ctx = ContextState::new();
         for (key, id, content) in entries {
             ctx.add_input(*key, *id, *content).unwrap();
         }
         Engine::new().run(ctx).unwrap().context
     }
 
-    fn context_with_strategies() -> Context {
+    fn context_with_strategies() -> ContextState {
         promoted_context(&[
             (ContextKey::Strategies, "strat-1", "SEO strategy"),
             (ContextKey::Strategies, "strat-2", "Content marketing"),
@@ -375,7 +375,7 @@ mod tests {
 
     #[test]
     fn context_to_guest_excludes_proposals_and_diagnostic() {
-        let ctx = Context::new();
+        let ctx = ContextState::new();
         let guest = context_to_guest(&ctx, 0);
 
         // Even if Proposals/Diagnostic had facts, they should be excluded
@@ -385,7 +385,7 @@ mod tests {
 
     #[test]
     fn context_to_guest_empty_context() {
-        let ctx = Context::new();
+        let ctx = ContextState::new();
         let guest = context_to_guest(&ctx, 0);
         assert!(guest.facts.is_empty());
         assert_eq!(guest.version, 0);
@@ -453,7 +453,7 @@ mod tests {
         let wat = invariant_violated_wat();
         let inv = WasmInvariant::new(engine, wat.as_bytes(), WasmQuota::default()).unwrap();
 
-        let ctx = Context::new();
+        let ctx = ContextState::new();
         let result = converge_core::Invariant::check(&inv, &ctx);
         assert!(result.is_violated());
     }
@@ -475,7 +475,7 @@ mod tests {
         // Creation might fail or check might fail depending on fuel
         match inv {
             Ok(inv) => {
-                let result = converge_core::Invariant::check(&inv, &Context::new());
+                let result = converge_core::Invariant::check(&inv, &ContextState::new());
                 assert!(result.is_violated());
             }
             Err(_) => {} // Expected: not enough fuel even for manifest read
