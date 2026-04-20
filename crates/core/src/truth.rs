@@ -86,3 +86,114 @@ pub trait TruthCatalog: Send + Sync {
             .find(|truth| truth.key == key)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn truth_kind_equality() {
+        assert_eq!(TruthKind::Job, TruthKind::Job);
+        assert_ne!(TruthKind::Job, TruthKind::Policy);
+        assert_ne!(TruthKind::Policy, TruthKind::Invariant);
+    }
+
+    #[test]
+    fn truth_kind_serde_roundtrip() {
+        for kind in [TruthKind::Job, TruthKind::Policy, TruthKind::Invariant] {
+            let json = serde_json::to_string(&kind).unwrap();
+            let back: TruthKind = serde_json::from_str(&json).unwrap();
+            assert_eq!(kind, back);
+        }
+    }
+
+    #[test]
+    fn criterion_result_met_with_evidence() {
+        let result = CriterionResult::Met {
+            evidence: vec!["fact-1".into(), "fact-2".into()],
+        };
+        assert!(matches!(result, CriterionResult::Met { evidence } if evidence.len() == 2));
+    }
+
+    #[test]
+    fn criterion_result_blocked() {
+        let result = CriterionResult::Blocked {
+            reason: "needs approval".into(),
+            approval_ref: Some("approval:top-up".into()),
+        };
+        assert!(matches!(result, CriterionResult::Blocked { .. }));
+    }
+
+    #[test]
+    fn criterion_result_unmet() {
+        let result = CriterionResult::Unmet {
+            reason: "insufficient funds".into(),
+        };
+        assert!(matches!(result, CriterionResult::Unmet { reason } if reason.contains("funds")));
+    }
+
+    #[test]
+    fn criterion_result_indeterminate() {
+        let result = CriterionResult::Indeterminate;
+        assert!(matches!(result, CriterionResult::Indeterminate));
+    }
+
+    #[test]
+    fn criterion_result_serde_roundtrip() {
+        let variants = vec![
+            CriterionResult::Met {
+                evidence: vec!["e1".into()],
+            },
+            CriterionResult::Blocked {
+                reason: "wait".into(),
+                approval_ref: None,
+            },
+            CriterionResult::Unmet {
+                reason: "fail".into(),
+            },
+            CriterionResult::Indeterminate,
+        ];
+        for variant in variants {
+            let json = serde_json::to_string(&variant).unwrap();
+            let back: CriterionResult = serde_json::from_str(&json).unwrap();
+            assert_eq!(variant, back);
+        }
+    }
+
+    #[test]
+    fn truth_catalog_find_truth_default_impl() {
+        struct TestCatalog;
+        impl TruthCatalog for TestCatalog {
+            fn list_truths(&self) -> Vec<TruthDefinition> {
+                vec![
+                    TruthDefinition {
+                        key: "job:onboard".into(),
+                        kind: TruthKind::Job,
+                        summary: "Onboard a new employee".into(),
+                        success_criteria: vec![],
+                        constraints: vec![],
+                        approval_points: vec![],
+                        participating_packs: vec!["hr".into()],
+                    },
+                    TruthDefinition {
+                        key: "policy:expense".into(),
+                        kind: TruthKind::Policy,
+                        summary: "Expense policy".into(),
+                        success_criteria: vec![],
+                        constraints: vec![],
+                        approval_points: vec![],
+                        participating_packs: vec![],
+                    },
+                ]
+            }
+        }
+
+        let catalog = TestCatalog;
+        let found = catalog.find_truth("job:onboard");
+        assert!(found.is_some());
+        assert_eq!(found.unwrap().kind, TruthKind::Job);
+
+        let not_found = catalog.find_truth("nonexistent");
+        assert!(not_found.is_none());
+    }
+}

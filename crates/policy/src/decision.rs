@@ -96,3 +96,75 @@ impl PolicyDecision {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn policy_outcome_is_allowed() {
+        assert!(PolicyOutcome::Promote.is_allowed());
+        assert!(!PolicyOutcome::Reject.is_allowed());
+        assert!(!PolicyOutcome::Escalate.is_allowed());
+    }
+
+    #[test]
+    fn policy_outcome_is_terminal() {
+        assert!(PolicyOutcome::Promote.is_terminal());
+        assert!(PolicyOutcome::Reject.is_terminal());
+        assert!(!PolicyOutcome::Escalate.is_terminal());
+    }
+
+    #[test]
+    fn policy_decision_constructor_sets_mode() {
+        let d = PolicyDecision::policy(
+            PolicyOutcome::Promote,
+            Some("reason".into()),
+            "agent:x".into(),
+            "propose".into(),
+            "flow:1".into(),
+        );
+        assert_eq!(d.mode, DecisionMode::Policy);
+        assert_eq!(d.outcome, PolicyOutcome::Promote);
+        assert_eq!(d.reason.as_deref(), Some("reason"));
+        assert_eq!(d.principal_id, "agent:x");
+        assert_eq!(d.action, "propose");
+        assert_eq!(d.resource_id, "flow:1");
+    }
+
+    #[test]
+    fn delegation_decision_constructor_sets_mode() {
+        let d = PolicyDecision::delegation(
+            PolicyOutcome::Escalate,
+            None,
+            "agent:y".into(),
+            "commit".into(),
+            "flow:2".into(),
+        );
+        assert_eq!(d.mode, DecisionMode::Delegation);
+        assert_eq!(d.outcome, PolicyOutcome::Escalate);
+        assert!(d.reason.is_none());
+    }
+
+    #[test]
+    fn policy_outcome_serde_roundtrip() {
+        for outcome in [
+            PolicyOutcome::Promote,
+            PolicyOutcome::Reject,
+            PolicyOutcome::Escalate,
+        ] {
+            let json = serde_json::to_string(&outcome).unwrap();
+            let back: PolicyOutcome = serde_json::from_str(&json).unwrap();
+            assert_eq!(outcome, back);
+        }
+    }
+
+    #[test]
+    fn decision_mode_serde_roundtrip() {
+        for mode in [DecisionMode::Policy, DecisionMode::Delegation] {
+            let json = serde_json::to_string(&mode).unwrap();
+            let back: DecisionMode = serde_json::from_str(&json).unwrap();
+            assert_eq!(mode, back);
+        }
+    }
+}

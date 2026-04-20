@@ -233,3 +233,106 @@ pub trait CapabilityError: std::error::Error + Send + Sync {
     /// Returns `None` if no specific delay is suggested.
     fn retry_after(&self) -> Option<Duration>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn error_category_display() {
+        assert_eq!(ErrorCategory::Timeout.to_string(), "timeout");
+        assert_eq!(ErrorCategory::RateLimit.to_string(), "rate_limit");
+        assert_eq!(ErrorCategory::Auth.to_string(), "auth");
+        assert_eq!(ErrorCategory::InvalidInput.to_string(), "invalid_input");
+        assert_eq!(ErrorCategory::NotFound.to_string(), "not_found");
+        assert_eq!(ErrorCategory::Conflict.to_string(), "conflict");
+        assert_eq!(ErrorCategory::Unavailable.to_string(), "unavailable");
+        assert_eq!(
+            ErrorCategory::InvariantViolation.to_string(),
+            "invariant_violation"
+        );
+        assert_eq!(ErrorCategory::Internal.to_string(), "internal");
+    }
+
+    #[test]
+    fn error_category_equality() {
+        assert_eq!(ErrorCategory::Timeout, ErrorCategory::Timeout);
+        assert_ne!(ErrorCategory::Timeout, ErrorCategory::RateLimit);
+    }
+
+    #[test]
+    fn error_category_serde_roundtrip() {
+        let categories = [
+            ErrorCategory::Timeout,
+            ErrorCategory::RateLimit,
+            ErrorCategory::Auth,
+            ErrorCategory::InvalidInput,
+            ErrorCategory::NotFound,
+            ErrorCategory::Conflict,
+            ErrorCategory::Unavailable,
+            ErrorCategory::InvariantViolation,
+            ErrorCategory::Internal,
+        ];
+        for cat in categories {
+            let json = serde_json::to_string(&cat).unwrap();
+            let back: ErrorCategory = serde_json::from_str(&json).unwrap();
+            assert_eq!(cat, back);
+        }
+    }
+
+    #[derive(Debug)]
+    struct TestError {
+        cat: ErrorCategory,
+        transient: bool,
+    }
+
+    impl std::fmt::Display for TestError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "test error: {}", self.cat)
+        }
+    }
+
+    impl std::error::Error for TestError {}
+
+    impl CapabilityError for TestError {
+        fn category(&self) -> ErrorCategory {
+            self.cat
+        }
+        fn is_transient(&self) -> bool {
+            self.transient
+        }
+        fn is_retryable(&self) -> bool {
+            self.transient
+        }
+        fn retry_after(&self) -> Option<Duration> {
+            if self.cat == ErrorCategory::RateLimit {
+                Some(Duration::from_secs(5))
+            } else {
+                None
+            }
+        }
+    }
+
+    #[test]
+    fn capability_error_trait_implementation() {
+        let err = TestError {
+            cat: ErrorCategory::RateLimit,
+            transient: true,
+        };
+        assert_eq!(err.category(), ErrorCategory::RateLimit);
+        assert!(err.is_transient());
+        assert!(err.is_retryable());
+        assert_eq!(err.retry_after(), Some(Duration::from_secs(5)));
+    }
+
+    #[test]
+    fn non_transient_error_not_retryable() {
+        let err = TestError {
+            cat: ErrorCategory::InvalidInput,
+            transient: false,
+        };
+        assert!(!err.is_transient());
+        assert!(!err.is_retryable());
+        assert!(err.retry_after().is_none());
+    }
+}

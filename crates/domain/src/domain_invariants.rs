@@ -74,3 +74,49 @@ impl Invariant for AuditTrailRequired {
         InvariantResult::Ok
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use converge_core::Fact;
+    use std::collections::HashMap;
+
+    struct FakeCtx(HashMap<ContextKey, Vec<Fact>>);
+
+    impl converge_core::ContextView for FakeCtx {
+        fn has(&self, key: ContextKey) -> bool {
+            self.0.get(&key).is_some_and(|v| !v.is_empty())
+        }
+        fn get(&self, key: ContextKey) -> &[Fact] {
+            self.0.get(&key).map_or(&[], Vec::as_slice)
+        }
+    }
+
+    #[test]
+    fn authority_required_name_and_class() {
+        let inv = AuthorityRequired;
+        assert_eq!(inv.name(), "authority_required");
+        assert_eq!(inv.class(), InvariantClass::Semantic);
+    }
+
+    #[test]
+    fn authority_required_passes_with_empty_ctx() {
+        let inv = AuthorityRequired;
+        let ctx = FakeCtx(HashMap::new());
+        assert_eq!(inv.check(&ctx), InvariantResult::Ok);
+    }
+
+    #[test]
+    fn audit_trail_required_name_and_class() {
+        let inv = AuditTrailRequired;
+        assert_eq!(inv.name(), "audit_trail_required");
+        assert_eq!(inv.class(), InvariantClass::Structural);
+    }
+
+    #[test]
+    fn audit_trail_required_passes_with_empty_ctx() {
+        let inv = AuditTrailRequired;
+        let ctx = FakeCtx(HashMap::new());
+        assert_eq!(inv.check(&ctx), InvariantResult::Ok);
+    }
+}

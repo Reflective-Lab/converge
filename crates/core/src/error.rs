@@ -92,3 +92,133 @@ impl ConvergeError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn empty_context() -> Context {
+        Context::default()
+    }
+
+    #[test]
+    fn budget_exhausted_display() {
+        let err = ConvergeError::BudgetExhausted {
+            kind: "cycles".into(),
+        };
+        assert_eq!(err.to_string(), "budget exhausted: cycles");
+    }
+
+    #[test]
+    fn budget_exhausted_has_no_context() {
+        let err = ConvergeError::BudgetExhausted {
+            kind: "tokens".into(),
+        };
+        assert!(err.context().is_none());
+    }
+
+    #[test]
+    fn agent_failed_display() {
+        let err = ConvergeError::AgentFailed {
+            agent_id: "agent-x".into(),
+        };
+        assert_eq!(err.to_string(), "agent failed: agent-x");
+    }
+
+    #[test]
+    fn agent_failed_has_no_context() {
+        let err = ConvergeError::AgentFailed {
+            agent_id: "a".into(),
+        };
+        assert!(err.context().is_none());
+    }
+
+    #[test]
+    fn invariant_violation_has_context() {
+        let err = ConvergeError::InvariantViolation {
+            name: "no_empty".into(),
+            class: InvariantClass::Structural,
+            reason: "empty found".into(),
+            context: Box::new(empty_context()),
+        };
+        assert!(err.context().is_some());
+    }
+
+    #[test]
+    fn invariant_violation_display() {
+        let err = ConvergeError::InvariantViolation {
+            name: "no_empty".into(),
+            class: InvariantClass::Semantic,
+            reason: "bad".into(),
+            context: Box::new(empty_context()),
+        };
+        assert_eq!(
+            err.to_string(),
+            "Semantic invariant 'no_empty' violated: bad"
+        );
+    }
+
+    #[test]
+    fn conflict_has_context() {
+        let err = ConvergeError::Conflict {
+            id: "fact-1".into(),
+            existing: "old".into(),
+            new: "new".into(),
+            context: Box::new(empty_context()),
+        };
+        assert!(err.context().is_some());
+    }
+
+    #[test]
+    fn conflict_display() {
+        let err = ConvergeError::Conflict {
+            id: "f".into(),
+            existing: "a".into(),
+            new: "b".into(),
+            context: Box::new(empty_context()),
+        };
+        assert!(err.to_string().contains("conflict detected for fact 'f'"));
+    }
+
+    #[test]
+    fn stop_reason_budget_exhausted() {
+        let err = ConvergeError::BudgetExhausted {
+            kind: "time".into(),
+        };
+        let reason = err.stop_reason();
+        assert!(matches!(reason, StopReason::Error { .. }));
+    }
+
+    #[test]
+    fn stop_reason_invariant_violated() {
+        let err = ConvergeError::InvariantViolation {
+            name: "inv".into(),
+            class: InvariantClass::Acceptance,
+            reason: "fail".into(),
+            context: Box::new(empty_context()),
+        };
+        let reason = err.stop_reason();
+        assert!(matches!(reason, StopReason::InvariantViolated { .. }));
+    }
+
+    #[test]
+    fn stop_reason_agent_refused() {
+        let err = ConvergeError::AgentFailed {
+            agent_id: "bot".into(),
+        };
+        let reason = err.stop_reason();
+        assert!(matches!(reason, StopReason::AgentRefused { .. }));
+    }
+
+    #[test]
+    fn stop_reason_conflict() {
+        let err = ConvergeError::Conflict {
+            id: "x".into(),
+            existing: "old".into(),
+            new: "new".into(),
+            context: Box::new(empty_context()),
+        };
+        let reason = err.stop_reason();
+        assert!(matches!(reason, StopReason::Error { .. }));
+    }
+}

@@ -192,3 +192,244 @@ pub fn verify(b64: &str, vkey: &VerifyingKey, req: &DecideRequest) -> Result<boo
 
     Ok(true)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn valid_req() -> IssueDelegationReq {
+        IssueDelegationReq {
+            sub: "agent:finance".into(),
+            issuer: "human:cfo".into(),
+            delegated_authority: "supervisory".into(),
+            actions: vec!["commit".into()],
+            resource_pattern: "flow:quote-*".into(),
+            max_amount: Some(50_000),
+            nbf_epoch: 1_000_000,
+            exp_epoch: 2_000_000,
+            jti: "nonce-1".into(),
+        }
+    }
+
+    fn signing_key() -> SigningKey {
+        SigningKey::from_bytes(&[42u8; 32])
+    }
+
+    #[test]
+    fn issue_succeeds_with_valid_request() {
+        let key = signing_key();
+        let resp = issue(&key, valid_req());
+        assert!(resp.is_ok());
+        let resp = resp.unwrap();
+        assert!(!resp.delegation_b64.is_empty());
+        assert!(!resp.pubkey_b64.is_empty());
+    }
+
+    #[test]
+    fn issue_rejects_empty_subject() {
+        let key = signing_key();
+        let mut req = valid_req();
+        req.sub = "  ".into();
+        let err = issue(&key, req).unwrap_err();
+        assert!(err.contains("subject"));
+    }
+
+    #[test]
+    fn issue_rejects_empty_issuer() {
+        let key = signing_key();
+        let mut req = valid_req();
+        req.issuer = "".into();
+        let err = issue(&key, req).unwrap_err();
+        assert!(err.contains("issuer"));
+    }
+
+    #[test]
+    fn issue_rejects_no_actions() {
+        let key = signing_key();
+        let mut req = valid_req();
+        req.actions = vec![];
+        let err = issue(&key, req).unwrap_err();
+        assert!(err.contains("action"));
+    }
+
+    #[test]
+    fn issue_rejects_empty_resource_pattern() {
+        let key = signing_key();
+        let mut req = valid_req();
+        req.resource_pattern = "   ".into();
+        let err = issue(&key, req).unwrap_err();
+        assert!(err.contains("resource_pattern"));
+    }
+
+    #[test]
+    fn issue_rejects_empty_jti() {
+        let key = signing_key();
+        let mut req = valid_req();
+        req.jti = "".into();
+        let err = issue(&key, req).unwrap_err();
+        assert!(err.contains("jti"));
+    }
+
+    #[test]
+    fn issue_rejects_exp_before_nbf() {
+        let key = signing_key();
+        let mut req = valid_req();
+        req.exp_epoch = req.nbf_epoch;
+        let err = issue(&key, req).unwrap_err();
+        assert!(err.contains("exp_epoch"));
+    }
+
+    #[test]
+    fn issue_rejects_negative_max_amount() {
+        let key = signing_key();
+        let mut req = valid_req();
+        req.max_amount = Some(-1);
+        let err = issue(&key, req).unwrap_err();
+        assert!(err.contains("max_amount"));
+    }
+
+    #[test]
+    fn verify_roundtrip_valid_token() {
+        let key = signing_key();
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64;
+
+        let req = IssueDelegationReq {
+            sub: "agent:finance".into(),
+            issuer: "human:cfo".into(),
+            delegated_authority: "supervisory".into(),
+            actions: vec!["commit".into()],
+            resource_pattern: "flow:quote-*".into(),
+            max_amount: Some(50_000),
+            nbf_epoch: now - 100,
+            exp_epoch: now + 3600,
+            jti: "nonce-rt".into(),
+        };
+
+        let resp = issue(&key, req).unwrap();
+        let vkey = key.verifying_key();
+
+        let decide_req = DecideRequest {
+            principal: crate::types::PrincipalIn {
+                id: "agent:finance".into(),
+                authority: "supervisory".into(),
+                domains: vec!["finance".into()],
+                policy_version: None,
+            },
+            resource: crate::types::ResourceIn {
+                id: "flow:quote-2025-001".into(),
+                resource_type: Some("quote".into()),
+                phase: Some("commitment".into()),
+                gates_passed: None,
+            },
+            action: "commit".into(),
+            context: Some(crate::types::ContextIn {
+                commitment_type: Some("quote".into()),
+                amount: Some(10_000),
+                human_approval_present: Some(true),
+                required_gates_met: Some(true),
+            }),
+            delegation_b64: None,
+        };
+
+        let result = verify(&resp.delegation_b64, &vkey, &decide_req).unwrap();
+        assert!(result);
+    }
+
+    #[test]
+    fn verify_rejects_wrong_principal() {
+        let key = signing_key();
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64;
+
+        let req = IssueDelegationReq {
+            sub: "agent:finance".into(),
+            issuer: "human:cfo".into(),
+            delegated_authority: "supervisory".into(),
+            actions: vec!["commit".into()],
+            resource_pattern: "flow:*".into(),
+            max_amount: None,
+            nbf_epoch: now - 100,
+            exp_epoch: now + 3600,
+            jti: "nonce-wp".into(),
+        };
+
+        let resp = issue(&key, req).unwrap();
+        let vkey = key.verifying_key();
+
+        let decide_req = DecideRequest {
+            principal: crate::types::PrincipalIn {
+                id: "agent:other".into(),
+                authority: "advisory".into(),
+                domains: vec![],
+                policy_version: None,
+            },
+            resource: crate::types::ResourceIn {
+                id: "flow:x".into(),
+                resource_type: None,
+                phase: None,
+                gates_passed: None,
+            },
+            action: "commit".into(),
+            context: None,
+            delegation_b64: None,
+        };
+
+        let result = verify(&resp.delegation_b64, &vkey, &decide_req).unwrap();
+        assert!(!result);
+    }
+
+    #[test]
+    fn verify_rejects_amount_over_cap() {
+        let key = signing_key();
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64;
+
+        let req = IssueDelegationReq {
+            sub: "agent:finance".into(),
+            issuer: "human:cfo".into(),
+            delegated_authority: "supervisory".into(),
+            actions: vec!["commit".into()],
+            resource_pattern: "flow:*".into(),
+            max_amount: Some(1_000),
+            nbf_epoch: now - 100,
+            exp_epoch: now + 3600,
+            jti: "nonce-cap".into(),
+        };
+
+        let resp = issue(&key, req).unwrap();
+        let vkey = key.verifying_key();
+
+        let decide_req = DecideRequest {
+            principal: crate::types::PrincipalIn {
+                id: "agent:finance".into(),
+                authority: "supervisory".into(),
+                domains: vec![],
+                policy_version: None,
+            },
+            resource: crate::types::ResourceIn {
+                id: "flow:x".into(),
+                resource_type: None,
+                phase: None,
+                gates_passed: None,
+            },
+            action: "commit".into(),
+            context: Some(crate::types::ContextIn {
+                commitment_type: None,
+                amount: Some(5_000),
+                human_approval_present: None,
+                required_gates_met: None,
+            }),
+            delegation_b64: None,
+        };
+
+        let result = verify(&resp.delegation_b64, &vkey, &decide_req).unwrap();
+        assert!(!result);
+    }
+}

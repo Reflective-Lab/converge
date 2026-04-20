@@ -69,3 +69,62 @@ pub(crate) fn json_has_array_items(value: &serde_json::Value, key: &str) -> bool
         .and_then(serde_json::Value::as_array)
         .is_some_and(|items| !items.is_empty())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn json_has_array_items_returns_true_for_non_empty_array() {
+        let val = serde_json::json!({"items": [1, 2, 3]});
+        assert!(json_has_array_items(&val, "items"));
+    }
+
+    #[test]
+    fn json_has_array_items_returns_false_for_empty_array() {
+        let val = serde_json::json!({"items": []});
+        assert!(!json_has_array_items(&val, "items"));
+    }
+
+    #[test]
+    fn json_has_array_items_returns_false_for_missing_key() {
+        let val = serde_json::json!({"other": 42});
+        assert!(!json_has_array_items(&val, "items"));
+    }
+
+    #[test]
+    fn json_has_array_items_returns_false_for_non_array() {
+        let val = serde_json::json!({"items": "not an array"});
+        assert!(!json_has_array_items(&val, "items"));
+    }
+
+    #[test]
+    fn flow_input_constructs_correct_struct() {
+        let input = flow_input(
+            "agent:fin",
+            "supervisory",
+            "finance",
+            "expense:001".into(),
+            "expense",
+            vec!["receipt".into()],
+            Some(5000),
+            true,
+            true,
+            FlowAction::Commit,
+        );
+        assert_eq!(input.principal.id, "agent:fin");
+        assert_eq!(input.principal.authority, "supervisory");
+        assert_eq!(input.principal.domains, vec!["finance"]);
+        assert_eq!(
+            input.principal.policy_version.as_deref(),
+            Some("flow_governance_v1")
+        );
+        assert_eq!(input.resource.id, "expense:001");
+        assert_eq!(input.resource.kind, "expense");
+        assert_eq!(input.resource.phase, "commitment");
+        assert_eq!(input.resource.gates_passed, vec!["receipt"]);
+        assert_eq!(input.context.amount, Some(5000));
+        assert_eq!(input.context.human_approval_present, Some(true));
+        assert_eq!(input.context.required_gates_met, Some(true));
+    }
+}

@@ -409,3 +409,86 @@ impl Suggestor for ProposalEmitterAgent {
         AgentEffect::with_proposals(proposals)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn classify_risk_detects_ssn() {
+        assert!(classify_risk("employee_ssn"));
+        assert!(classify_risk("SSN_field"));
+    }
+
+    #[test]
+    fn classify_risk_detects_bank() {
+        assert!(classify_risk("bank_account_number"));
+        assert!(classify_risk("BANK_ROUTING"));
+    }
+
+    #[test]
+    fn classify_risk_detects_account() {
+        assert!(classify_risk("account_number"));
+    }
+
+    #[test]
+    fn classify_risk_detects_passport() {
+        assert!(classify_risk("passport_number"));
+    }
+
+    #[test]
+    fn classify_risk_detects_tax() {
+        assert!(classify_risk("tax_id"));
+    }
+
+    #[test]
+    fn classify_risk_detects_salary() {
+        assert!(classify_risk("annual_salary"));
+    }
+
+    #[test]
+    fn classify_risk_safe_fields() {
+        assert!(!classify_risk("first_name"));
+        assert!(!classify_risk("email"));
+        assert!(!classify_risk("department"));
+        assert!(!classify_risk("start_date"));
+    }
+
+    #[test]
+    fn has_fact_returns_false_for_empty_ctx() {
+        use std::collections::HashMap;
+
+        struct FakeCtx(HashMap<ContextKey, Vec<converge_core::Fact>>);
+
+        impl converge_core::ContextView for FakeCtx {
+            fn has(&self, key: ContextKey) -> bool {
+                self.0.get(&key).is_some_and(|v| !v.is_empty())
+            }
+            fn get(&self, key: ContextKey) -> &[converge_core::Fact] {
+                self.0.get(&key).map_or(&[], Vec::as_slice)
+            }
+        }
+
+        let ctx = FakeCtx(HashMap::new());
+        assert!(!has_fact(&ctx, ContextKey::Seeds, "anything"));
+    }
+
+    #[test]
+    fn parse_form_request_returns_none_for_empty_ctx() {
+        use std::collections::HashMap;
+
+        struct FakeCtx(HashMap<ContextKey, Vec<converge_core::Fact>>);
+
+        impl converge_core::ContextView for FakeCtx {
+            fn has(&self, key: ContextKey) -> bool {
+                self.0.get(&key).is_some_and(|v| !v.is_empty())
+            }
+            fn get(&self, key: ContextKey) -> &[converge_core::Fact] {
+                self.0.get(&key).map_or(&[], Vec::as_slice)
+            }
+        }
+
+        let ctx = FakeCtx(HashMap::new());
+        assert!(parse_form_request(&ctx).is_none());
+    }
+}
