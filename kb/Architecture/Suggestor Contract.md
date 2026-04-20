@@ -76,4 +76,51 @@ with `StopReason::BudgetExhausted`.
 All participate through `register_suggestor()`. Same governance, same
 convergence loop, same ExperienceStore capture.
 
+## Convergence Ordering Rules
+
+Agents within a cycle execute sorted by name. This creates implicit ordering.
+Understanding this prevents subtle bugs.
+
+### Rule 1: Idempotency via Context
+
+Never use internal state to prevent re-firing. Always check context:
+
+```rust
+fn accepts(&self, ctx: &dyn Context) -> bool {
+    // Good: check for MY output in context
+    ctx.has(ContextKey::Seeds)
+        && !ctx.get(ContextKey::Strategies).iter().any(|f| f.id == "my-fact-id")
+}
+```
+
+### Rule 2: Same-Cycle Visibility
+
+Agents eligible in the same cycle do NOT see each other's proposals from
+that cycle. Proposals are collected, then promoted AFTER all agents run.
+
+If agent A and agent B both depend on `ContextKey::Strategies`:
+- Both fire in the same cycle when Strategies changes
+- A cannot see B's proposals from this cycle (and vice versa)
+- Both see the promoted results in the NEXT cycle
+
+### Rule 3: Dependency-Driven Sequencing
+
+To ensure agent B runs AFTER agent A:
+- Make B depend on A's OUTPUT key (e.g., `ContextKey::Constraints`)
+- B becomes eligible only when that key is modified
+- This creates a natural multi-cycle pipeline
+
+```
+Cycle 1: Seeds written → Planner fires (writes Strategies)
+Cycle 2: Strategies written → Policy fires (writes Constraints)
+Cycle 3: Constraints written → Evaluator fires (writes Evaluations)
+Cycle 4: Nothing changed → converged
+```
+
+### Rule 4: Name Ordering Within a Cycle
+
+When multiple agents share the same dependencies and fire in the same cycle,
+they execute sorted by `name()`. Use this for determinism, not for sequencing.
+If you need guaranteed ordering, use different dependency keys.
+
 See also: [[Formation Pattern]], [[Hexagonal Architecture]]

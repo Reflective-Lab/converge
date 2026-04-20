@@ -4,6 +4,11 @@
 //! Hello Convergence — minimal example of the convergence engine.
 //!
 //! Shows: Engine, agents, context, facts, and the convergence loop.
+//!
+//! Key patterns demonstrated:
+//! - Idempotency via context: `accepts()` checks for own output
+//! - Dependency-driven sequencing: ReactOnce depends on Seeds
+//! - Fixed-point convergence: engine stops when context stabilizes
 
 use converge_kernel::{
     AgentEffect, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,

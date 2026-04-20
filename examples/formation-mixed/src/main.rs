@@ -55,6 +55,10 @@ impl Suggestor for IntentSeeder {
 
 // ── LLM Reasoning Agent (Stub) ───────────────────────────────────────
 // In real usage, this calls Claude/GPT to reason about the allocation.
+//
+// Key pattern: depends on Constraints (written by policy), NOT Strategies.
+// This ensures it fires AFTER the policy gate has had a chance to block.
+// See kb/Architecture/Suggestor Contract.md — "Dependency-Driven Sequencing".
 
 struct ReasoningAgent;
 
@@ -64,31 +68,43 @@ impl Suggestor for ReasoningAgent {
         "llm-reasoning"
     }
     fn dependencies(&self) -> &[ContextKey] {
-        &[ContextKey::Strategies]
+        // Depends on Constraints — fires after policy has evaluated
+        &[ContextKey::Constraints]
     }
     fn accepts(&self, ctx: &dyn Context) -> bool {
+        // Idempotency: check for OWN output in context
         ctx.has(ContextKey::Strategies) && !ctx.has(ContextKey::Evaluations)
     }
     async fn execute(&self, ctx: &dyn Context) -> AgentEffect {
         let strategies = ctx.get(ContextKey::Strategies);
-        // In production: send strategies to LLM for evaluation
-        // Here: approve if any strategy exists
-        if let Some(strategy) = strategies.first() {
+        let constraints = ctx.get(ContextKey::Constraints);
+
+        // Only evaluate strategies not blocked by policy
+        let blocked_ids: Vec<_> = constraints
+            .iter()
+            .filter_map(|c| c.id.strip_prefix("block-"))
+            .collect();
+
+        let mut proposals = Vec::new();
+        for strategy in strategies {
+            if blocked_ids.contains(&strategy.id.as_str()) {
+                continue; // Skip blocked strategies
+            }
+            // In production: send to Claude/GPT for evaluation
             let evaluation = serde_json::json!({
                 "strategy_id": strategy.id,
                 "assessment": "allocation meets priority ordering",
                 "confidence": 0.85,
                 "recommendation": "proceed"
             });
-            AgentEffect::with_proposal(ProposedFact::new(
+            proposals.push(ProposedFact::new(
                 ContextKey::Evaluations,
-                "llm-eval-1",
+                format!("eval-{}", strategy.id),
                 evaluation.to_string(),
                 "llm-reasoning",
-            ))
-        } else {
-            AgentEffect::empty()
+            ));
         }
+        AgentEffect::with_proposals(proposals)
     }
 }
 
