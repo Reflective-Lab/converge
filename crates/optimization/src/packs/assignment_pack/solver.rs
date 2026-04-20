@@ -1,16 +1,17 @@
 //! Solver for Task Assignment pack
+//!
+//! Delegates to the Hungarian algorithm from `crate::assignment::hungarian`
+//! for optimal O(n³) assignment.
 
 use super::types::*;
 use crate::Result;
+use crate::assignment::{self, AssignmentProblem};
 use crate::gate::{ProblemSpec, ReplayEnvelope, SolverReport};
 
-/// Greedy assignment solver
-///
-/// Algorithm: flatten all (agent, task, cost) triples, sort by cost,
-/// assign greedily ensuring each agent and task used at most once.
-pub struct GreedyAssignmentSolver;
+/// Optimal assignment solver (Hungarian algorithm wrapper)
+pub struct HungarianAssignmentSolver;
 
-impl GreedyAssignmentSolver {
+impl HungarianAssignmentSolver {
     pub fn solve(
         &self,
         input: &AssignmentInput,
@@ -18,32 +19,35 @@ impl GreedyAssignmentSolver {
     ) -> Result<(AssignmentOutput, SolverReport)> {
         let n = input.cost_matrix.len();
 
-        // Build sorted list of (cost, agent, task)
-        let mut edges: Vec<(f64, usize, usize)> = Vec::new();
-        for (i, row) in input.cost_matrix.iter().enumerate() {
-            for (j, &cost) in row.iter().enumerate() {
-                edges.push((cost, i, j));
-            }
-        }
-        edges.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+        // Convert f64 cost matrix to i64 for the Hungarian solver.
+        // Scale by 1000 to preserve 3 decimal places of precision.
+        let scale = 1000i64;
+        let int_costs: Vec<Vec<i64>> = input
+            .cost_matrix
+            .iter()
+            .map(|row| {
+                row.iter()
+                    .map(|&c| (c * scale as f64).round() as i64)
+                    .collect()
+            })
+            .collect();
 
-        let mut assigned_agents = vec![false; n];
-        let mut assigned_tasks = vec![false; n];
-        let mut assignments = Vec::new();
-        let mut total_cost = 0.0;
+        let problem = AssignmentProblem::from_costs(int_costs);
+        let solution = assignment::solve(&problem)?;
 
-        for (cost, agent, task) in edges {
-            if assigned_agents[agent] || assigned_tasks[task] {
-                continue;
-            }
-            assignments.push((agent, task));
-            total_cost += cost;
-            assigned_agents[agent] = true;
-            assigned_tasks[task] = true;
-            if assignments.len() == n {
-                break;
-            }
-        }
+        // Convert back: assignments[agent] = task → Vec<(agent, task)>
+        let assignments: Vec<(usize, usize)> = solution
+            .assignments
+            .iter()
+            .enumerate()
+            .filter(|&(agent, _)| agent < n)
+            .map(|(agent, &task)| (agent, task))
+            .collect();
+
+        let total_cost: f64 = assignments
+            .iter()
+            .map(|&(a, t)| input.cost_matrix[a][t])
+            .sum();
 
         let output = AssignmentOutput {
             assignments,
@@ -51,7 +55,7 @@ impl GreedyAssignmentSolver {
         };
 
         let replay = ReplayEnvelope::minimal(spec.seed());
-        let report = SolverReport::optimal("greedy-assignment-v1", total_cost, replay);
+        let report = SolverReport::optimal("hungarian-assignment-v1", total_cost, replay);
 
         Ok((output, report))
     }

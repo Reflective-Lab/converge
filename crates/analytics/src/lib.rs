@@ -25,9 +25,14 @@
 // ── Public API: Suggestor interfaces ──────────────────────────────────
 
 pub mod engine;
+pub mod packs;
 pub mod training;
 
 pub use engine::FeatureAgent;
+pub use packs::{
+    AnomalyDetectionPack, ClassificationPack, ForecastingPack, RankingPack, RegressionPack,
+    SegmentationPack, SimilarityPack,
+};
 
 // ── Internal: data processing utilities ───────────────────────────────
 // These are utility modules for feature agents to use internally.

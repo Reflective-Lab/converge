@@ -27,6 +27,7 @@ tracing.workspace = true
 # Converge platform dependencies
 converge-core.workspace = true
 converge-domain.workspace = true
+converge-optimization.workspace = true
 converge-provider.workspace = true
 
 # Object storage (optional)

@@ -298,17 +298,17 @@ clean:
 
 # ── Workflow ──────────────────────────────────────────────────────────
 
-# Session opener — repo health + recent activity
+# Session opener — build + test health
 focus:
-    @bash ops/scripts/workflow/focus.sh
-
-# Team sync — PRs, issues, recent commits
-sync:
-    @bash ops/scripts/workflow/sync.sh
+    @cargo build --workspace
+    @cargo test --workspace --lib -- --quiet
+    @echo "✓ workspace healthy"
 
 # Build health, test results
 status:
-    @bash ops/scripts/workflow/status.sh
+    @cargo test --workspace -- --quiet 2>&1 | tail -5
+    @echo "---"
+    @git log --oneline -5
 
 # ── Info ───────────────────────────────────────────────────────────────
 

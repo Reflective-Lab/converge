@@ -31,7 +31,7 @@ See [[Building/Crate Catalog]] for the full list.
 ```rust
 use async_trait::async_trait;
 use converge_kernel::{
-    AgentEffect, Context, ContextKey, ContextView, Engine, ProposedFact, Suggestor,
+    AgentEffect, Context, ContextKey, Context, Engine, ProposedFact, Suggestor,
 };
 
 #[tokio::main]
@@ -42,10 +42,10 @@ async fn main() {
     impl Suggestor for SeedSuggestor {
         fn name(&self) -> &str { "seed" }
         fn dependencies(&self) -> &[ContextKey] { &[] }
-        fn accepts(&self, ctx: &dyn ContextView) -> bool {
+        fn accepts(&self, ctx: &dyn Context) -> bool {
             !ctx.has(ContextKey::Seeds)
         }
-        async fn execute(&self, _ctx: &dyn ContextView) -> AgentEffect {
+        async fn execute(&self, _ctx: &dyn Context) -> AgentEffect {
             AgentEffect::with_proposal(ProposedFact {
                 key: ContextKey::Seeds,
                 id: "observation-1".into(),
@@ -58,7 +58,7 @@ async fn main() {
 
     let mut engine = Engine::new();
     engine.register_suggestor(SeedSuggestor);
-    let result = engine.run(Context::new()).await.expect("converges");
+    let result = engine.run(ContextState::new()).await.expect("converges");
 
     assert!(result.converged);
     assert!(result.context.has(ContextKey::Seeds));

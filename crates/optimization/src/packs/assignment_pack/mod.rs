@@ -1,6 +1,6 @@
 //! Task Assignment Pack
 //!
-//! Assign N agents to N tasks minimizing total cost using a greedy heuristic.
+//! Assign N agents to N tasks minimizing total cost using the Hungarian algorithm.
 
 mod solver;
 mod types;
@@ -37,7 +37,7 @@ impl Pack for AssignmentPack {
         let input: AssignmentInput = spec.inputs_as()?;
         input.validate()?;
 
-        let solver = GreedyAssignmentSolver;
+        let solver = HungarianAssignmentSolver;
         let (output, report) = solver.solve(&input, spec)?;
 
         let trace = KernelTraceLink::audit_only(format!("trace-{}", spec.problem_id));

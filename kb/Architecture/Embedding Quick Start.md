@@ -22,7 +22,7 @@ async-trait     = "0.1"
 // Typical import block
 use converge_kernel::{Context, Engine};
 use converge_pack::{
-    AgentEffect, Context as ContextView, ContextKey, ProposedFact, Suggestor,
+    AgentEffect, Context, ContextKey, ProposedFact, Suggestor,
 };
 ```
 
@@ -54,11 +54,11 @@ impl Suggestor for MySuggestor {
         &[ContextKey::Seeds]
     }
 
-    fn accepts(&self, ctx: &dyn ContextView) -> bool {
+    fn accepts(&self, ctx: &dyn Context) -> bool {
         ctx.has(ContextKey::Seeds) && !ctx.has(ContextKey::Hypotheses)
     }
 
-    async fn execute(&self, ctx: &dyn ContextView) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn Context) -> AgentEffect {
         let seeds = ctx.get(ContextKey::Seeds);
         let input = &seeds[0].content;
 
@@ -85,7 +85,7 @@ impl Suggestor for MySuggestor {
 ## Seeding a Context
 
 ```rust
-let mut ctx = Context::new();
+let mut ctx = ContextState::new();
 ctx.add_input(
     ContextKey::Seeds,
     "target-company",

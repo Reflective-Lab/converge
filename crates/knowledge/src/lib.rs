@@ -67,6 +67,7 @@ pub mod error;
 pub mod ingest;
 pub mod learning;
 pub mod storage;
+pub mod suggestor;
 
 #[cfg(feature = "grpc")]
 pub mod grpc;

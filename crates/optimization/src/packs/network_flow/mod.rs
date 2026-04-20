@@ -37,7 +37,7 @@ impl Pack for NetworkFlowPack {
         let input: NetworkFlowInput = spec.inputs_as()?;
         input.validate()?;
 
-        let solver = SuccessiveShortestPathSolver;
+        let solver = MinCostFlowSolver;
         let (output, report) = solver.solve(&input, spec)?;
 
         let trace = KernelTraceLink::audit_only(format!("trace-{}", spec.problem_id));

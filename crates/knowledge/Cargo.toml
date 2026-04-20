@@ -12,6 +12,9 @@ categories = ["database", "science"]
 exclude = ["target/*", "target/"]
 
 [dependencies]
+# Converge contract
+converge-pack.workspace = true
+
 # Async runtime
 tokio.workspace = true
 tokio-stream.workspace = true

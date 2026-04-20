@@ -141,7 +141,7 @@ initialize context from RootIntent
 repeat
   determine eligible suggestors (pure, side-effect free)
   filter by active packs        (only suggestors in activated packs run)
-  execute eligible suggestors   (read-only context via ContextView; scheduling is runtime-defined)
+  execute eligible suggestors   (read-only context via Context; scheduling is runtime-defined)
   collect AgentEffects          (buffered proposals only)
   promote proposals → facts     (promotion gate validates confidence, provenance)
   merge effects into context    (serialized, deterministic)
@@ -234,7 +234,7 @@ engine.run_with_types_intent_and_hooks(          // application-level truth exec
 
 ### Context
 ```rust
-let context = Context::new();
+let context = ContextState::new();
 context.has(ContextKey::Seeds);
 context.get(ContextKey::Seeds);          // → iterator of &Fact
 context.get(ContextKey::Evaluations);
