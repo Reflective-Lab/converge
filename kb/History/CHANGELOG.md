@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Optimization Suggestor adapter**: `SolverSuggestor<P: Pack>` wraps all 11 optimization domain packs as first-class Suggestors. Every solver participates in the convergence loop via `register_suggestor_in_pack`.
+- **Policy Suggestor adapters**: `PolicyGateSuggestor`, `DelegationVerifySuggestor`, `FlowGateSuggestor` bridge Cedar policy evaluation into the convergence loop.
+- **Compile-fail contract tests** (7): Prove at compile time that wrong API usage is impossible — no Fact construction without kernel authority, no orphan `Agent` trait, no `register_in_pack`, immutable facts, closed ContextKey enum.
+- **CI/CD infrastructure**: Pre-commit hooks, GitHub Actions (CI/Security/Coverage), dependabot auto-merge, self-hosted coverage badges across converge, organism, and axiom repos.
+- **700+ new tests** across all modules: property tests, negative tests, edge cases, serde roundtrips, async path tests with mocked LLM backends.
+
+### Changed
+- **BREAKING**: `ContextView` removed — use `Context` (the trait). The concrete implementation is now `ContextState`.
+- **BREAKING**: Consumers using `converge_core::ContextView` must change to `converge_core::Context`.
+
+### Removed
+- 3,469 lines of dead code: orphaned `consensus/` module, broken `billing/` module, orphaned `stress_tests.rs`.
+- `ContextView` alias (use `Context` directly).
+
 ## [3.4.0] - 2026-04-19
 
 ### Added
