@@ -1,0 +1,7 @@
+error[E0277]: the trait bound `ContextKey: From<&str>` is not satisfied
+ --> tests/compile_fail/context_key_exhaustive.rs:8:40
+  |
+8 |     let _key: ContextKey = "arbitrary".into();
+  |                                        ^^^^ the trait `From<&str>` is not implemented for `ContextKey`
+  |
+  = note: required for `&str` to implement `Into<ContextKey>`

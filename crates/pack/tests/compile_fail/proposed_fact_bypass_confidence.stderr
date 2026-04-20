@@ -1,0 +1,7 @@
+error[E0277]: the trait bound `Fact: From<ProposedFact>` is not satisfied
+  --> tests/compile_fail/proposed_fact_bypass_confidence.rs:16:32
+   |
+16 |     let _fact: Fact = proposal.into();
+   |                                ^^^^ the trait `From<ProposedFact>` is not implemented for `Fact`
+   |
+   = note: required for `ProposedFact` to implement `Into<Fact>`

@@ -1,0 +1,5 @@
+error[E0616]: field `agents` of struct `Engine` is private
+ --> tests/compile_fail/engine_private_fields.rs:9:26
+  |
+9 |     let _agents = engine.agents;
+  |                          ^^^^^^ private field
