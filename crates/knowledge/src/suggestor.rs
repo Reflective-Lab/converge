@@ -21,10 +21,12 @@ pub struct KnowledgeRetrievalSuggestor {
 }
 
 impl KnowledgeRetrievalSuggestor {
+    /// Create a retrieval suggestor backed by the given knowledge base.
     pub fn new(kb: Arc<KnowledgeBase>) -> Self {
         Self { kb, max_results: 5 }
     }
 
+    /// Override the maximum number of search hits proposed per seed fact.
     pub fn with_max_results(mut self, n: usize) -> Self {
         self.max_results = n;
         self
@@ -91,6 +93,7 @@ pub struct KnowledgeStoreSuggestor {
 }
 
 impl KnowledgeStoreSuggestor {
+    /// Create a storage suggestor backed by the given knowledge base.
     pub fn new(kb: Arc<KnowledgeBase>) -> Self {
         Self { kb }
     }

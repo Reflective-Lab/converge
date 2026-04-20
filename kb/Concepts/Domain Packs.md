@@ -4,46 +4,57 @@ source: mixed
 ---
 # Domain Packs
 
-Pre-built suggestor collections from `converge-domain`. Register and run — no custom suggestors needed for cross-cutting concerns.
+Domain packs are **one** way of organizing built-in suggestors. They are not
+the only way to participate in convergence.
 
-## Available Packs
+## Built-In Packs from `converge-domain`
 
-| Pack | Purpose | Key Suggestors |
+| Pack | Purpose | Representative Suggestors |
 |---|---|---|
-| `trust` | Audit, access control, provenance, compliance | SessionValidatorAgent, RbacEnforcerAgent, AuditWriterAgent, ProvenanceTrackerAgent, ComplianceScannerAgent, ViolationRemediatorAgent, PiiRedactorAgent |
-| `money` | Financial transactions, invoicing, reconciliation | InvoiceCreatorAgent, PaymentAllocatorAgent, ReconciliationMatcherAgent, PeriodCloserAgent |
-| `delivery` | Promise fulfillment, scope tracking, blockers | PromiseCreatorAgent, WorkBreakdownAgent, BlockerDetectorAgent, RiskAssessorAgent, StatusAggregatorAgent |
-| `knowledge` | Signal capture, hypothesis testing, canonical decisions | SignalCaptureAgent, HypothesisGeneratorAgent, ExperimentRunnerAgent, DecisionMemoAgent, CanonicalKnowledgeAgent |
-| `data_metrics` | Metrics, dashboards, anomaly detection, alerting | MetricRegistrarAgent, DataValidatorAgent, DashboardBuilderAgent, AnomalyDetectorAgent, AlertEvaluatorAgent |
+| `trust` | Audit, access control, provenance, compliance | `SessionValidatorAgent`, `RbacEnforcerAgent`, `AuditWriterAgent`, `PiiRedactorAgent` |
+| `money` | Invoicing, allocation, reconciliation, close | `InvoiceCreatorAgent`, `PaymentAllocatorAgent`, `ReconciliationMatcherAgent`, `PeriodCloserAgent` |
+| `delivery` | Promise fulfillment, blockers, status, risk | `PromiseCreatorAgent`, `WorkBreakdownAgent`, `BlockerDetectorAgent`, `RiskAssessorAgent` |
+| `data_metrics` | Metrics, data quality, dashboards, alerts | `MetricRegistrarAgent`, `DataValidatorAgent`, `DashboardBuilderAgent`, `AlertEvaluatorAgent` |
 
-## Usage
-
-```rust
-let mut engine = Engine::new();
-engine.register_suggestor_in_pack("trust-pack", AuditWriterAgent);
-engine.register_suggestor_in_pack("trust-pack", ProvenanceTrackerAgent);
-```
-
-## Mixing with Custom Suggestors
-
-Domain packs handle cross-cutting concerns. Your custom suggestors handle business logic. Both run in the same engine under the same governance.
+Register built-in packs with `register_suggestor_in_pack(...)` when you want
+pack labels for filtering or formation assembly:
 
 ```rust
-// Business logic
-engine.register_suggestor_in_pack("evaluation-pack", ComplianceScreenerAgent { .. });
-engine.register_suggestor_in_pack("evaluation-pack", CostAnalysisAgent);
-
-// Governance (free audit trails)
-engine.register_suggestor_in_pack("trust-pack", AuditWriterAgent);
-engine.register_suggestor_in_pack("trust-pack", ProvenanceTrackerAgent);
+engine.register_suggestor_in_pack("trust", AuditWriterAgent);
+engine.register_suggestor_in_pack("delivery", RiskAssessorAgent);
 ```
 
-## Invariants
+## Other Suggestor Families in the Same Loop
 
-Domain packs ship their own [[Concepts/Invariants|invariants]]:
+Not everything belongs in `converge-domain`.
 
-- `AllActionsAuditedInvariant`
-- `AuditImmutabilityInvariant`
-- `ViolationsHaveRemediationInvariant`
+| Crate | Role in the loop |
+|---|---|
+| `converge-policy` | Policy and flow gates as Suggestors |
+| `converge-optimization` | Solver packs through `SolverSuggestor<P>` |
+| `converge-analytics` | Feature extraction, training, inference, monitoring suggestors |
+| `converge-knowledge` | Retrieval and persistence suggestors for the knowledge base |
 
-See also: [[Concepts/Agents]], [[Building/Crate Catalog]]
+These are still plain `Suggestor`s. They register through the same engine API
+and run in the same convergence loop.
+
+## Mixing Built-In Packs with Other Suggestors
+
+```rust
+engine.register_suggestor_in_pack("delivery", RiskAssessorAgent);
+engine.register_suggestor(policy_gate);
+engine.register_suggestor(solver);
+engine.register_suggestor(knowledge_retrieval);
+engine.register_suggestor(custom_llm);
+```
+
+That is the intended architecture. One loop. One contract.
+
+## Ownership Boundary
+
+- Converge owns the loop and the governance mechanics.
+- Formation assembly belongs to the consumer layer.
+- Organism chooses which packs and suggestors belong in a formation.
+- Helms and applications decide when to run that formation.
+
+See also: [[Architecture/Suggestor Contract]], [[Building/Crate Catalog]]

@@ -6,87 +6,101 @@ source: mixed
 
 ## Add Converge to Your Project
 
+Start with the kernel:
+
 ```toml
 [dependencies]
 converge-kernel = "3"
+async-trait = "0.1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
-That's enough to embed the Converge engine in-process.
-
-Need more?
+Add narrower crates only when you need them:
 
 ```toml
-converge-pack = "3"          # Author suggestors and invariants
-converge-model = "3"         # Curated semantic types
-converge-domain = "3"        # Pre-built domain packs
-converge-client = "3"        # Remote Rust client
-async-trait = "0.1"          # Implement async Suggestor
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }  # or use your runtime
+converge-pack = "3"      # author reusable packs and invariants directly
+converge-model = "3"     # curated semantic types
+converge-client = "3"    # remote Rust client
 ```
 
-See [[Building/Crate Catalog]] for the full list.
+Built-in domain packs and internal suggestor crates exist in this workspace,
+but they are not part of the six canonical public API surfaces. See
+[[Building/Crate Catalog]].
 
 ## First Run
 
 ```rust
-use async_trait::async_trait;
 use converge_kernel::{
-    AgentEffect, Context, ContextKey, Context, Engine, ProposedFact, Suggestor,
+    AgentEffect, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
 };
+
+struct SeedSuggestor;
+
+#[async_trait::async_trait]
+impl Suggestor for SeedSuggestor {
+    fn name(&self) -> &str {
+        "seed"
+    }
+
+    fn dependencies(&self) -> &[ContextKey] {
+        &[]
+    }
+
+    fn accepts(&self, ctx: &dyn Context) -> bool {
+        !ctx.has(ContextKey::Seeds)
+    }
+
+    async fn execute(&self, _ctx: &dyn Context) -> AgentEffect {
+        AgentEffect::with_proposal(
+            ProposedFact::new(
+                ContextKey::Seeds,
+                "observation-1",
+                "Monthly active users grew 15%",
+                "suggestor:seed",
+            )
+            .with_confidence(0.95),
+        )
+    }
+}
 
 #[tokio::main]
 async fn main() {
-    struct SeedSuggestor;
-
-    #[async_trait]
-    impl Suggestor for SeedSuggestor {
-        fn name(&self) -> &str { "seed" }
-        fn dependencies(&self) -> &[ContextKey] { &[] }
-        fn accepts(&self, ctx: &dyn Context) -> bool {
-            !ctx.has(ContextKey::Seeds)
-        }
-        async fn execute(&self, _ctx: &dyn Context) -> AgentEffect {
-            AgentEffect::with_proposal(ProposedFact {
-                key: ContextKey::Seeds,
-                id: "observation-1".into(),
-                content: "Monthly active users grew 15%".into(),
-                confidence: 0.95,
-                provenance: "suggestor:seed".into(),
-            })
-        }
-    }
-
     let mut engine = Engine::new();
     engine.register_suggestor(SeedSuggestor);
-    let result = engine.run(ContextState::new()).await.expect("converges");
+
+    let result = engine
+        .run(ContextState::new())
+        .await
+        .expect("should converge");
 
     assert!(result.converged);
     assert!(result.context.has(ContextKey::Seeds));
 }
 ```
 
-Tokio is only the host runtime in this example. `converge-core` stays runtime-agnostic.
+Tokio is only the host runtime in this example. `converge-core` stays
+runtime-agnostic.
 
 ## Build Commands
 
-If you're working on the Converge repo itself:
+If you're working inside the Converge repo itself:
 
 | Command | What it does |
 |---|---|
 | `just build` | `cargo build --release` |
 | `just build-quick` | `cargo build --profile quick-release` |
+| `just check` | `cargo check --workspace` |
 | `just lint` | `cargo fmt --check && cargo clippy --all-targets -- -D warnings` |
-| `just fix-lint` | Auto-fix lint issues |
-| `just test` | `cargo test --all-targets` (default members) |
+| `just test` | `cargo test --all-targets` |
 | `just test-all` | `cargo test --all-targets --workspace` |
 | `just doc` | `cargo doc --no-deps --workspace` |
-| `just example hello-convergence` | Run an example |
+| `just example formation-mixed` | Run the mixed Suggestor loop example |
 
 ## Next Steps
 
-1. Read [[Philosophy/Why Converge]] and [[Philosophy/Nine Axioms]] — understand the model before building
-2. Read [[Building/Writing Agents]] — implement the `Suggestor` trait
-3. Study [[Concepts/Context and Facts]] — understand the shared state model
-4. Explore [[Concepts/Domain Packs]] — use pre-built suggestors for cross-cutting concerns
+1. Read [[Philosophy/Nine Axioms]].
+2. Read [[Architecture/Embedding Quick Start]].
+3. Read [[Architecture/Suggestor Contract]].
+4. Read [[Concepts/Domain Packs]] to see where built-in packs stop and other suggestor families begin.
 
 See also: [[Building/Crate Catalog]], [[Building/Context Keys]]

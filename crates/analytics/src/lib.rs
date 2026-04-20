@@ -19,31 +19,28 @@
 //! ## Available Suggestors
 //!
 //! - [`FeatureAgent`] — Polars-based feature extraction
-//! - Training pipeline: DataValidation, FeatureEngineering, ModelTraining,
-//!   ModelEvaluation, ModelRegistry, Monitoring, Deployment, etc.
+//! - [`InferenceAgent`] — Burn-based inference over feature vectors
+//! - Training pipeline suggestors — dataset, validation, feature engineering,
+//!   training, evaluation, registry, monitoring, deployment
 
-// ── Public API: Suggestor interfaces ──────────────────────────────────
-
+pub mod batch;
 pub mod engine;
+pub mod ingest;
+pub mod model;
 pub mod packs;
+#[cfg(feature = "storage")]
+pub mod storage;
+pub mod suggestor;
 pub mod training;
 
 pub use engine::FeatureAgent;
+pub use model::InferenceAgent;
 pub use packs::{
-    AnomalyDetectionPack, ClassificationPack, ForecastingPack, RankingPack, RegressionPack,
-    SegmentationPack, SimilarityPack,
+    AnomalyDetectionPack, ClassificationPack, DescriptiveStatsPack, ForecastingPack, RankingPack,
+    RegressionPack, SegmentationPack, SimilarityPack, TrendDetectionPack,
 };
-
-// ── Internal: data processing utilities ───────────────────────────────
-// These are utility modules for feature agents to use internally.
-// They will be wired into Suggestors as the analytics pipeline matures.
-
-#[allow(dead_code)]
-mod batch;
-#[allow(dead_code)]
-mod ingest;
-#[allow(dead_code)]
-mod model;
-#[cfg(feature = "storage")]
-#[allow(dead_code)]
-mod storage;
+pub use training::{
+    DataValidationAgent, DatasetAgent, DeploymentAgent, FeatureEngineeringAgent,
+    HyperparameterSearchAgent, ModelEvaluationAgent, ModelRegistryAgent, ModelTrainingAgent,
+    MonitoringAgent, SampleInferenceAgent,
+};

@@ -4,90 +4,70 @@ source: mixed
 ---
 # Crate Catalog
 
-## Public Contract Crates
+## Canonical Public Crates
 
-These are the six supported external APIs. See [[Architecture/API Surfaces]] for who should use what.
-
-### Authoring
+These six crates are the supported external API surfaces.
 
 | Crate | What it does |
 |---|---|
-| `converge-pack` | Author packs, suggestors, invariants. The strict authoring contract. |
-| `converge-provider-api` | Backend identity, capability declaration, routing requirements. |
+| `converge-pack` | Author packs, suggestors, invariants, and proposal-only effects |
+| `converge-provider-api` | Backend identity, capability routing, and chat contracts |
+| `converge-model` | Curated semantic types shared across consumers |
+| `converge-kernel` | In-process embedding API |
+| `converge-protocol` | Generated `converge.v1` wire types |
+| `converge-client` | Remote Rust SDK |
 
-### Semantic Model
+## Internal Workspace Crates
 
-| Crate | What it does |
-|---|---|
-| `converge-model` | Curated semantic types: governed Fact, Proposal, PromotionRecord, RootIntent, Criterion, StopReason, and all IDs/newtypes. |
-
-### Execution
-
-| Crate | What it does |
-|---|---|
-| `converge-kernel` | In-process embedding API: Engine, RunResult, Budget, HITL, streaming callbacks. |
-
-### Remote
+These crates are part of the workspace but are not canonical external API
+surfaces.
 
 | Crate | What it does |
 |---|---|
-| `converge-protocol` | Generated `converge.v1` protobuf/gRPC types. Wire contract for remote systems. |
-| `converge-client` | Idiomatic Rust SDK for remote Converge runtimes. Typed wrappers over the wire protocol. |
+| `converge-core` | Engine implementation, context state, promotion gate, integrity tracking |
+| `converge-provider` | Provider adapters and routing implementations |
+| `converge-domain` | Built-in domain packs: trust, money, delivery, data_metrics, plus example domain agents |
+| `converge-policy` | Cedar policy engine and policy suggestors |
+| `converge-optimization` | Solver packs and `SolverSuggestor` |
+| `converge-analytics` | Analytics and ML suggestors |
+| `converge-knowledge` | Knowledge base and knowledge suggestors |
+| `converge-experience` | Experience event storage |
+| `converge-runtime` | HTTP and gRPC runtime |
+| `converge-storage` | Object storage abstraction |
+| `ortools-sys` | Optional OR-Tools FFI bindings |
 
-## Internal Crates
-
-These are implementation crates. Not stable external contracts.
-
-| Crate | What it does |
-|---|---|
-| `converge-core` | Engine implementation, context, promotion gates. Re-exports pack types. |
-| `converge-domain` | Pre-built [[Concepts/Domain Packs\|agent packs]]: trust, money, delivery, knowledge, data_metrics |
-| `converge-provider` | LLM provider adapters (Anthropic, OpenAI, Gemini, Ollama, and more) |
-| `converge-mcp` | [[Integrations/MCP Tools\|Model Context Protocol]] server/client |
-| `converge-axiom` | Gherkin spec validation, truth-spec parsing |
-| `converge-knowledge` | Knowledge management, signal capture |
-| `converge-experience` | Experience tracking across runs |
-| `converge-optimization` | Multi-criteria optimization via OR-Tools |
-| `ortools-sys` | FFI bindings to Google OR-Tools |
-| `converge-storage` | Object store abstraction (local, S3, GCS) |
-| `converge-llm` | Local LLM inference (Burn, Gemma, Llama) |
-| `converge-runtime` | HTTP/gRPC server, SSE transport |
-| `converge-remote` | gRPC CLI client |
-| `converge-application` | CLI/TUI distribution |
-
-## Deprecated
-
-| Crate | Status |
-|---|---|
-| `converge-traits` | Compatibility facade. `publish = false`. Use `converge-pack` + `converge-provider-api` instead. |
+Some internal crates are publishable for controlled reuse. That still does not
+make them part of the stable public contract.
 
 ## Adding a Dependency
 
 For pack authors:
+
 ```toml
 [dependencies]
-converge-pack = "3.0.1"
+converge-pack = "3"
 ```
 
 For embedded applications:
+
 ```toml
 [dependencies]
-converge-kernel = "3.0.1"
-converge-model = "3.0.1"
+converge-kernel = "3"
+converge-model = "3"
 ```
 
 For remote Rust consumers:
+
 ```toml
 [dependencies]
-converge-client = "3.0.1"
+converge-client = "3"
 ```
 
 For provider adapters:
+
 ```toml
 [dependencies]
-converge-provider-api = "3.0.1"
+converge-provider-api = "3"
 ```
-
-If you need something that doesn't exist in any of these crates, say so. We patch Converge. We don't work around it.
 
 See also: [[Architecture/API Surfaces]], [[Architecture/Crate Map]]

@@ -4,111 +4,90 @@ source: mixed
 ---
 # Domain Packs
 
-`converge-domain` provides 47 production Suggestors across 7 business domains.
-Registered via `register_suggestor_in_pack()` for pack-scoped activation.
+`converge-domain` contains the built-in pack-organized Suggestors shipped with
+this workspace.
 
-## Domains
+## Built-In Packs
 
-### Trust (8 agents)
+### Trust
 
-| Agent | Purpose |
-|-------|---------|
-| AuditWriter | Records audit events |
-| ComplianceScanner | Scans for compliance violations |
-| ContractExecution | Executes contract terms |
-| PiiRedactor | Redacts PII from proposals |
-| ProvenanceTracker | Tracks data lineage |
-| RbacEnforcer | Enforces role-based access |
-| SessionValidator | Validates session integrity |
-| ViolationRemediator | Proposes fixes for violations |
+Audit, provenance, RBAC, compliance, and redaction.
 
-### Money (6 agents)
+Representative suggestors:
+- `SessionValidatorAgent`
+- `RbacEnforcerAgent`
+- `AuditWriterAgent`
+- `ProvenanceTrackerAgent`
+- `ComplianceScannerAgent`
+- `ViolationRemediatorAgent`
+- `ContractExecutionAgent`
+- `PiiRedactorAgent`
 
-| Agent | Purpose |
-|-------|---------|
-| InvoiceCreator | Creates invoice proposals |
-| InvoiceIssuer | Issues approved invoices |
-| OverdueDetector | Flags overdue payments |
-| PaymentAllocator | Allocates payments to invoices |
-| PeriodCloser | Closes accounting periods |
-| ReconciliationMatcher | Matches transactions |
+### Money
 
-### Delivery (9 agents)
+Invoice creation, issuance, allocation, reconciliation, and close.
 
-| Agent | Purpose |
-|-------|---------|
-| AcceptanceRequestor | Requests stakeholder acceptance |
-| BlockerDetector | Identifies delivery blockers |
-| BlockerRouter | Routes blockers to owners |
-| PostmortemScheduler | Schedules incident reviews |
-| PromiseCreator | Creates delivery promises |
-| RiskAssessor | Assesses delivery risks |
-| ScopeExtractor | Extracts scope from requirements |
-| StatusAggregator | Aggregates status across streams |
-| WorkBreakdown | Decomposes work into tasks |
+Representative suggestors:
+- `InvoiceCreatorAgent`
+- `InvoiceIssuerAgent`
+- `PaymentAllocatorAgent`
+- `ReconciliationMatcherAgent`
+- `OverdueDetectorAgent`
+- `PeriodCloserAgent`
 
-### Data Metrics (10 agents)
+### Delivery
 
-| Agent | Purpose |
-|-------|---------|
-| AlertEvaluator | Evaluates alert conditions |
-| AnomalyDetector | Detects data anomalies |
-| DashboardBuilder | Builds dashboard definitions |
-| DataValidator | Validates data quality |
-| FreshnessMonitor | Monitors data freshness |
-| MetricCalculator | Computes business metrics |
-| MetricRegistrar | Registers metric definitions |
-| PipelineCoordinator | Coordinates data pipelines |
-| ReportGenerator | Generates reports |
-| SourceConnector | Connects to data sources |
+Work decomposition, blockers, risk, status, and acceptance.
 
-### Meeting Scheduler (5 agents)
+Representative suggestors:
+- `PromiseCreatorAgent`
+- `ScopeExtractorAgent`
+- `WorkBreakdownAgent`
+- `BlockerDetectorAgent`
+- `BlockerRouterAgent`
+- `RiskAssessorAgent`
+- `StatusAggregatorAgent`
+- `AcceptanceRequestorAgent`
+- `PostmortemSchedulerAgent`
 
-| Agent | Purpose |
-|-------|---------|
-| AvailabilityRetrieval | Gets participant availability |
-| ConflictDetection | Detects scheduling conflicts |
-| SlotOptimization | Finds optimal time slots |
-| TimeZoneNormalization | Normalizes across time zones |
-| WorkingHoursConstraint | Enforces working hours |
+### Data Metrics
 
-### Form Filler (7 agents)
+Metrics, freshness, anomalies, dashboards, reports, and alerts.
 
-| Agent | Purpose |
-|-------|---------|
-| Completeness | Checks form completeness |
-| FieldMapping | Maps data to form fields |
-| FillPlan | Plans form filling strategy |
-| FormSchema | Parses form structure |
-| Normalization | Normalizes field values |
-| ProposalEmitter | Emits filled form proposals |
-| RiskClassifier | Classifies form risk level |
-
-### Resource Routing (5 agents)
-
-| Agent | Purpose |
-|-------|---------|
-| ConstraintValidation | Validates routing constraints |
-| Feasibility | Checks routing feasibility |
-| ResourceRetrieval | Gets available resources |
-| Solver | Solves routing optimization |
-| TaskRetrieval | Gets tasks needing resources |
+Representative suggestors:
+- `MetricRegistrarAgent`
+- `SourceConnectorAgent`
+- `PipelineCoordinatorAgent`
+- `DataValidatorAgent`
+- `AnomalyDetectorAgent`
+- `DashboardBuilderAgent`
+- `ReportGeneratorAgent`
+- `AlertEvaluatorAgent`
+- `FreshnessMonitorAgent`
+- `MetricCalculatorAgent`
 
 ## Registration Pattern
 
 ```rust
-use converge_domain::delivery::{RiskAssessor, WorkBreakdown};
+use converge_domain::packs::delivery::RiskAssessorAgent;
+use converge_domain::packs::trust::AuditWriterAgent;
 
-engine.register_suggestor_in_pack("delivery", RiskAssessor);
-engine.register_suggestor_in_pack("delivery", WorkBreakdown);
+engine.register_suggestor_in_pack("delivery", RiskAssessorAgent);
+engine.register_suggestor_in_pack("trust", AuditWriterAgent);
 ```
 
-Pack registration enables selective activation via `TypesRootIntent`:
-```rust
-let intent = TypesRootIntent::new()
-    .with_active_packs(vec!["delivery", "trust"]);
-```
+Use pack labels when upper layers want to filter or assemble formations by
+named pack. Use plain `register_suggestor(...)` when a suggestor does not
+belong to a `converge-domain` pack.
 
-Only agents in active packs participate in that run.
+## Same Loop, Different Crates
 
-See also: [[Architecture/Suggestor Contract]], [[Architecture/Formation Pattern]]
+These crates are not domain packs, but they still participate through
+`Suggestor` in the same engine run:
+
+- `converge-policy`
+- `converge-optimization`
+- `converge-analytics`
+- `converge-knowledge`
+
+See also: [[Concepts/Domain Packs]], [[Architecture/Suggestor Contract]]

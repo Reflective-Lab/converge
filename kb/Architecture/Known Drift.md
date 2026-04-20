@@ -12,7 +12,7 @@ This page tracks where the implementation diverges from the [[Philosophy/Nine Ax
 Single truth pipeline enforced. `AgentEffect` is proposal-only. `Fact` has no public constructor. Engine promotes through `PromotionGate`. 26 tests prove the contract. Compile-fail tests prove external code cannot forge facts.
 
 ### Crate Boundary Split — CLOSED
-Split into `converge-pack` (authoring) and `converge-provider-api` (capability routing). `converge-traits` deprecated.
+Split into `converge-pack` (authoring) and `converge-provider-api` (capability routing). The old compatibility facade is gone from the current workspace.
 
 ### Provenance Gap — CLOSED
 `Fact` now carries read-only promotion metadata (actor, validation summary, evidence refs, trace link, timestamps). The engine projects governed facts with full audit trail into the public type.

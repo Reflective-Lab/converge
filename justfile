@@ -310,29 +310,33 @@ status:
     @echo "---"
     @git log --oneline -5
 
+# Team sync — repo state + recent commits
+sync:
+    @git status --short
+    @echo "---"
+    @git log --oneline -5
+
 # ── Info ───────────────────────────────────────────────────────────────
 
 # Show workspace crate dependency graph
 deps:
-    @echo "Dependency graph (leaf → root):"
-    @echo "  converge-pack            (no internal deps)"
-    @echo "  converge-provider-api    (no internal deps)"
-    @echo "  converge-protocol        (no internal deps)"
-    @echo "  converge-traits          -> pack, provider-api (compatibility only)"
-    @echo "  converge-core            -> pack"
-    @echo "  converge-model           -> core, pack"
-    @echo "  converge-kernel          -> core, pack"
-    @echo "  converge-client          -> protocol"
-    @echo "  converge-provider        → core, pack, provider-api"
-    @echo "  converge-domain          → core, provider"
-    @echo "  converge-experience      → core"
-    @echo "  converge-knowledge       (standalone, optional in app)"
-    @echo "  ortools-sys              (no deps, FFI)"
-    @echo "  converge-optimization    → ortools-sys (optional)"
-    @echo "  converge-analytics       → core, domain, provider"
-    @echo "  converge-llm             → core, domain, provider (optional)"
-    @echo "  converge-policy          → core"
-    @echo "  converge-axiom            → core, provider"
-    @echo "  converge-remote          → client, protocol"
-    @echo "  converge-runtime         → core, provider, protocol"
-    @echo "  converge-application     → core, provider, domain, knowledge"
+    @echo "Canonical public crates:"
+    @echo "  converge-pack"
+    @echo "  converge-provider-api"
+    @echo "  converge-model"
+    @echo "  converge-kernel"
+    @echo "  converge-protocol"
+    @echo "  converge-client"
+    @echo "---"
+    @echo "Internal workspace crates:"
+    @echo "  converge-core"
+    @echo "  converge-provider"
+    @echo "  converge-domain"
+    @echo "  converge-policy"
+    @echo "  converge-optimization"
+    @echo "  converge-analytics"
+    @echo "  converge-knowledge"
+    @echo "  converge-experience"
+    @echo "  converge-runtime"
+    @echo "  converge-storage"
+    @echo "  ortools-sys"

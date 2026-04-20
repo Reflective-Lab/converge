@@ -106,4 +106,23 @@ Agents self-organize via dependencies:
 
 The Engine's fixed-point detection handles the coordination.
 
-See also: [[Suggestor Contract]], [[Hexagonal Architecture]]
+## Analytics Pack Compositions
+
+Analytics packs (`converge-analytics`) are designed to compose with optimization
+and policy packs in formations. Common patterns:
+
+| Formation | Packs composed | Use case |
+|---|---|---|
+| Detect → Triage → Scale | anomaly_detection → anomaly_triage → capacity_planning | SRE incident response |
+| Segment → Route → Constrain | segmentation → lead_routing → PolicyGate | Sales operations |
+| Forecast → Replenish → Budget | forecasting → inventory_replenishment → budget_allocation | Supply chain |
+| Classify → Rank → Select | classification → ranking → vendor_shortlist | Procurement |
+| Stats → Trend → Alert | descriptive_stats → trend_detection → anomaly_detection | Business intelligence |
+| Similar → Segment → Price | similarity → segmentation → pricing_guardrails | Dynamic pricing |
+
+Each pack reads from one ContextKey, writes to another. The Engine's fixed-point
+detection coordinates the multi-cycle pipeline automatically.
+
+See [[Analytics Packs]] for the full catalog, input schemas, and invariant definitions.
+
+See also: [[Suggestor Contract]], [[Hexagonal Architecture]], [[Analytics Packs]]

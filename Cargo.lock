@@ -2403,9 +2403,10 @@ dependencies = [
  "bincode 1.3.3",
  "burn",
  "calamine",
- "converge-core",
  "converge-domain",
+ "converge-kernel",
  "converge-optimization",
+ "converge-pack",
  "converge-provider",
  "converge-storage",
  "ndarray 0.17.2",
@@ -4889,6 +4890,18 @@ checksum = "8be9f3dfaaffdae2972880079a491a1a8bb7cbed0b8dd7a347f668b4150a3b93"
 dependencies = [
  "event-listener",
  "pin-project-lite",
+]
+
+[[package]]
+name = "example-analytics-packs"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "converge-analytics",
+ "converge-kernel",
+ "converge-optimization",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]

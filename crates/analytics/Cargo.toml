@@ -24,8 +24,10 @@ bincode.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 
-# Converge platform dependencies
-converge-core.workspace = true
+# Converge contract
+converge-pack.workspace = true
+
+# Converge platform dependencies (for pack integrations)
 converge-domain.workspace = true
 converge-optimization.workspace = true
 converge-provider.workspace = true
@@ -34,6 +36,7 @@ converge-provider.workspace = true
 converge-storage = { workspace = true, optional = true, features = ["local"] }
 
 [dev-dependencies]
+converge-kernel.workspace = true
 tempfile.workspace = true
 
 [features]

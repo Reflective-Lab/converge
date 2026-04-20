@@ -26,6 +26,7 @@ members = [
     "examples/vendor-selection",
     "examples/loan-application",
     "examples/formation-mixed",
+    "examples/analytics-packs",
 ]
 default-members = [
     "crates/model",

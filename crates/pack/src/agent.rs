@@ -31,11 +31,12 @@ use crate::effect::AgentEffect;
 /// The core suggestor contract.
 ///
 /// Every suggestor in the Converge ecosystem implements this trait — whether
-/// it wraps an LLM, a policy engine, an optimizer, or a simple rule.
+/// it wraps an LLM, a policy engine, an optimizer, analytics, knowledge
+/// retrieval, or a simple rule.
 ///
 /// The engine calls `accepts()` to determine eligibility, then `execute()`
 /// to collect effects. Effects are merged by the engine in deterministic
-/// order (sorted by suggestor name).
+/// registration order via [`crate::types::SuggestorId`].
 ///
 /// # Async
 ///
@@ -50,10 +51,10 @@ use crate::effect::AgentEffect;
 /// suggestors concurrently in the future.
 #[async_trait::async_trait]
 pub trait Suggestor: Send + Sync {
-    /// Human-readable name, used for ordering, logging, and provenance.
+    /// Human-readable name, used for logging and provenance.
     ///
-    /// Must be unique within a convergence run. The engine sorts suggestors
-    /// by name to ensure deterministic merge order.
+    /// Must be unique within a convergence run. Deterministic execution order
+    /// is derived from registration order, not lexical name sorting.
     fn name(&self) -> &str;
 
     /// Context keys this suggestor reads from.

@@ -153,20 +153,20 @@ Publishable crates in dependency order (see [ADR-001](kb/Architecture/ADRs/ADR-0
 
 1. `converge-pack`
 2. `converge-provider-api`
-3. `converge-protocol`
-4. `converge-core`
-5. `converge-mcp`
-6. `converge-model`
-7. `converge-kernel`
+3. `converge-core`
+4. `converge-policy`
+5. `converge-model`
+6. `converge-kernel`
+7. `converge-protocol`
 8. `converge-client`
-9. `converge-provider`
-10. `converge-experience`
-11. `converge-knowledge`
-12. `ortools-sys`
-13. `converge-optimization`
-14. `converge-domain`
-15. `converge-storage`
-16. `converge-axiom`
+9. `converge-storage`
+10. `converge-provider`
+11. `converge-experience`
+12. `converge-knowledge`
+13. `ortools-sys`
+14. `converge-optimization`
+15. `converge-domain`
+16. `converge-analytics`
 
 ```bash
 # Validate readiness

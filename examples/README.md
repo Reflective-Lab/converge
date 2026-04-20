@@ -1,73 +1,50 @@
 # Converge Examples
 
-Self-contained examples demonstrating Converge capabilities.
-Each subdirectory is a standalone project with its own `Cargo.toml`.
+Each subdirectory under `examples/` is a standalone crate that compiles as part
+of the workspace.
 
 ## Quick Start
 
 ```bash
 just examples
 just example hello-convergence
+just example formation-mixed
 ```
 
-Most examples map directly from the directory name to the package name:
+Most example package names follow the directory directly:
 
 - `just example hello-convergence`
 - `cargo run -p example-hello-convergence`
 
-Inference examples are the exception: they may need model files, feature flags,
-or extra setup. See the notes below before running them.
-
-The canonical convergence examples use Tokio and call `engine.run(...).await`.
-The local inference examples stay synchronous because the embedded inference
-engines they demonstrate are synchronous APIs.
-
-## Example Catalog
+## Current Example Set
 
 | Example | What it shows | Run |
-|---------|--------------|-----|
-| [hello-convergence](hello-convergence/) | Core convergence loop: agents, facts, invariants | `just example hello-convergence` |
-| [custom-agent](custom-agent/) | Implement a custom `Suggestor` | `just example custom-agent` |
-| [meeting-scheduler](meeting-scheduler/) | Domain pack with constraint agents | `just example meeting-scheduler` |
-| [custom-provider](custom-provider/) | Implement an LLM provider adapter | `just example custom-provider` |
-| [vendor-selection](vendor-selection/) | Multi-criteria vendor selection with default Cedar-backed commit gating | `just example vendor-selection` |
-| [expense-approval](expense-approval/) | Governed expense approval through the default `FlowGateAuthorizer` contract | `just example expense-approval` |
-| [loan-application](loan-application/) | Loan application processing with domain packs and traits | `just example loan-application` |
-| [local-inference](local-inference/) | Local inference example; defaults to the `gemma` feature | See [local-inference/README.md](local-inference/README.md) |
-| [gemma-inference](gemma-inference/) | Minimal Gemma GGUF inference via `llama.cpp` | `cargo run -p example-gemma-inference` |
+|---|---|---|
+| [hello-convergence](hello-convergence/) | Minimal convergence loop and fixed-point execution | `just example hello-convergence` |
+| [custom-agent](custom-agent/) | A custom `Suggestor` implementation | `just example custom-agent` |
+| [custom-provider](custom-provider/) | A provider adapter implementing the provider API | `just example custom-provider` |
+| [meeting-scheduler](meeting-scheduler/) | Multi-step convergence over scheduling constraints | `just example meeting-scheduler` |
+| [expense-approval](expense-approval/) | Governed approval flow with policy decisions in the loop | `just example expense-approval` |
+| [vendor-selection](vendor-selection/) | Multi-criteria selection with default Cedar-backed flow gating | `just example vendor-selection` |
+| [loan-application](loan-application/) | Domain suggestors, policy checks, and HITL escalation | `just example loan-application` |
+| [formation-mixed](formation-mixed/) | One loop mixing optimization, policy, and LLM-style reasoning | `just example formation-mixed` |
 
-## Verified Results (Apple M2 Max, 2026-04-13)
+## Contract Notes
 
-| Example | Model | Result |
-|---------|-------|--------|
-| hello-convergence | — | Converged in 3 cycles |
-| custom-agent | — | Converged in 3 cycles |
-| custom-provider | — | Echo provider works |
-| meeting-scheduler | — | Converged in 6 cycles |
-| expense-approval | — | Cedar-gated approval flow |
-| vendor-selection | — | 3 vendors scored, Cedar commit gate |
-| loan-application | — | HITL gate, approved |
-| local-inference | gemma-3-4b | 39.6 tok/s, structured output |
-| local-inference | gemma-4-E4B | 35.6 tok/s, structured output |
-| gemma-inference | gemma-4-E4B | Loaded 5.1 GiB, interactive chat ready |
+- All examples use the current `Context` / `ContextState` naming. There is no `ContextView`.
+- Examples seed runs with `ProposedFact` or `ContextState::add_input(...)`. They do not construct authoritative `Fact` values.
+- Heterogeneous behavior still enters through one trait: `Suggestor`.
 
-## Notes
+## For Consumers
 
-- Gemma examples require a local GGUF model file in `~/models/` or at the path pointed to by `CONVERGE_GEMMA_MODEL_PATH`.
-- `local-inference` has its own setup guide because it may need `CONVERGE_GEMMA_MODEL_PATH`, explicit features, and Apple Silicon / GPU-specific configuration.
-- `gemma-inference` is a focused `converge-llm` example, not a general business-flow example.
+Start with `hello-convergence`, then read `formation-mixed`.
 
-## For Partners
+That pairing shows the stable contract clearly:
 
-Start with **hello-convergence** to understand the core model, then move to
-**custom-agent** to build your own. The remaining examples show specific
-capabilities you can compose.
+- `Engine`
+- `Suggestor`
+- `AgentEffect`
+- `ProposedFact`
+- `Context` / `ContextState`
 
-If you need the canonical governance pattern, start with **expense-approval**
-and **vendor-selection**. They show the intended default path for consequential
-business actions:
-
-- flow state projects into `FlowGateInput`
-- `converge-policy` evaluates Cedar rules through `FlowGateAuthorizer`
-- outcomes are `promote`, `reject`, or `escalate`
-- HITL approval resumes the same convergence loop
+Everything else is composition on top.

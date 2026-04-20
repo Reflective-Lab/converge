@@ -1,7 +1,7 @@
 // Copyright 2024-2026 Reflective Labs
 
 use anyhow::{Result, anyhow};
-use converge_core::{AgentEffect, ContextKey, ProposedFact, Suggestor};
+use converge_pack::{AgentEffect, Context, ContextKey, ProposedFact, Suggestor};
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -100,12 +100,12 @@ impl Suggestor for FeatureAgent {
         &[ContextKey::Seeds]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
+    fn accepts(&self, ctx: &dyn Context) -> bool {
         // Run if we have Seeds but haven't produced Proposals yet
         ctx.has(ContextKey::Seeds) && !ctx.has(ContextKey::Proposals)
     }
 
-    async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
+    async fn execute(&self, _ctx: &dyn Context) -> AgentEffect {
         // 1. Compute features using Polars
         let features = match self.compute_features() {
             Ok(f) => f,

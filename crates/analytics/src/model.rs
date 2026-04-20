@@ -6,7 +6,7 @@ use burn::{
     prelude::*,
     tensor::{Tensor, backend::Backend},
 };
-use converge_core::{AgentEffect, ContextKey, ProposedFact, Suggestor};
+use converge_pack::{AgentEffect, Context, ContextKey, ProposedFact, Suggestor};
 
 // Re-defining for now if not public in engine, strictly we should move to lib or common
 // But for this example we assume we can deserialize into this struct.
@@ -75,12 +75,12 @@ impl Suggestor for InferenceAgent {
         &[ContextKey::Proposals]
     }
 
-    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
+    fn accepts(&self, ctx: &dyn Context) -> bool {
         // Run if there are proposals (features) but no hypothesis yet
         ctx.has(ContextKey::Proposals) && !ctx.has(ContextKey::Hypotheses)
     }
 
-    async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
+    async fn execute(&self, ctx: &dyn Context) -> AgentEffect {
         // 1. Find the feature proposal
         // In reality, filtered by provenance "polars-engine"
         let _proposals = ctx.get(ContextKey::Proposals); // wait, ctx.get returns Fact, but proposals are ProposedFacts?

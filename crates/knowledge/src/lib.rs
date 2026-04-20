@@ -10,6 +10,8 @@
 //! - **Hybrid Search**: Combine vector similarity with metadata filtering
 //! - **gRPC Interface**: High-performance RPC for service integration
 //! - **MCP Server**: Model Context Protocol for Claude Desktop
+//! - **Suggestor Adapters**: Knowledge retrieval and persistence inside the
+//!   convergence loop
 //!
 //! ## Quick Start
 //!
@@ -119,3 +121,4 @@ pub use crate::embedding::EmbeddingEngine;
 pub use crate::error::{Error, Result};
 pub use crate::learning::LearningEngine;
 pub use crate::storage::StorageBackend;
+pub use crate::suggestor::{KnowledgeRetrievalSuggestor, KnowledgeStoreSuggestor};
