@@ -7,7 +7,6 @@ use burn::{
     tensor::{Tensor, backend::Backend},
 };
 use converge_core::{AgentEffect, ContextKey, ProposedFact, Suggestor};
-use serde_json;
 
 // Re-defining for now if not public in engine, strictly we should move to lib or common
 // But for this example we assume we can deserialize into this struct.

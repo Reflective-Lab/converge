@@ -1,50 +1,54 @@
 //! # converge-optimization
 //!
-//! Optimization algorithms for converge.zone - a Rust reimplementation of
-//! key OR-Tools algorithms optimized for the converge platform.
+//! Optimization solvers as first-class Suggestors for the Converge Engine.
 //!
-//! ## Modules
+//! Every solver is accessed through [`SolverSuggestor`] — the ONLY public
+//! interface. Register it in a formation and let it converge alongside
+//! LLM agents, policy gates, and other Suggestors.
 //!
-//! - [`assignment`] - Linear assignment problem (Hungarian, Goldberg-Kennedy)
-//! - [`graph`] - Graph algorithms (shortest path, max flow, min cost flow)
-//! - [`knapsack`] - Knapsack problems (0-1, bounded, multidimensional)
-//! - [`scheduling`] - Scheduling constraints and solvers
-//! - [`setcover`] - Set cover heuristics
-//! - [`provider`] - Converge platform integration
+//! ## Usage
 //!
-//! ## Quick Start
+//! ```rust,ignore
+//! use converge_optimization::{SolverSuggestor, packs::budget_allocation::BudgetAllocationPack};
+//! use converge_pack::ContextKey;
 //!
-//! ```rust
-//! use converge_optimization::assignment::{hungarian, AssignmentProblem};
-//!
-//! // Cost matrix: agent i to task j
-//! let costs = vec![
-//!     vec![10, 5, 13],
-//!     vec![3, 9, 18],
-//!     vec![14, 8, 7],
-//! ];
-//!
-//! let problem = AssignmentProblem::from_costs(costs);
-//! let solution = hungarian::solve(&problem).unwrap();
-//! println!("Total cost: {}", solution.total_cost);
+//! let solver = SolverSuggestor::new(
+//!     BudgetAllocationPack,
+//!     ContextKey::Seeds,
+//!     ContextKey::Strategies,
+//! );
+//! engine.register_suggestor(solver);
 //! ```
+//!
+//! ## Available Packs (11)
+//!
+//! LeadRouting, MeetingScheduler, BudgetAllocation, CapacityPlanning,
+//! InventoryReplenishment, InventoryRebalancing, AnomalyTriage,
+//! PricingGuardrails, ShippingChoice, VendorShortlist, BacklogPrioritization
 //!
 //! ## Feature Flags
 //!
-//! - `ffi` - Enable C++ OR-Tools bindings for complex algorithms
-//! - `full` - Enable all features
+//! - `sat` - Varisat SAT solver for constraint programming
+//! - `ffi` - OR-Tools C++ FFI bindings
+//! - `full` - All features
 
-#![warn(missing_docs)]
+// ── Public API: Suggestor interface only ──────────────────────────────
+
+pub mod packs;
+pub mod suggestor;
+
+pub use packs::{Pack, PackRegistry, PackSolveResult};
+pub use suggestor::SolverSuggestor;
+
+// ── Algorithm implementations (used by Packs) ────────────────────────
 
 pub mod assignment;
 pub mod gate;
 pub mod graph;
 pub mod knapsack;
-pub mod packs;
 pub mod provider;
 pub mod scheduling;
 pub mod setcover;
-pub mod suggestor;
 
 #[cfg(feature = "sat")]
 pub mod cp;
@@ -54,14 +58,3 @@ mod types;
 
 pub use error::{Error, Result};
 pub use types::*;
-
-/// Prelude for common imports
-pub mod prelude {
-    pub use crate::Error;
-    pub use crate::Result;
-    pub use crate::assignment::{AssignmentProblem, AssignmentSolution, AssignmentSolver};
-    pub use crate::gate::{GateDecision, ProblemSpec, PromotionGate, ProposedPlan, SolverReport};
-    pub use crate::graph::{EdgeId, Graph, NodeId};
-    pub use crate::knapsack::{KnapsackProblem, KnapsackSolution, KnapsackSolver};
-    pub use crate::packs::{Pack, PackRegistry, PackSolveResult};
-}

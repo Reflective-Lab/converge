@@ -32,13 +32,18 @@ pub mod meeting_scheduler;
 
 // Stub packs (types + placeholder solver)
 pub mod anomaly_triage;
+pub mod assignment_pack;
 pub mod backlog_prioritization;
+pub mod bin_packing;
 pub mod budget_allocation;
 pub mod capacity_planning;
+pub mod facility_location;
 pub mod inventory_replenishment;
 pub mod lead_routing;
+pub mod network_flow;
 pub mod pricing_guardrails;
 pub mod shipping_choice;
+pub mod vehicle_routing;
 pub mod vendor_shortlist;
 
 pub use registry::*;

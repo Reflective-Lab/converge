@@ -1,8 +1,9 @@
 //! Cedar implementation of the neutral flow gate contract from `converge-core`.
 
 use crate::{
-    ContextIn, DecideRequest, PolicyDecision, PolicyEngine, PrincipalIn, ResourceIn,
-    decision::PolicyOutcome, engine::EngineError,
+    ContextIn, DecideRequest, PolicyEngine, PrincipalIn, ResourceIn,
+    decision::{PolicyDecision, PolicyOutcome},
+    engine::EngineError,
 };
 use converge_core::{
     FlowGateAuthorizer, FlowGateDecision, FlowGateError, FlowGateInput, FlowGateOutcome,

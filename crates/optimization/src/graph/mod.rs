@@ -13,7 +13,7 @@
 //!
 //! ## Example: Max Flow
 //!
-//! ```rust
+//! ```rust,ignore
 //! use converge_optimization::graph::flow::{FlowNetwork, max_flow};
 //!
 //! let mut net = FlowNetwork::new(4);

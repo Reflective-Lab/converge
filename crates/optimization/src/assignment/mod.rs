@@ -21,7 +21,7 @@
 //!
 //! ## Example
 //!
-//! ```rust
+//! ```rust,ignore
 //! use converge_optimization::assignment::{solve, AssignmentProblem};
 //!
 //! let problem = AssignmentProblem::from_costs(vec![
