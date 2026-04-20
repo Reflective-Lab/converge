@@ -846,6 +846,7 @@ mod tests {
         let path = dir.path().join(name);
         let mut file = File::create(&path).await.unwrap();
         file.write_all(content.as_bytes()).await.unwrap();
+        file.sync_all().await.unwrap();
         path
     }
 

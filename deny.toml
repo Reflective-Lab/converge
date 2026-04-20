@@ -8,6 +8,11 @@ vulnerability = "deny"
 unmaintained = "warn"
 yanked = "warn"
 notice = "warn"
+# Transitive advisories with no fix available — not in our code paths:
+# - lru 0.12.5 unsound IterMut (tantivy/lance)
+# - rustls-pemfile 2.2.0 (tonic/reqwest)
+# - rsa 0.9.10 timing side-channel, no fixed version (lance/object_store)
+ignore = ["RUSTSEC-2026-0002", "RUSTSEC-2025-0134", "RUSTSEC-2023-0071"]
 
 [licenses]
 unlicensed = "deny"
