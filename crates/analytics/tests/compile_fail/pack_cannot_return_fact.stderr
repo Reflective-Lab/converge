@@ -1,0 +1,13 @@
+error[E0053]: method `solve` has an incompatible type for trait
+  --> tests/compile_fail/pack_cannot_return_fact.rs:22:74
+   |
+22 |     fn solve(&self, _spec: &converge_optimization::gate::ProblemSpec) -> converge_optimization::Result<Fact> {
+   |                                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `PackSolveResult`, found `Fact`
+   |
+   = note: expected signature `fn(&EvilPack, &ProblemSpec) -> Result<PackSolveResult, converge_optimization::Error>`
+              found signature `fn(&EvilPack, &ProblemSpec) -> Result<Fact, converge_optimization::Error>`
+help: change the output type to match the trait
+   |
+22 -     fn solve(&self, _spec: &converge_optimization::gate::ProblemSpec) -> converge_optimization::Result<Fact> {
+22 +     fn solve(&self, _spec: &converge_optimization::gate::ProblemSpec) -> Result<PackSolveResult, converge_optimization::Error> {
+   |

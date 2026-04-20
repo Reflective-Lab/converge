@@ -29,7 +29,11 @@ pub mod suggestor;
 pub mod types;
 
 pub use engine::PolicyEngine;
-pub use suggestor::{DelegationVerifySuggestor, FlowGateSuggestor, PolicyGateSuggestor};
+pub use suggestor::{
+    ApprovalGateSuggestor, BudgetGateSuggestor, ComplianceCondition, ComplianceGateSuggestor,
+    ComplianceRule, DataClassificationGateSuggestor, DelegationVerifySuggestor, FlowGateSuggestor,
+    PolicyGateSuggestor, RateLimitGateSuggestor,
+};
 pub use types::{ContextIn, DecideRequest, PrincipalIn, ResourceIn};
 
 /// Built-in Cedar policies for reference and testing.

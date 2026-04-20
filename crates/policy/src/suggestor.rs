@@ -276,6 +276,391 @@ impl Suggestor for FlowGateSuggestor {
     }
 }
 
+// --- RateLimitGateSuggestor ---
+
+/// Throttles agent activity by counting proposals per key per convergence run.
+/// If the count exceeds the limit, emits a constraint blocking further proposals.
+pub struct RateLimitGateSuggestor {
+    max_proposals_per_key: usize,
+    watched_key: ContextKey,
+}
+
+impl RateLimitGateSuggestor {
+    #[must_use]
+    pub fn new(watched_key: ContextKey, max_proposals_per_key: usize) -> Self {
+        Self {
+            max_proposals_per_key,
+            watched_key,
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl Suggestor for RateLimitGateSuggestor {
+    fn name(&self) -> &str {
+        "rate-limit-gate"
+    }
+
+    fn dependencies(&self) -> &[ContextKey] {
+        std::slice::from_ref(&self.watched_key)
+    }
+
+    fn accepts(&self, ctx: &dyn Context) -> bool {
+        ctx.count(self.watched_key) > self.max_proposals_per_key
+            && !ctx
+                .get(ContextKey::Constraints)
+                .iter()
+                .any(|f| f.id == "rate-limit-exceeded")
+    }
+
+    async fn execute(&self, ctx: &dyn Context) -> AgentEffect {
+        let count = ctx.count(self.watched_key);
+        AgentEffect::with_proposal(ProposedFact::new(
+            ContextKey::Constraints,
+            "rate-limit-exceeded",
+            serde_json::json!({
+                "gate": "rate-limit",
+                "key": format!("{:?}", self.watched_key),
+                "count": count,
+                "limit": self.max_proposals_per_key,
+                "action": "block",
+            })
+            .to_string(),
+            PROVENANCE,
+        ))
+    }
+}
+
+// --- BudgetGateSuggestor ---
+
+/// Enforces a cost/token budget within a convergence run.
+/// Reads cost estimates from proposals and blocks when cumulative cost exceeds the limit.
+pub struct BudgetGateSuggestor {
+    max_cost: f64,
+    cost_key: ContextKey,
+}
+
+impl BudgetGateSuggestor {
+    #[must_use]
+    pub fn new(cost_key: ContextKey, max_cost: f64) -> Self {
+        Self { max_cost, cost_key }
+    }
+}
+
+#[async_trait::async_trait]
+impl Suggestor for BudgetGateSuggestor {
+    fn name(&self) -> &str {
+        "budget-gate"
+    }
+
+    fn dependencies(&self) -> &[ContextKey] {
+        std::slice::from_ref(&self.cost_key)
+    }
+
+    fn accepts(&self, ctx: &dyn Context) -> bool {
+        ctx.has(self.cost_key)
+            && !ctx
+                .get(ContextKey::Constraints)
+                .iter()
+                .any(|f| f.id == "budget-exceeded")
+    }
+
+    async fn execute(&self, ctx: &dyn Context) -> AgentEffect {
+        let facts = ctx.get(self.cost_key);
+        let total_cost: f64 = facts
+            .iter()
+            .filter_map(|f| {
+                serde_json::from_str::<serde_json::Value>(&f.content)
+                    .ok()
+                    .and_then(|v| v.get("cost").and_then(|c| c.as_f64()))
+            })
+            .sum();
+
+        if total_cost > self.max_cost {
+            AgentEffect::with_proposal(ProposedFact::new(
+                ContextKey::Constraints,
+                "budget-exceeded",
+                serde_json::json!({
+                    "gate": "budget",
+                    "total_cost": total_cost,
+                    "limit": self.max_cost,
+                    "action": "block",
+                })
+                .to_string(),
+                PROVENANCE,
+            ))
+        } else {
+            AgentEffect::empty()
+        }
+    }
+}
+
+// --- ApprovalGateSuggestor ---
+
+/// Requires human-in-the-loop approval for high-stakes proposals.
+/// Blocks proposals matching a predicate until an approval fact appears.
+pub struct ApprovalGateSuggestor {
+    watched_key: ContextKey,
+    approval_key: ContextKey,
+    stakes_threshold: f64,
+}
+
+impl ApprovalGateSuggestor {
+    /// Gate proposals on `watched_key` that have confidence above `stakes_threshold`.
+    /// Approval is signaled by a fact in `approval_key`.
+    #[must_use]
+    pub fn new(watched_key: ContextKey, stakes_threshold: f64) -> Self {
+        Self {
+            watched_key,
+            approval_key: ContextKey::Signals,
+            stakes_threshold,
+        }
+    }
+
+    #[must_use]
+    pub fn with_approval_key(mut self, key: ContextKey) -> Self {
+        self.approval_key = key;
+        self
+    }
+}
+
+#[async_trait::async_trait]
+impl Suggestor for ApprovalGateSuggestor {
+    fn name(&self) -> &str {
+        "approval-gate"
+    }
+
+    fn dependencies(&self) -> &[ContextKey] {
+        std::slice::from_ref(&self.watched_key)
+    }
+
+    fn accepts(&self, ctx: &dyn Context) -> bool {
+        ctx.has(self.watched_key)
+            && !ctx.has(self.approval_key)
+            && !ctx
+                .get(ContextKey::Constraints)
+                .iter()
+                .any(|f| f.id == "approval-pending")
+    }
+
+    async fn execute(&self, ctx: &dyn Context) -> AgentEffect {
+        let facts = ctx.get(self.watched_key);
+        let needs_approval = facts.iter().any(|f| {
+            serde_json::from_str::<serde_json::Value>(&f.content)
+                .ok()
+                .and_then(|v| v.get("confidence").and_then(|c| c.as_f64()))
+                .is_none_or(|c| c >= self.stakes_threshold)
+        });
+
+        if needs_approval {
+            AgentEffect::with_proposal(ProposedFact::new(
+                ContextKey::Constraints,
+                "approval-pending",
+                serde_json::json!({
+                    "gate": "approval",
+                    "status": "pending_human_review",
+                    "threshold": self.stakes_threshold,
+                    "action": "pause",
+                })
+                .to_string(),
+                PROVENANCE,
+            ))
+        } else {
+            AgentEffect::empty()
+        }
+    }
+}
+
+// --- DataClassificationGateSuggestor ---
+
+/// Blocks proposals containing PII or sensitive data patterns from crossing boundaries.
+/// Scans proposal content for configurable patterns (emails, SSNs, credit cards, etc.).
+pub struct DataClassificationGateSuggestor {
+    watched_key: ContextKey,
+    patterns: Vec<(&'static str, regex::Regex)>,
+}
+
+impl DataClassificationGateSuggestor {
+    /// Create with default PII patterns (email, SSN, credit card).
+    #[must_use]
+    pub fn default_patterns(watched_key: ContextKey) -> Self {
+        Self {
+            watched_key,
+            patterns: vec![
+                (
+                    "email",
+                    regex::Regex::new(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
+                        .expect("valid regex"),
+                ),
+                (
+                    "ssn",
+                    regex::Regex::new(r"\b\d{3}-\d{2}-\d{4}\b").expect("valid regex"),
+                ),
+                (
+                    "credit_card",
+                    regex::Regex::new(r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b")
+                        .expect("valid regex"),
+                ),
+                (
+                    "phone",
+                    regex::Regex::new(r"\b\+?\d{1,3}[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b")
+                        .expect("valid regex"),
+                ),
+            ],
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl Suggestor for DataClassificationGateSuggestor {
+    fn name(&self) -> &str {
+        "data-classification-gate"
+    }
+
+    fn dependencies(&self) -> &[ContextKey] {
+        std::slice::from_ref(&self.watched_key)
+    }
+
+    fn accepts(&self, ctx: &dyn Context) -> bool {
+        ctx.has(self.watched_key)
+            && !ctx
+                .get(ContextKey::Constraints)
+                .iter()
+                .any(|f| f.id.starts_with("pii-detected-"))
+    }
+
+    async fn execute(&self, ctx: &dyn Context) -> AgentEffect {
+        let facts = ctx.get(self.watched_key);
+        let mut proposals = Vec::new();
+
+        for fact in facts {
+            let mut detected = Vec::new();
+            for (label, pattern) in &self.patterns {
+                if pattern.is_match(&fact.content) {
+                    detected.push(*label);
+                }
+            }
+            if !detected.is_empty() {
+                proposals.push(ProposedFact::new(
+                    ContextKey::Constraints,
+                    format!("pii-detected-{}", fact.id),
+                    serde_json::json!({
+                        "gate": "data-classification",
+                        "fact_id": fact.id,
+                        "detected_types": detected,
+                        "action": "block",
+                    })
+                    .to_string(),
+                    PROVENANCE,
+                ));
+            }
+        }
+
+        AgentEffect::with_proposals(proposals)
+    }
+}
+
+// --- ComplianceGateSuggestor ---
+
+/// Checks proposals against compliance requirements (GDPR, SOC2, HIPAA, etc.).
+/// Configurable with compliance rules that map to constraint violations.
+pub struct ComplianceGateSuggestor {
+    watched_key: ContextKey,
+    rules: Vec<ComplianceRule>,
+}
+
+/// A compliance rule that checks a condition and produces a violation if met.
+pub struct ComplianceRule {
+    /// Rule identifier (e.g., "gdpr-data-retention").
+    pub id: String,
+    /// Compliance framework (e.g., "GDPR", "SOC2", "HIPAA").
+    pub framework: String,
+    /// JSON path to check in proposal content.
+    pub field: String,
+    /// Condition that triggers a violation.
+    pub condition: ComplianceCondition,
+}
+
+/// What triggers a compliance violation.
+pub enum ComplianceCondition {
+    /// Field must not be present.
+    FieldMustNotExist,
+    /// Field value must not exceed this numeric threshold.
+    MaxValue(f64),
+    /// Field value must not contain these strings.
+    MustNotContain(Vec<String>),
+}
+
+impl ComplianceGateSuggestor {
+    #[must_use]
+    pub fn new(watched_key: ContextKey, rules: Vec<ComplianceRule>) -> Self {
+        Self { watched_key, rules }
+    }
+}
+
+#[async_trait::async_trait]
+impl Suggestor for ComplianceGateSuggestor {
+    fn name(&self) -> &str {
+        "compliance-gate"
+    }
+
+    fn dependencies(&self) -> &[ContextKey] {
+        std::slice::from_ref(&self.watched_key)
+    }
+
+    fn accepts(&self, ctx: &dyn Context) -> bool {
+        ctx.has(self.watched_key)
+            && !ctx
+                .get(ContextKey::Constraints)
+                .iter()
+                .any(|f| f.id.starts_with("compliance-"))
+    }
+
+    async fn execute(&self, ctx: &dyn Context) -> AgentEffect {
+        let facts = ctx.get(self.watched_key);
+        let mut proposals = Vec::new();
+
+        for fact in facts {
+            let Ok(value) = serde_json::from_str::<serde_json::Value>(&fact.content) else {
+                continue;
+            };
+
+            for rule in &self.rules {
+                let violated = match &rule.condition {
+                    ComplianceCondition::FieldMustNotExist => value.get(&rule.field).is_some(),
+                    ComplianceCondition::MaxValue(max) => value
+                        .get(&rule.field)
+                        .and_then(|v| v.as_f64())
+                        .is_some_and(|v| v > *max),
+                    ComplianceCondition::MustNotContain(forbidden) => value
+                        .get(&rule.field)
+                        .and_then(|v| v.as_str())
+                        .is_some_and(|s| forbidden.iter().any(|f| s.contains(f.as_str()))),
+                };
+
+                if violated {
+                    proposals.push(ProposedFact::new(
+                        ContextKey::Constraints,
+                        format!("compliance-{}-{}", rule.id, fact.id),
+                        serde_json::json!({
+                            "gate": "compliance",
+                            "rule_id": rule.id,
+                            "framework": rule.framework,
+                            "fact_id": fact.id,
+                            "field": rule.field,
+                            "action": "block",
+                        })
+                        .to_string(),
+                        PROVENANCE,
+                    ));
+                }
+            }
+        }
+
+        AgentEffect::with_proposals(proposals)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -356,5 +741,133 @@ mod tests {
         let s = FlowGateSuggestor::new(engine);
         let ctx = MockContext::empty();
         assert!(!s.accepts(&ctx));
+    }
+
+    // ── New gate tests ────────────────────────────────────────────
+
+    #[test]
+    fn rate_limit_gate_name_and_deps() {
+        let s = RateLimitGateSuggestor::new(ContextKey::Strategies, 10);
+        assert_eq!(s.name(), "rate-limit-gate");
+        assert_eq!(s.dependencies(), &[ContextKey::Strategies]);
+    }
+
+    #[test]
+    fn rate_limit_gate_rejects_empty() {
+        let s = RateLimitGateSuggestor::new(ContextKey::Strategies, 5);
+        let ctx = MockContext::empty();
+        assert!(!s.accepts(&ctx));
+    }
+
+    #[test]
+    fn budget_gate_name_and_deps() {
+        let s = BudgetGateSuggestor::new(ContextKey::Strategies, 1000.0);
+        assert_eq!(s.name(), "budget-gate");
+        assert_eq!(s.dependencies(), &[ContextKey::Strategies]);
+    }
+
+    #[test]
+    fn approval_gate_name_and_deps() {
+        let s = ApprovalGateSuggestor::new(ContextKey::Strategies, 0.9);
+        assert_eq!(s.name(), "approval-gate");
+        assert_eq!(s.dependencies(), &[ContextKey::Strategies]);
+    }
+
+    #[test]
+    fn data_classification_gate_name() {
+        let s = DataClassificationGateSuggestor::default_patterns(ContextKey::Strategies);
+        assert_eq!(s.name(), "data-classification-gate");
+    }
+
+    #[test]
+    fn compliance_gate_name() {
+        let rules = vec![ComplianceRule {
+            id: "gdpr-retention".into(),
+            framework: "GDPR".into(),
+            field: "retention_days".into(),
+            condition: ComplianceCondition::MaxValue(365.0),
+        }];
+        let s = ComplianceGateSuggestor::new(ContextKey::Strategies, rules);
+        assert_eq!(s.name(), "compliance-gate");
+    }
+
+    #[tokio::test]
+    async fn data_classification_detects_email() {
+        use converge_pack::fact::kernel_authority::new_fact;
+        let s = DataClassificationGateSuggestor::default_patterns(ContextKey::Strategies);
+
+        let mut ctx = MockContext::empty();
+        ctx.facts.insert(
+            ContextKey::Strategies,
+            vec![new_fact(
+                ContextKey::Strategies,
+                "strat-1",
+                "Contact john@example.com for details",
+            )],
+        );
+
+        assert!(s.accepts(&ctx));
+        let effect = s.execute(&ctx).await;
+        assert_eq!(effect.proposals.len(), 1);
+        assert!(effect.proposals[0].id.contains("pii-detected"));
+    }
+
+    #[tokio::test]
+    async fn data_classification_passes_clean_content() {
+        use converge_pack::fact::kernel_authority::new_fact;
+        let s = DataClassificationGateSuggestor::default_patterns(ContextKey::Strategies);
+
+        let mut ctx = MockContext::empty();
+        ctx.facts.insert(
+            ContextKey::Strategies,
+            vec![new_fact(
+                ContextKey::Strategies,
+                "strat-1",
+                "Allocate budget across 4 departments",
+            )],
+        );
+
+        assert!(s.accepts(&ctx));
+        let effect = s.execute(&ctx).await;
+        assert!(effect.proposals.is_empty());
+    }
+
+    #[tokio::test]
+    async fn budget_gate_blocks_over_limit() {
+        use converge_pack::fact::kernel_authority::new_fact;
+        let s = BudgetGateSuggestor::new(ContextKey::Strategies, 100.0);
+
+        let mut ctx = MockContext::empty();
+        ctx.facts.insert(
+            ContextKey::Strategies,
+            vec![
+                new_fact(ContextKey::Strategies, "s1", r#"{"cost": 60.0}"#),
+                new_fact(ContextKey::Strategies, "s2", r#"{"cost": 50.0}"#),
+            ],
+        );
+
+        assert!(s.accepts(&ctx));
+        let effect = s.execute(&ctx).await;
+        assert_eq!(effect.proposals.len(), 1);
+        assert!(effect.proposals[0].id.contains("budget-exceeded"));
+    }
+
+    #[tokio::test]
+    async fn budget_gate_allows_within_limit() {
+        use converge_pack::fact::kernel_authority::new_fact;
+        let s = BudgetGateSuggestor::new(ContextKey::Strategies, 200.0);
+
+        let mut ctx = MockContext::empty();
+        ctx.facts.insert(
+            ContextKey::Strategies,
+            vec![
+                new_fact(ContextKey::Strategies, "s1", r#"{"cost": 60.0}"#),
+                new_fact(ContextKey::Strategies, "s2", r#"{"cost": 50.0}"#),
+            ],
+        );
+
+        assert!(s.accepts(&ctx));
+        let effect = s.execute(&ctx).await;
+        assert!(effect.proposals.is_empty());
     }
 }

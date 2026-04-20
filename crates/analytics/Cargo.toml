@@ -38,6 +38,7 @@ converge-storage = { workspace = true, optional = true, features = ["local"] }
 [dev-dependencies]
 converge-kernel.workspace = true
 tempfile.workspace = true
+trybuild.workspace = true
 
 [features]
 default = []

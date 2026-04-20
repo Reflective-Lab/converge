@@ -2419,6 +2419,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "tracing",
+ "trybuild",
 ]
 
 [[package]]
@@ -2592,6 +2593,7 @@ dependencies = [
  "converge-pack",
  "ed25519-dalek",
  "proptest",
+ "regex",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
