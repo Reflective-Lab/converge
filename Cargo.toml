@@ -125,7 +125,7 @@ opentelemetry-otlp = { version = "0.31", default-features = false, features = ["
 opentelemetry_sdk = { version = "0.31", features = ["rt-tokio"] }
 ordered-float = "4"
 parking_lot = "0.12"
-petgraph = "0.7"
+petgraph = "0.8"
 calamine = "0.34"
 polars = { version = "0.51.0", features = ["csv", "lazy", "log", "ndarray", "parquet", "rows"] }
 proptest = "1.5"
