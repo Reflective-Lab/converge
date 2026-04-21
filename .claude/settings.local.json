@@ -74,7 +74,13 @@
       "Bash(git -C /Users/kpernyer/dev/work/converge log --oneline -20)",
       "Bash(awk '{print $NF}')",
       "Bash([ -d \"/Users/kpernyer/dev/work/$repo\" ])",
-      "Bash(cat .git/hooks/pre-commit.d/*)"
+      "Bash(cat .git/hooks/pre-commit.d/*)",
+      "Bash(rustfmt:*)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(find:*)",
+      "Bash(cargo metadata:*)",
+      "Bash(python3 -c \"import json,sys; m=json.load\\(sys.stdin\\); pkgs=[p for p in m['packages'] if p['name']=='converge-core']; print\\(pkgs[0]['version'] if pkgs else 'not found'\\)\")",
+      "Bash(python3 -c \"import json,sys; m=json.load\\(sys.stdin\\); pkgs=[p for p in m['packages'] if p['name']=='converge-core']; print\\(pkgs[0]['source'] if pkgs else 'not found'\\)\")"
     ]
   }
 }
