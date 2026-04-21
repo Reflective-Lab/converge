@@ -4,11 +4,11 @@ mod types;
 pub use solver::*;
 pub use types::*;
 
-use converge_optimization::Result;
-use converge_optimization::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 use converge_optimization::packs::{
     InvariantDef, InvariantResult, Pack, PackSolveResult, default_gate_evaluation,
 };
+use converge_pack::gate::GateResult as Result;
+use converge_pack::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 
 pub struct SimilarityPack;
 
@@ -22,9 +22,8 @@ impl Pack for SimilarityPack {
     }
 
     fn validate_inputs(&self, inputs: &serde_json::Value) -> Result<()> {
-        let input: SimilarityInput = serde_json::from_value(inputs.clone()).map_err(|e| {
-            converge_optimization::Error::invalid_input(format!("Invalid input: {e}"))
-        })?;
+        let input: SimilarityInput = serde_json::from_value(inputs.clone())
+            .map_err(|e| converge_pack::GateError::invalid_input(format!("Invalid input: {e}")))?;
         input.validate()
     }
 
@@ -74,7 +73,7 @@ impl Pack for SimilarityPack {
 
     fn check_invariants(&self, plan: &ProposedPlan) -> Result<Vec<InvariantResult>> {
         let output: SimilarityOutput = serde_json::from_value(plan.plan.clone())
-            .map_err(|e| converge_optimization::Error::invalid_input(e.to_string()))?;
+            .map_err(|e| converge_pack::GateError::invalid_input(e.to_string()))?;
 
         let mut results = vec![];
 
@@ -84,7 +83,7 @@ impl Pack for SimilarityPack {
         } else {
             results.push(InvariantResult::fail(
                 "valid-scores",
-                converge_optimization::gate::Violation::new(
+                converge_pack::gate::Violation::new(
                     "valid-scores",
                     1.0,
                     "Non-finite similarity scores",
@@ -98,7 +97,7 @@ impl Pack for SimilarityPack {
             if (max_s - min_s).abs() < 0.01 {
                 results.push(InvariantResult::fail(
                     "low-discrimination",
-                    converge_optimization::gate::Violation::new(
+                    converge_pack::gate::Violation::new(
                         "low-discrimination",
                         max_s - min_s,
                         "Similarity scores are nearly identical across all pairs",

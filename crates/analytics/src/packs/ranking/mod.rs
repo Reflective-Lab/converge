@@ -4,11 +4,11 @@ mod types;
 pub use solver::*;
 pub use types::*;
 
-use converge_optimization::Result;
-use converge_optimization::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 use converge_optimization::packs::{
     InvariantDef, InvariantResult, Pack, PackSolveResult, default_gate_evaluation,
 };
+use converge_pack::gate::GateResult as Result;
+use converge_pack::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 
 pub struct RankingPack;
 
@@ -22,9 +22,8 @@ impl Pack for RankingPack {
     }
 
     fn validate_inputs(&self, inputs: &serde_json::Value) -> Result<()> {
-        let input: RankingInput = serde_json::from_value(inputs.clone()).map_err(|e| {
-            converge_optimization::Error::invalid_input(format!("Invalid input: {e}"))
-        })?;
+        let input: RankingInput = serde_json::from_value(inputs.clone())
+            .map_err(|e| converge_pack::GateError::invalid_input(format!("Invalid input: {e}")))?;
         input.validate()
     }
 
@@ -80,7 +79,7 @@ impl Pack for RankingPack {
 
     fn check_invariants(&self, plan: &ProposedPlan) -> Result<Vec<InvariantResult>> {
         let output: RankingOutput = serde_json::from_value(plan.plan.clone())
-            .map_err(|e| converge_optimization::Error::invalid_input(e.to_string()))?;
+            .map_err(|e| converge_pack::GateError::invalid_input(e.to_string()))?;
 
         let mut results = vec![];
 
@@ -100,7 +99,7 @@ impl Pack for RankingPack {
         if (max_score - min_score) < 0.01 {
             results.push(InvariantResult::fail(
                 "score-separation",
-                converge_optimization::gate::Violation::new(
+                converge_pack::gate::Violation::new(
                     "score-separation",
                     max_score - min_score,
                     "Items are effectively indistinguishable by score",

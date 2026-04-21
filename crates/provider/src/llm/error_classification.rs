@@ -231,4 +231,194 @@ mod tests {
             ChatLlmError::RateLimited { retry_after, .. } if retry_after >= Duration::from_secs(42)
         ));
     }
+
+    // ========================================================================
+    // Negative / edge-case tests
+    // ========================================================================
+
+    #[test]
+    fn empty_body_with_401_is_auth_denied() {
+        let error = classify_http_error(401, "", "demo-model");
+        assert!(is_auth_denied(&error));
+    }
+
+    #[test]
+    fn empty_body_with_429_is_rate_limited_default_retry() {
+        let error = classify_http_error(429, "", "demo-model");
+        assert!(is_rate_limited(&error));
+        match error {
+            ChatLlmError::RateLimited { retry_after, .. } => {
+                assert_eq!(retry_after, DEFAULT_RETRY_AFTER);
+            }
+            _ => panic!("expected RateLimited"),
+        }
+    }
+
+    #[test]
+    fn empty_body_with_500_is_provider_error() {
+        let error = classify_http_error(500, "", "demo-model");
+        assert!(matches!(
+            error,
+            ChatLlmError::ProviderError { code: Some(ref c), .. } if c == "500"
+        ));
+    }
+
+    #[test]
+    fn status_400_generic_is_invalid_request() {
+        let error = classify_http_error(400, "something went wrong", "demo-model");
+        assert!(matches!(error, ChatLlmError::InvalidRequest { .. }));
+    }
+
+    #[test]
+    fn status_400_with_auth_body_is_auth_denied() {
+        let error = classify_http_error(400, "Invalid API Key provided", "demo-model");
+        assert!(is_auth_denied(&error));
+    }
+
+    #[test]
+    fn status_404_is_model_not_found() {
+        let error = classify_http_error(404, "resource not found", "gpt-99");
+        assert!(matches!(
+            error,
+            ChatLlmError::ModelNotFound { ref model } if model == "gpt-99"
+        ));
+    }
+
+    #[test]
+    fn rate_limit_body_detection_various_patterns() {
+        for body in &[
+            "rate limit exceeded",
+            "Too Many Requests",
+            "quota exceeded for this month",
+            "resource exhausted for today",
+        ] {
+            let error = classify_http_error(200, body, "demo-model");
+            // Only 429 status or body keywords trigger rate limit
+            // With 200 status, body keywords alone don't trigger — only classify looks at body for 429
+            // Actually re-reading the code: the 429 check is `status == 429 || is_rate_limit_body`
+            assert!(
+                is_rate_limited(&error),
+                "body {body:?} should be rate limited"
+            );
+        }
+    }
+
+    #[test]
+    fn model_not_found_body_patterns() {
+        for body in &[
+            "model_not_found",
+            "The model `gpt-99` does not exist",
+            "invalid_model: unknown",
+            "Model not found in registry",
+            "unsupported model requested",
+        ] {
+            let error = classify_http_error(400, body, "demo-model");
+            assert!(
+                is_model_not_found(&error),
+                "body {body:?} should be model_not_found"
+            );
+        }
+    }
+
+    #[test]
+    fn retry_delay_extracted_from_please_retry_pattern() {
+        let body = r#"Rate limit hit. Please retry in 5 seconds."#;
+        let error = classify_http_error(429, body, "demo-model");
+        match error {
+            ChatLlmError::RateLimited { retry_after, .. } => {
+                assert_eq!(retry_after, Duration::from_secs(5));
+            }
+            _ => panic!("expected RateLimited"),
+        }
+    }
+
+    #[test]
+    fn retry_delay_not_found_uses_default() {
+        let body = "rate limit exceeded, no timing info";
+        let error = classify_http_error(429, body, "demo-model");
+        match error {
+            ChatLlmError::RateLimited { retry_after, .. } => {
+                assert_eq!(retry_after, DEFAULT_RETRY_AFTER);
+            }
+            _ => panic!("expected RateLimited"),
+        }
+    }
+
+    #[test]
+    fn unknown_status_is_provider_error_with_code() {
+        let error = classify_http_error(418, "I'm a teapot", "demo-model");
+        assert!(matches!(
+            error,
+            ChatLlmError::ProviderError { code: Some(ref c), .. } if c == "418"
+        ));
+    }
+
+    #[test]
+    fn network_error_formats_display() {
+        let err = network_error("connection refused");
+        assert!(matches!(
+            err,
+            ChatLlmError::NetworkError { ref message } if message == "connection refused"
+        ));
+    }
+
+    #[test]
+    fn parse_error_wraps_message() {
+        let err = parse_error("unexpected token at position 5");
+        assert!(matches!(
+            err,
+            ChatLlmError::ProviderError { ref message, code: None }
+            if message.contains("unexpected token at position 5")
+        ));
+    }
+
+    #[test]
+    fn map_backend_error_all_variants() {
+        use converge_core::backend::BackendError;
+
+        let cases: Vec<(BackendError, &str)> = vec![
+            (
+                BackendError::InvalidRequest {
+                    message: "bad".into(),
+                },
+                "InvalidRequest",
+            ),
+            (
+                BackendError::Timeout {
+                    deadline_ms: 1000,
+                    elapsed_ms: 2000,
+                },
+                "Timeout",
+            ),
+            (
+                BackendError::Unavailable {
+                    message: "down".into(),
+                },
+                "ProviderError",
+            ),
+            (
+                BackendError::BudgetExceeded {
+                    resource: "tokens".into(),
+                    limit: "100".into(),
+                },
+                "InvalidRequest",
+            ),
+            (
+                BackendError::CircuitOpen {
+                    backend: "anthropic".into(),
+                    retry_after_ms: Some(5000),
+                },
+                "RateLimited",
+            ),
+        ];
+
+        for (backend_err, expected_variant) in cases {
+            let llm_err = map_backend_error(backend_err);
+            let debug = format!("{llm_err:?}");
+            assert!(
+                debug.contains(expected_variant),
+                "Expected {expected_variant} in {debug}"
+            );
+        }
+    }
 }

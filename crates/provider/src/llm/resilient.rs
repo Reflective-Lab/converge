@@ -257,4 +257,190 @@ mod tests {
             }
         ));
     }
+
+    // ========================================================================
+    // Model fallback path tests
+    // ========================================================================
+
+    struct FailingBackend {
+        error: LlmError,
+    }
+
+    impl FailingBackend {
+        fn rate_limited() -> Self {
+            Self {
+                error: LlmError::RateLimited {
+                    retry_after: std::time::Duration::from_secs(60),
+                    message: Some("rate limited".into()),
+                },
+            }
+        }
+
+        fn provider_error() -> Self {
+            Self {
+                error: LlmError::ProviderError {
+                    message: "internal error".into(),
+                    code: Some("500".into()),
+                },
+            }
+        }
+
+        fn network_error() -> Self {
+            Self {
+                error: LlmError::NetworkError {
+                    message: "connection refused".into(),
+                },
+            }
+        }
+    }
+
+    impl ChatBackend for FailingBackend {
+        type ChatFut<'a>
+            = BoxFuture<'a, Result<ChatResponse, LlmError>>
+        where
+            Self: 'a;
+
+        fn chat(&self, _req: ChatRequest) -> Self::ChatFut<'_> {
+            let err = match &self.error {
+                LlmError::RateLimited {
+                    retry_after,
+                    message,
+                } => LlmError::RateLimited {
+                    retry_after: *retry_after,
+                    message: message.clone(),
+                },
+                LlmError::ProviderError { message, code } => LlmError::ProviderError {
+                    message: message.clone(),
+                    code: code.clone(),
+                },
+                LlmError::NetworkError { message } => LlmError::NetworkError {
+                    message: message.clone(),
+                },
+                _ => LlmError::ProviderError {
+                    message: "test".into(),
+                    code: None,
+                },
+            };
+            Box::pin(async move { Err(err) })
+        }
+    }
+
+    struct SuccessBackend;
+
+    impl ChatBackend for SuccessBackend {
+        type ChatFut<'a>
+            = BoxFuture<'a, Result<ChatResponse, LlmError>>
+        where
+            Self: 'a;
+
+        fn chat(&self, _req: ChatRequest) -> Self::ChatFut<'_> {
+            Box::pin(async {
+                Ok(ChatResponse {
+                    content: "fallback response".to_string(),
+                    tool_calls: Vec::new(),
+                    usage: None,
+                    model: None,
+                    finish_reason: None,
+                    metadata: Default::default(),
+                })
+            })
+        }
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn falls_back_on_rate_limit() {
+        let primary = Arc::new(FailingBackend::rate_limited());
+        let fallback = Arc::new(SuccessBackend);
+        let backend =
+            ResilientChatBackend::new(primary, "primary").with_fallback(fallback, "fallback");
+
+        let response = ChatBackend::chat(&backend, request(ResponseFormat::Json))
+            .await
+            .unwrap();
+        assert_eq!(response.content, "fallback response");
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn falls_back_on_provider_error() {
+        let primary = Arc::new(FailingBackend::provider_error());
+        let fallback = Arc::new(SuccessBackend);
+        let backend =
+            ResilientChatBackend::new(primary, "primary").with_fallback(fallback, "fallback");
+
+        let response = ChatBackend::chat(&backend, request(ResponseFormat::Json))
+            .await
+            .unwrap();
+        assert_eq!(response.content, "fallback response");
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn falls_back_on_network_error() {
+        let primary = Arc::new(FailingBackend::network_error());
+        let fallback = Arc::new(SuccessBackend);
+        let backend =
+            ResilientChatBackend::new(primary, "primary").with_fallback(fallback, "fallback");
+
+        let response = ChatBackend::chat(&backend, request(ResponseFormat::Json))
+            .await
+            .unwrap();
+        assert_eq!(response.content, "fallback response");
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn no_fallback_configured_returns_original_error() {
+        let primary = Arc::new(FailingBackend::rate_limited());
+        let backend = ResilientChatBackend::new(primary, "primary");
+        // No .with_fallback()
+
+        let err = ChatBackend::chat(&backend, request(ResponseFormat::Json))
+            .await
+            .unwrap_err();
+        assert!(matches!(err, LlmError::RateLimited { .. }));
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn fallback_also_fails_returns_primary_error() {
+        let primary = Arc::new(FailingBackend::rate_limited());
+        let fallback = Arc::new(FailingBackend::provider_error());
+        let backend =
+            ResilientChatBackend::new(primary, "primary").with_fallback(fallback, "fallback");
+
+        let err = ChatBackend::chat(&backend, request(ResponseFormat::Json))
+            .await
+            .unwrap_err();
+        // Should return original (primary) error, not fallback error
+        assert!(matches!(err, LlmError::RateLimited { .. }));
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn auth_denied_is_not_retryable_with_model_change() {
+        // AuthDenied should NOT trigger model fallback
+        struct AuthDeniedBackend;
+
+        impl ChatBackend for AuthDeniedBackend {
+            type ChatFut<'a>
+                = BoxFuture<'a, Result<ChatResponse, LlmError>>
+            where
+                Self: 'a;
+
+            fn chat(&self, _req: ChatRequest) -> Self::ChatFut<'_> {
+                Box::pin(async {
+                    Err(LlmError::AuthDenied {
+                        message: "invalid key".into(),
+                    })
+                })
+            }
+        }
+
+        let primary = Arc::new(AuthDeniedBackend);
+        let fallback = Arc::new(SuccessBackend);
+        let backend =
+            ResilientChatBackend::new(primary, "primary").with_fallback(fallback, "fallback");
+
+        let err = ChatBackend::chat(&backend, request(ResponseFormat::Json))
+            .await
+            .unwrap_err();
+        // AuthDenied is not retryable — should NOT fall through to fallback
+        assert!(matches!(err, LlmError::AuthDenied { .. }));
+    }
 }

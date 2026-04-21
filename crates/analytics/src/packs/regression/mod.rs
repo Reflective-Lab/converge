@@ -4,11 +4,11 @@ mod types;
 pub use solver::*;
 pub use types::*;
 
-use converge_optimization::Result;
-use converge_optimization::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 use converge_optimization::packs::{
     InvariantDef, InvariantResult, Pack, PackSolveResult, default_gate_evaluation,
 };
+use converge_pack::gate::GateResult as Result;
+use converge_pack::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 
 pub struct RegressionPack;
 
@@ -22,9 +22,8 @@ impl Pack for RegressionPack {
     }
 
     fn validate_inputs(&self, inputs: &serde_json::Value) -> Result<()> {
-        let input: RegressionInput = serde_json::from_value(inputs.clone()).map_err(|e| {
-            converge_optimization::Error::invalid_input(format!("Invalid input: {e}"))
-        })?;
+        let input: RegressionInput = serde_json::from_value(inputs.clone())
+            .map_err(|e| converge_pack::GateError::invalid_input(format!("Invalid input: {e}")))?;
         input.validate()
     }
 
@@ -70,7 +69,7 @@ impl Pack for RegressionPack {
 
     fn check_invariants(&self, plan: &ProposedPlan) -> Result<Vec<InvariantResult>> {
         let output: RegressionOutput = serde_json::from_value(plan.plan.clone())
-            .map_err(|e| converge_optimization::Error::invalid_input(e.to_string()))?;
+            .map_err(|e| converge_pack::GateError::invalid_input(e.to_string()))?;
 
         let mut results = vec![];
 
@@ -80,7 +79,7 @@ impl Pack for RegressionPack {
         } else {
             results.push(InvariantResult::fail(
                 "finite-values",
-                converge_optimization::gate::Violation::new(
+                converge_pack::gate::Violation::new(
                     "finite-values",
                     1.0,
                     "Non-finite predicted values",
@@ -91,7 +90,7 @@ impl Pack for RegressionPack {
         if output.std_prediction < 1e-10 && output.total > 1 {
             results.push(InvariantResult::fail(
                 "zero-variance",
-                converge_optimization::gate::Violation::new(
+                converge_pack::gate::Violation::new(
                     "zero-variance",
                     0.0,
                     "All predictions are identical",

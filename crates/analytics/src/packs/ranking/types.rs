@@ -1,4 +1,4 @@
-use converge_optimization::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,18 +18,18 @@ pub struct RankingInput {
 impl RankingInput {
     pub fn validate(&self) -> Result<()> {
         if self.items.is_empty() {
-            return Err(converge_optimization::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "At least one item required",
             ));
         }
         let dim = self.weights.len();
         if dim == 0 {
-            return Err(converge_optimization::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "At least one criterion required",
             ));
         }
         if self.higher_is_better.len() != dim {
-            return Err(converge_optimization::Error::invalid_input(format!(
+            return Err(converge_pack::GateError::invalid_input(format!(
                 "higher_is_better length {} must match weights length {}",
                 self.higher_is_better.len(),
                 dim
@@ -37,14 +37,14 @@ impl RankingInput {
         }
         for weight in &self.weights {
             if *weight < 0.0 {
-                return Err(converge_optimization::Error::invalid_input(
+                return Err(converge_pack::GateError::invalid_input(
                     "All weights must be >= 0",
                 ));
             }
         }
         for (i, item) in self.items.iter().enumerate() {
             if item.scores.len() != dim {
-                return Err(converge_optimization::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Item {} has {} scores, expected {}",
                     i,
                     item.scores.len(),
@@ -54,7 +54,7 @@ impl RankingInput {
         }
         if let Some(top_k) = self.top_k {
             if top_k == 0 {
-                return Err(converge_optimization::Error::invalid_input(
+                return Err(converge_pack::GateError::invalid_input(
                     "top_k must be >= 1",
                 ));
             }

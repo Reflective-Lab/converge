@@ -1,4 +1,4 @@
-use converge_optimization::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -11,13 +11,13 @@ pub struct DescriptiveStatsInput {
 impl DescriptiveStatsInput {
     pub fn validate(&self) -> Result<()> {
         if self.values.is_empty() {
-            return Err(converge_optimization::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "At least one value required",
             ));
         }
         for (i, &p) in self.percentiles.iter().enumerate() {
             if !(0.0..=100.0).contains(&p) {
-                return Err(converge_optimization::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Percentile {} ({}) must be in [0, 100]",
                     i, p
                 )));

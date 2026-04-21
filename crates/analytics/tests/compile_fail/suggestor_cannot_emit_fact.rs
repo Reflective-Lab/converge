@@ -1,4 +1,4 @@
-// Prove: SolverSuggestor's execute() returns AgentEffect (proposals only).
+// Prove: PackSuggestor's execute() returns AgentEffect (proposals only).
 // You cannot construct an AgentEffect containing a Fact — only ProposedFact.
 
 use converge_pack::{AgentEffect, ContextKey, Fact};

@@ -570,4 +570,162 @@ mod tests {
             "anthropic" | "openai" | "gemini"
         ));
     }
+
+    // ========================================================================
+    // Parsing and normalization tests
+    // ========================================================================
+
+    #[test]
+    fn normalize_provider_name_aliases() {
+        use super::normalize_provider_name;
+
+        assert_eq!(normalize_provider_name("anthropic"), Some("anthropic"));
+        assert_eq!(normalize_provider_name("claude"), Some("anthropic"));
+        assert_eq!(normalize_provider_name("CLAUDE"), Some("anthropic"));
+        assert_eq!(normalize_provider_name("openai"), Some("openai"));
+        assert_eq!(normalize_provider_name("gpt"), Some("openai"));
+        assert_eq!(normalize_provider_name("gemini"), Some("gemini"));
+        assert_eq!(normalize_provider_name("google"), Some("gemini"));
+        assert_eq!(normalize_provider_name("mistral"), Some("mistral"));
+        assert_eq!(normalize_provider_name("mixtral"), Some("mistral"));
+        assert_eq!(normalize_provider_name("openrouter"), Some("openrouter"));
+        assert_eq!(normalize_provider_name("router"), Some("openrouter"));
+        assert_eq!(normalize_provider_name("kong"), Some("kong"));
+        assert_eq!(normalize_provider_name("kong_gateway"), Some("kong"));
+        assert_eq!(normalize_provider_name("kong_ai"), Some("kong"));
+        assert_eq!(normalize_provider_name("unknown"), None);
+        assert_eq!(normalize_provider_name(""), None);
+    }
+
+    #[test]
+    fn parse_profile_valid_values() {
+        use super::parse_profile;
+
+        assert!(parse_profile("interactive").is_ok());
+        assert!(parse_profile("high_volume").is_ok());
+        assert!(parse_profile("high-volume").is_ok());
+        assert!(parse_profile("analysis").is_ok());
+        assert!(parse_profile("research").is_ok());
+        assert!(parse_profile("batch").is_ok());
+        assert!(parse_profile("INTERACTIVE").is_ok()); // case insensitive
+    }
+
+    #[test]
+    fn parse_profile_invalid_value() {
+        use super::parse_profile;
+
+        let err = parse_profile("turbo").unwrap_err();
+        assert!(err.to_string().contains("turbo"));
+        assert!(err.to_string().contains("CONVERGE_LLM_PROFILE"));
+    }
+
+    #[test]
+    fn parse_jurisdiction_valid() {
+        use super::parse_jurisdiction;
+
+        assert!(parse_jurisdiction("unrestricted").is_ok());
+        assert!(parse_jurisdiction("trusted").is_ok());
+        assert!(parse_jurisdiction("same_region").is_ok());
+        assert!(parse_jurisdiction("same-region").is_ok());
+        assert!(parse_jurisdiction("same_country").is_ok());
+        assert!(parse_jurisdiction("same-country").is_ok());
+    }
+
+    #[test]
+    fn parse_jurisdiction_invalid() {
+        use super::parse_jurisdiction;
+
+        assert!(parse_jurisdiction("local").is_err());
+    }
+
+    #[test]
+    fn parse_latency_valid() {
+        use super::parse_latency;
+
+        assert!(parse_latency("realtime").is_ok());
+        assert!(parse_latency("interactive").is_ok());
+        assert!(parse_latency("background").is_ok());
+        assert!(parse_latency("batch").is_ok());
+    }
+
+    #[test]
+    fn parse_cost_valid() {
+        use super::parse_cost;
+
+        assert!(parse_cost("minimal").is_ok());
+        assert!(parse_cost("cheap").is_ok());
+        assert!(parse_cost("standard").is_ok());
+        assert!(parse_cost("balanced").is_ok());
+        assert!(parse_cost("premium").is_ok());
+    }
+
+    #[test]
+    fn parse_cost_invalid() {
+        use super::parse_cost;
+
+        assert!(parse_cost("free").is_err());
+    }
+
+    #[test]
+    fn parse_complexity_valid() {
+        use super::parse_complexity;
+
+        assert!(parse_complexity("extraction").is_ok());
+        assert!(parse_complexity("classification").is_ok());
+        assert!(parse_complexity("reasoning").is_ok());
+        assert!(parse_complexity("research").is_ok());
+        assert!(parse_complexity("generation").is_ok());
+    }
+
+    #[test]
+    fn parse_compliance_valid() {
+        use super::parse_compliance;
+
+        assert!(parse_compliance("none").is_ok());
+        assert!(parse_compliance("gdpr").is_ok());
+        assert!(parse_compliance("soc2").is_ok());
+        assert!(parse_compliance("hipaa").is_ok());
+        assert!(parse_compliance("high_explainability").is_ok());
+        assert!(parse_compliance("high-explainability").is_ok());
+    }
+
+    #[test]
+    fn parse_bool_valid_values() {
+        use super::parse_bool;
+
+        for v in &["1", "true", "yes", "on", "TRUE", "Yes", "ON"] {
+            assert!(parse_bool("KEY", v).unwrap());
+        }
+        for v in &["0", "false", "no", "off", "FALSE", "No", "OFF"] {
+            assert!(!parse_bool("KEY", v).unwrap());
+        }
+    }
+
+    #[test]
+    fn parse_bool_invalid() {
+        use super::parse_bool;
+
+        assert!(parse_bool("KEY", "maybe").is_err());
+        assert!(parse_bool("KEY", "2").is_err());
+    }
+
+    #[test]
+    fn unsupported_provider_override_fails() {
+        let config = ChatBackendSelectionConfig::default().with_provider_override("cohere");
+        let result =
+            select_chat_backend_with_secret_provider(&config, &StaticSecretProvider::new("test"));
+        let err = result.err().expect("should fail");
+        assert!(err.to_string().contains("cohere"));
+    }
+
+    #[test]
+    fn forced_provider_without_key_returns_auth_denied() {
+        let config = ChatBackendSelectionConfig::default().with_provider_override("anthropic");
+        let result = select_chat_backend_with_secret_provider(&config, &MissingSecretProvider);
+        let err = result.err().expect("should fail");
+        assert!(matches!(
+            err,
+            converge_core::traits::LlmError::AuthDenied { .. }
+        ));
+    }
 }

@@ -5,7 +5,7 @@ use converge_analytics::packs::{
     RegressionPack, SegmentationPack, SimilarityPack, TrendDetectionPack,
 };
 use converge_kernel::{Budget, ContextKey, ContextState, ConvergeResult, Engine};
-use converge_optimization::suggestor::SolverSuggestor;
+use converge_pack::PackSuggestor;
 
 fn budget() -> Budget {
     Budget {
@@ -14,12 +14,12 @@ fn budget() -> Budget {
     }
 }
 
-async fn run_with_input<P: converge_optimization::packs::Pack + 'static>(
+async fn run_with_input<P: converge_pack::Pack + 'static>(
     pack: P,
     input: serde_json::Value,
 ) -> ConvergeResult {
     let mut engine = Engine::with_budget(budget());
-    engine.register_suggestor(SolverSuggestor::new(
+    engine.register_suggestor(PackSuggestor::new(
         pack,
         ContextKey::Seeds,
         ContextKey::Strategies,

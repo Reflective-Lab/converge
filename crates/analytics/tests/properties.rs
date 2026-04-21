@@ -5,8 +5,8 @@ use converge_analytics::packs::{
     RegressionPack, SegmentationPack, SimilarityPack, TrendDetectionPack,
 };
 use converge_kernel::{Budget, ContextKey, ContextState, Engine};
-use converge_optimization::packs::Pack;
-use converge_optimization::suggestor::SolverSuggestor;
+use converge_pack::Pack;
+use converge_pack::PackSuggestor;
 use proptest::prelude::*;
 
 fn rt() -> tokio::runtime::Runtime {
@@ -30,7 +30,7 @@ proptest! {
     ) {
         let input = serde_json::json!({"values": values, "threshold": threshold});
         let mut engine = Engine::with_budget(budget());
-        engine.register_suggestor(SolverSuggestor::new(
+        engine.register_suggestor(PackSuggestor::new(
             AnomalyDetectionPack, ContextKey::Seeds, ContextKey::Strategies,
         ));
         let mut ctx = ContextState::new();
@@ -48,8 +48,8 @@ proptest! {
         let input = serde_json::json!({"values": values.clone(), "threshold": threshold});
         prop_assert!(AnomalyDetectionPack.validate_inputs(&input).is_ok());
 
-        let spec = converge_optimization::gate::ProblemSpec::builder("test", "test")
-            .objective(converge_optimization::gate::ObjectiveSpec::maximize("default"))
+        let spec = converge_pack::gate::ProblemSpec::builder("test", "test")
+            .objective(converge_pack::gate::ObjectiveSpec::maximize("default"))
             .inputs_raw(input)
             .build()
             .unwrap();
@@ -72,7 +72,7 @@ proptest! {
         let records: Vec<Vec<f64>> = (0..n).map(|i| vec![i as f64, (i * 2) as f64]).collect();
         let input = serde_json::json!({"records": records, "k": k});
         let mut engine = Engine::with_budget(budget());
-        engine.register_suggestor(SolverSuggestor::new(
+        engine.register_suggestor(PackSuggestor::new(
             SegmentationPack, ContextKey::Seeds, ContextKey::Strategies,
         ));
         let mut ctx = ContextState::new();
@@ -91,8 +91,8 @@ proptest! {
         let records: Vec<Vec<f64>> = (0..n).map(|i| vec![i as f64]).collect();
         let input = serde_json::json!({"records": records, "k": k});
 
-        let spec = converge_optimization::gate::ProblemSpec::builder("test", "test")
-            .objective(converge_optimization::gate::ObjectiveSpec::maximize("default"))
+        let spec = converge_pack::gate::ProblemSpec::builder("test", "test")
+            .objective(converge_pack::gate::ObjectiveSpec::maximize("default"))
             .inputs_raw(input)
             .build()
             .unwrap();
@@ -128,7 +128,7 @@ proptest! {
             "higher_is_better": higher
         });
         let mut engine = Engine::with_budget(budget());
-        engine.register_suggestor(SolverSuggestor::new(
+        engine.register_suggestor(PackSuggestor::new(
             RankingPack, ContextKey::Seeds, ContextKey::Strategies,
         ));
         let mut ctx = ContextState::new();
@@ -150,8 +150,8 @@ proptest! {
             "higher_is_better": [true]
         });
 
-        let spec = converge_optimization::gate::ProblemSpec::builder("test", "test")
-            .objective(converge_optimization::gate::ObjectiveSpec::maximize("default"))
+        let spec = converge_pack::gate::ProblemSpec::builder("test", "test")
+            .objective(converge_pack::gate::ObjectiveSpec::maximize("default"))
             .inputs_raw(input)
             .build()
             .unwrap();
@@ -174,7 +174,7 @@ proptest! {
     ) {
         let input = serde_json::json!({"values": values, "horizon": horizon, "alpha": alpha});
         let mut engine = Engine::with_budget(budget());
-        engine.register_suggestor(SolverSuggestor::new(
+        engine.register_suggestor(PackSuggestor::new(
             ForecastingPack, ContextKey::Seeds, ContextKey::Strategies,
         ));
         let mut ctx = ContextState::new();
@@ -190,8 +190,8 @@ proptest! {
     ) {
         let input = serde_json::json!({"values": values, "horizon": horizon, "alpha": 0.3});
 
-        let spec = converge_optimization::gate::ProblemSpec::builder("test", "test")
-            .objective(converge_optimization::gate::ObjectiveSpec::maximize("default"))
+        let spec = converge_pack::gate::ProblemSpec::builder("test", "test")
+            .objective(converge_pack::gate::ObjectiveSpec::maximize("default"))
             .inputs_raw(input)
             .build()
             .unwrap();
@@ -230,7 +230,7 @@ proptest! {
             "threshold": 0.5
         });
         let mut engine = Engine::with_budget(budget());
-        engine.register_suggestor(SolverSuggestor::new(
+        engine.register_suggestor(PackSuggestor::new(
             ClassificationPack, ContextKey::Seeds, ContextKey::Strategies,
         ));
         let mut ctx = ContextState::new();
@@ -252,8 +252,8 @@ proptest! {
             "threshold": 0.5
         });
 
-        let spec = converge_optimization::gate::ProblemSpec::builder("test", "test")
-            .objective(converge_optimization::gate::ObjectiveSpec::maximize("default"))
+        let spec = converge_pack::gate::ProblemSpec::builder("test", "test")
+            .objective(converge_pack::gate::ObjectiveSpec::maximize("default"))
             .inputs_raw(input)
             .build()
             .unwrap();
@@ -279,7 +279,7 @@ proptest! {
         let records: Vec<Vec<f64>> = (0..n).map(|i| vec![i as f64]).collect();
         let input = serde_json::json!({"records": records, "weights": [weight], "bias": bias});
         let mut engine = Engine::with_budget(budget());
-        engine.register_suggestor(SolverSuggestor::new(
+        engine.register_suggestor(PackSuggestor::new(
             RegressionPack, ContextKey::Seeds, ContextKey::Strategies,
         ));
         let mut ctx = ContextState::new();
@@ -297,8 +297,8 @@ proptest! {
         let records: Vec<Vec<f64>> = (0..n).map(|i| vec![i as f64]).collect();
         let input = serde_json::json!({"records": records, "weights": [weight], "bias": bias});
 
-        let spec = converge_optimization::gate::ProblemSpec::builder("test", "test")
-            .objective(converge_optimization::gate::ObjectiveSpec::maximize("default"))
+        let spec = converge_pack::gate::ProblemSpec::builder("test", "test")
+            .objective(converge_pack::gate::ObjectiveSpec::maximize("default"))
             .inputs_raw(input)
             .build()
             .unwrap();
@@ -328,7 +328,7 @@ proptest! {
         }).collect();
         let input = serde_json::json!({"items": items, "metric": "euclidean"});
         let mut engine = Engine::with_budget(budget());
-        engine.register_suggestor(SolverSuggestor::new(
+        engine.register_suggestor(PackSuggestor::new(
             SimilarityPack, ContextKey::Seeds, ContextKey::Strategies,
         ));
         let mut ctx = ContextState::new();
@@ -346,8 +346,8 @@ proptest! {
         }).collect();
         let input = serde_json::json!({"items": items, "metric": "euclidean"});
 
-        let spec = converge_optimization::gate::ProblemSpec::builder("test", "test")
-            .objective(converge_optimization::gate::ObjectiveSpec::maximize("default"))
+        let spec = converge_pack::gate::ProblemSpec::builder("test", "test")
+            .objective(converge_pack::gate::ObjectiveSpec::maximize("default"))
             .inputs_raw(input)
             .build()
             .unwrap();
@@ -369,7 +369,7 @@ proptest! {
         let window = window.min(values.len());
         let input = serde_json::json!({"values": values, "window": window, "sensitivity": 1.0});
         let mut engine = Engine::with_budget(budget());
-        engine.register_suggestor(SolverSuggestor::new(
+        engine.register_suggestor(PackSuggestor::new(
             TrendDetectionPack, ContextKey::Seeds, ContextKey::Strategies,
         ));
         let mut ctx = ContextState::new();
@@ -388,7 +388,7 @@ proptest! {
     ) {
         let input = serde_json::json!({"values": values});
         let mut engine = Engine::with_budget(budget());
-        engine.register_suggestor(SolverSuggestor::new(
+        engine.register_suggestor(PackSuggestor::new(
             DescriptiveStatsPack, ContextKey::Seeds, ContextKey::Strategies,
         ));
         let mut ctx = ContextState::new();
@@ -403,8 +403,8 @@ proptest! {
     ) {
         let input = serde_json::json!({"values": values.clone()});
 
-        let spec = converge_optimization::gate::ProblemSpec::builder("test", "test")
-            .objective(converge_optimization::gate::ObjectiveSpec::maximize("default"))
+        let spec = converge_pack::gate::ProblemSpec::builder("test", "test")
+            .objective(converge_pack::gate::ObjectiveSpec::maximize("default"))
             .inputs_raw(input)
             .build()
             .unwrap();
@@ -422,8 +422,8 @@ proptest! {
     ) {
         let input = serde_json::json!({"values": values});
 
-        let spec = converge_optimization::gate::ProblemSpec::builder("test", "test")
-            .objective(converge_optimization::gate::ObjectiveSpec::maximize("default"))
+        let spec = converge_pack::gate::ProblemSpec::builder("test", "test")
+            .objective(converge_pack::gate::ObjectiveSpec::maximize("default"))
             .inputs_raw(input)
             .build()
             .unwrap();
@@ -444,8 +444,8 @@ proptest! {
         let values: Vec<f64> = (0..10).map(|i| (seed as f64 + i as f64).sin() * 100.0).collect();
         let input = serde_json::json!({"values": values, "threshold": 2.0});
 
-        let spec = converge_optimization::gate::ProblemSpec::builder("test", "test")
-            .objective(converge_optimization::gate::ObjectiveSpec::maximize("default"))
+        let spec = converge_pack::gate::ProblemSpec::builder("test", "test")
+            .objective(converge_pack::gate::ObjectiveSpec::maximize("default"))
             .inputs_raw(input.clone())
             .build()
             .unwrap();

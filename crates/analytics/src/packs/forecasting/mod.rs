@@ -4,11 +4,11 @@ mod types;
 pub use solver::*;
 pub use types::*;
 
-use converge_optimization::Result;
-use converge_optimization::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 use converge_optimization::packs::{
     InvariantDef, InvariantResult, Pack, PackSolveResult, default_gate_evaluation,
 };
+use converge_pack::gate::GateResult as Result;
+use converge_pack::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 
 pub struct ForecastingPack;
 
@@ -22,9 +22,8 @@ impl Pack for ForecastingPack {
     }
 
     fn validate_inputs(&self, inputs: &serde_json::Value) -> Result<()> {
-        let input: ForecastingInput = serde_json::from_value(inputs.clone()).map_err(|e| {
-            converge_optimization::Error::invalid_input(format!("Invalid input: {e}"))
-        })?;
+        let input: ForecastingInput = serde_json::from_value(inputs.clone())
+            .map_err(|e| converge_pack::GateError::invalid_input(format!("Invalid input: {e}")))?;
         input.validate()
     }
 
@@ -73,7 +72,7 @@ impl Pack for ForecastingPack {
 
     fn check_invariants(&self, plan: &ProposedPlan) -> Result<Vec<InvariantResult>> {
         let output: ForecastingOutput = serde_json::from_value(plan.plan.clone())
-            .map_err(|e| converge_optimization::Error::invalid_input(e.to_string()))?;
+            .map_err(|e| converge_pack::GateError::invalid_input(e.to_string()))?;
 
         let mut results = vec![];
 
@@ -87,7 +86,7 @@ impl Pack for ForecastingPack {
         } else {
             results.push(InvariantResult::fail(
                 "finite-predictions",
-                converge_optimization::gate::Violation::new(
+                converge_pack::gate::Violation::new(
                     "finite-predictions",
                     1.0,
                     "Non-finite values in predictions",
@@ -101,7 +100,7 @@ impl Pack for ForecastingPack {
             if max_width > first_width * 4.0 && first_width > 0.0 {
                 results.push(InvariantResult::fail(
                     "wide-intervals",
-                    converge_optimization::gate::Violation::new(
+                    converge_pack::gate::Violation::new(
                         "wide-intervals",
                         max_width,
                         "Confidence intervals grow too wide over horizon",

@@ -206,4 +206,135 @@ mod tests {
         let finalized = finalize_chat_response(ResponseFormat::Json, response).unwrap();
         assert_eq!(finalized.content, "not json");
     }
+
+    // ========================================================================
+    // Additional format contract tests
+    // ========================================================================
+
+    #[test]
+    fn text_passthrough_unchanged() {
+        let r = finalize_chat_response(ResponseFormat::Text, response("Hello world!")).unwrap();
+        assert_eq!(r.content, "Hello world!");
+    }
+
+    #[test]
+    fn markdown_passthrough_unchanged() {
+        let md = "# Header\n\n- bullet 1\n- bullet 2";
+        let r = finalize_chat_response(ResponseFormat::Markdown, response(md)).unwrap();
+        assert_eq!(r.content, md);
+    }
+
+    #[test]
+    fn valid_json_object_accepted() {
+        let r =
+            finalize_chat_response(ResponseFormat::Json, response(r#"{"key": "value"}"#)).unwrap();
+        assert_eq!(r.content, r#"{"key": "value"}"#);
+    }
+
+    #[test]
+    fn valid_json_array_accepted() {
+        let r = finalize_chat_response(ResponseFormat::Json, response(r#"[1, 2, 3]"#)).unwrap();
+        assert_eq!(r.content, "[1, 2, 3]");
+    }
+
+    #[test]
+    fn json_scalar_rejected() {
+        let err = finalize_chat_response(ResponseFormat::Json, response(r#""just a string""#))
+            .unwrap_err();
+        assert!(matches!(
+            err,
+            LlmError::ResponseFormatMismatch {
+                expected: ResponseFormat::Json,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn json_number_rejected() {
+        let err = finalize_chat_response(ResponseFormat::Json, response("42")).unwrap_err();
+        assert!(matches!(
+            err,
+            LlmError::ResponseFormatMismatch {
+                expected: ResponseFormat::Json,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn empty_content_rejected_as_json() {
+        let err = finalize_chat_response(ResponseFormat::Json, response("")).unwrap_err();
+        assert!(matches!(
+            err,
+            LlmError::ResponseFormatMismatch {
+                expected: ResponseFormat::Json,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn strips_yaml_code_fences() {
+        let yaml_fenced = "```yaml\nkey: value\nlist:\n  - a\n  - b\n```";
+        let r = finalize_chat_response(ResponseFormat::Yaml, response(yaml_fenced)).unwrap();
+        assert!(r.content.contains("key: value"));
+        assert!(!r.content.contains("```"));
+    }
+
+    #[test]
+    fn valid_yaml_mapping_accepted() {
+        let r = finalize_chat_response(ResponseFormat::Yaml, response("key: value\nother: 42"))
+            .unwrap();
+        assert!(r.content.contains("key: value"));
+    }
+
+    #[test]
+    fn valid_yaml_sequence_accepted() {
+        let r = finalize_chat_response(ResponseFormat::Yaml, response("- item1\n- item2")).unwrap();
+        assert!(r.content.contains("- item1"));
+    }
+
+    #[test]
+    fn valid_toml_accepted() {
+        let toml_content = "[section]\nkey = \"value\"\ncount = 42";
+        let r = finalize_chat_response(ResponseFormat::Toml, response(toml_content)).unwrap();
+        assert!(r.content.contains("key = \"value\""));
+    }
+
+    #[test]
+    fn toml_scalar_rejected() {
+        // A bare string is not valid TOML (no table or array)
+        let err = finalize_chat_response(ResponseFormat::Toml, response("just text")).unwrap_err();
+        assert!(matches!(
+            err,
+            LlmError::ResponseFormatMismatch {
+                expected: ResponseFormat::Toml,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn strips_toml_code_fences() {
+        let toml_fenced = "```toml\n[section]\nkey = \"value\"\n```";
+        let r = finalize_chat_response(ResponseFormat::Toml, response(toml_fenced)).unwrap();
+        assert!(r.content.contains("key = \"value\""));
+        assert!(!r.content.contains("```"));
+    }
+
+    #[test]
+    fn whitespace_only_rejected_as_json() {
+        let err =
+            finalize_chat_response(ResponseFormat::Json, response("   \n  \t  ")).unwrap_err();
+        assert!(matches!(err, LlmError::ResponseFormatMismatch { .. }));
+    }
+
+    #[test]
+    fn json_with_leading_trailing_whitespace_accepted() {
+        let r =
+            finalize_chat_response(ResponseFormat::Json, response("  \n{\"key\": \"val\"}\n  "))
+                .unwrap();
+        assert_eq!(r.content, r#"{"key": "val"}"#);
+    }
 }

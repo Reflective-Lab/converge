@@ -447,4 +447,118 @@ mod tests {
         let obs2 = ProviderObservation::new("test", "model", "b", 2);
         assert_ne!(obs1.observation_id, obs2.observation_id);
     }
+
+    // ========================================================================
+    // Property tests
+    // ========================================================================
+
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn canonical_hash_is_deterministic(data in "[a-zA-Z0-9 ]{0,256}") {
+            let h1 = canonical_hash(&data);
+            let h2 = canonical_hash(&data);
+            prop_assert_eq!(h1, h2);
+        }
+
+        #[test]
+        fn canonical_hash_starts_with_prefix(data in ".{0,100}") {
+            let h = canonical_hash(&data);
+            prop_assert!(h.starts_with("hash:"));
+            prop_assert_eq!(h.len(), 5 + 16); // "hash:" + 16 hex chars
+        }
+
+        #[test]
+        fn token_usage_total_is_sum(input in 0u32..1_000_000, output in 0u32..1_000_000) {
+            let usage = TokenUsage::new(input, output);
+            prop_assert_eq!(usage.total(), input + output);
+        }
+
+        #[test]
+        fn raw_response_truncation_boundary(len in 1usize..30_000) {
+            let raw = "x".repeat(len);
+            let obs = ProviderObservation::new("v", "m", "c", 1)
+                .with_raw_response(raw.clone());
+            let stored = obs.raw_response.unwrap();
+
+            if len <= 10_000 {
+                prop_assert_eq!(stored, raw);
+            } else {
+                prop_assert!(stored.len() < 15_000);
+                prop_assert!(stored.ends_with("...[truncated]"));
+            }
+        }
+
+        #[test]
+        fn observation_ids_monotonically_unique(count in 2usize..50) {
+            let ids: Vec<String> = (0..count)
+                .map(|_| ProviderObservation::new("v", "m", "c", 1).observation_id)
+                .collect();
+
+            // All unique
+            let unique: std::collections::HashSet<&String> = ids.iter().collect();
+            prop_assert_eq!(unique.len(), ids.len());
+        }
+
+        #[test]
+        fn provenance_format(
+            vendor in "[a-z]{1,10}",
+            mdl in "[a-z0-9-]{1,20}",
+        ) {
+            let obs = ProviderObservation::new(&vendor, &mdl, "content", 100);
+            let prov = obs.provenance();
+            let expected_prefix = format!("{vendor}:{mdl}:obs-");
+            prop_assert!(prov.starts_with(&expected_prefix));
+        }
+    }
+
+    // ========================================================================
+    // Negative tests
+    // ========================================================================
+
+    #[test]
+    fn call_context_serde_roundtrip() {
+        let ctx = ProviderCallContext::default()
+            .with_root_intent("intent-1")
+            .with_user("user-1")
+            .with_timeout_ms(5000)
+            .with_max_cost(0.5)
+            .with_max_tokens(2000);
+
+        let json = serde_json::to_string(&ctx).unwrap();
+        let round: ProviderCallContext = serde_json::from_str(&json).unwrap();
+        assert_eq!(round.root_intent_id, Some("intent-1".into()));
+        assert_eq!(round.timeout_ms, 5000);
+        assert_eq!(round.max_tokens, Some(2000));
+    }
+
+    #[test]
+    fn observation_serde_roundtrip() {
+        let obs = ProviderObservation::new("openai", "gpt-4", "hello world", 200)
+            .with_cost(0.01)
+            .with_tokens(50, 10)
+            .with_request_hash("hash:abc");
+
+        let json = serde_json::to_string(&obs).unwrap();
+        let round: ProviderObservation<String> = serde_json::from_str(&json).unwrap();
+        assert_eq!(round.vendor, "openai");
+        assert_eq!(round.content, "hello world");
+        assert_eq!(round.tokens.unwrap().total(), 60);
+    }
+
+    #[test]
+    fn region_display() {
+        assert_eq!(Region::US.to_string(), "US");
+        assert_eq!(Region::EU.to_string(), "EU");
+        assert_eq!(Region::CN.to_string(), "CN");
+        assert_eq!(Region::Local.to_string(), "Local");
+    }
+
+    #[test]
+    fn empty_raw_response_not_serialized() {
+        let obs = ProviderObservation::new("v", "m", "c", 1);
+        let json = serde_json::to_string(&obs).unwrap();
+        assert!(!json.contains("raw_response"));
+    }
 }

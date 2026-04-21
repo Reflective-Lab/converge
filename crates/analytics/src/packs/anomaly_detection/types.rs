@@ -1,4 +1,4 @@
-use converge_optimization::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -16,18 +16,18 @@ fn default_threshold() -> f64 {
 impl AnomalyDetectionInput {
     pub fn validate(&self) -> Result<()> {
         if self.values.is_empty() {
-            return Err(converge_optimization::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "At least one value required",
             ));
         }
         if self.threshold <= 0.0 {
-            return Err(converge_optimization::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "Threshold must be positive",
             ));
         }
         if let Some(labels) = &self.labels {
             if labels.len() != self.values.len() {
-                return Err(converge_optimization::Error::invalid_input(
+                return Err(converge_pack::GateError::invalid_input(
                     "Labels length must match values length",
                 ));
             }

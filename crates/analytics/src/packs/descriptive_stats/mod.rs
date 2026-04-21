@@ -4,11 +4,11 @@ mod types;
 pub use solver::*;
 pub use types::*;
 
-use converge_optimization::Result;
-use converge_optimization::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 use converge_optimization::packs::{
     InvariantDef, InvariantResult, Pack, PackSolveResult, default_gate_evaluation,
 };
+use converge_pack::gate::GateResult as Result;
+use converge_pack::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 
 pub struct DescriptiveStatsPack;
 
@@ -22,9 +22,8 @@ impl Pack for DescriptiveStatsPack {
     }
 
     fn validate_inputs(&self, inputs: &serde_json::Value) -> Result<()> {
-        let input: DescriptiveStatsInput = serde_json::from_value(inputs.clone()).map_err(|e| {
-            converge_optimization::Error::invalid_input(format!("Invalid input: {e}"))
-        })?;
+        let input: DescriptiveStatsInput = serde_json::from_value(inputs.clone())
+            .map_err(|e| converge_pack::GateError::invalid_input(format!("Invalid input: {e}")))?;
         input.validate()
     }
 
@@ -69,7 +68,7 @@ impl Pack for DescriptiveStatsPack {
 
     fn check_invariants(&self, plan: &ProposedPlan) -> Result<Vec<InvariantResult>> {
         let output: DescriptiveStatsOutput = serde_json::from_value(plan.plan.clone())
-            .map_err(|e| converge_optimization::Error::invalid_input(e.to_string()))?;
+            .map_err(|e| converge_pack::GateError::invalid_input(e.to_string()))?;
 
         let mut results = vec![];
 
@@ -85,7 +84,7 @@ impl Pack for DescriptiveStatsPack {
         } else {
             results.push(InvariantResult::fail(
                 "finite-statistics",
-                converge_optimization::gate::Violation::new(
+                converge_pack::gate::Violation::new(
                     "finite-statistics",
                     1.0,
                     "Non-finite values in computed statistics",
@@ -96,7 +95,7 @@ impl Pack for DescriptiveStatsPack {
         if output.skewness.abs() > 2.0 {
             results.push(InvariantResult::fail(
                 "high-skew",
-                converge_optimization::gate::Violation::new(
+                converge_pack::gate::Violation::new(
                     "high-skew",
                     output.skewness.abs(),
                     format!("Skewness of {:.2} indicates heavy skew", output.skewness),

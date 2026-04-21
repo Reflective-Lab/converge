@@ -1,4 +1,4 @@
-use converge_optimization::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -16,17 +16,17 @@ fn default_alpha() -> f64 {
 impl ForecastingInput {
     pub fn validate(&self) -> Result<()> {
         if self.values.len() < 2 {
-            return Err(converge_optimization::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "At least 2 historical values required",
             ));
         }
         if self.horizon == 0 {
-            return Err(converge_optimization::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "Horizon must be >= 1",
             ));
         }
         if !(0.0..=1.0).contains(&self.alpha) {
-            return Err(converge_optimization::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "Alpha (smoothing factor) must be in [0.0, 1.0]",
             ));
         }

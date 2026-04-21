@@ -8,6 +8,7 @@ publish = false
 converge-kernel = { path = "../../crates/kernel" }
 converge-analytics = { path = "../../crates/analytics" }
 converge-optimization = { path = "../../crates/optimization" }
+converge-pack = { path = "../../crates/pack" }
 async-trait = "0.1"
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }

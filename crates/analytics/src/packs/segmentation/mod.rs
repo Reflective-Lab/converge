@@ -4,11 +4,11 @@ mod types;
 pub use solver::*;
 pub use types::*;
 
-use converge_optimization::Result;
-use converge_optimization::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 use converge_optimization::packs::{
     InvariantDef, InvariantResult, Pack, PackSolveResult, default_gate_evaluation,
 };
+use converge_pack::gate::GateResult as Result;
+use converge_pack::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 
 pub struct SegmentationPack;
 
@@ -22,9 +22,8 @@ impl Pack for SegmentationPack {
     }
 
     fn validate_inputs(&self, inputs: &serde_json::Value) -> Result<()> {
-        let input: SegmentationInput = serde_json::from_value(inputs.clone()).map_err(|e| {
-            converge_optimization::Error::invalid_input(format!("Invalid input: {e}"))
-        })?;
+        let input: SegmentationInput = serde_json::from_value(inputs.clone())
+            .map_err(|e| converge_pack::GateError::invalid_input(format!("Invalid input: {e}")))?;
         input.validate()
     }
 
@@ -99,7 +98,7 @@ impl Pack for SegmentationPack {
 
     fn check_invariants(&self, plan: &ProposedPlan) -> Result<Vec<InvariantResult>> {
         let output: SegmentationOutput = serde_json::from_value(plan.plan.clone())
-            .map_err(|e| converge_optimization::Error::invalid_input(e.to_string()))?;
+            .map_err(|e| converge_pack::GateError::invalid_input(e.to_string()))?;
 
         let k = output.centroids.len();
         let n = output.assignments.len();
@@ -124,7 +123,7 @@ impl Pack for SegmentationPack {
         } else {
             results.push(InvariantResult::fail(
                 "non-empty-clusters",
-                converge_optimization::gate::Violation::new(
+                converge_pack::gate::Violation::new(
                     "non-empty-clusters",
                     empty_clusters.len() as f64,
                     format!("Empty clusters: {:?}", empty_clusters),
@@ -146,7 +145,7 @@ impl Pack for SegmentationPack {
         } else {
             results.push(InvariantResult::fail(
                 "balanced-clusters",
-                converge_optimization::gate::Violation::new(
+                converge_pack::gate::Violation::new(
                     "balanced-clusters",
                     undersized.len() as f64,
                     format!("Undersized clusters: {:?}", undersized),

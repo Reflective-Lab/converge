@@ -4,11 +4,11 @@ mod types;
 pub use solver::*;
 pub use types::*;
 
-use converge_optimization::Result;
-use converge_optimization::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 use converge_optimization::packs::{
     InvariantDef, InvariantResult, Pack, PackSolveResult, default_gate_evaluation,
 };
+use converge_pack::gate::GateResult as Result;
+use converge_pack::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 
 pub struct TrendDetectionPack;
 
@@ -22,9 +22,8 @@ impl Pack for TrendDetectionPack {
     }
 
     fn validate_inputs(&self, inputs: &serde_json::Value) -> Result<()> {
-        let input: TrendDetectionInput = serde_json::from_value(inputs.clone()).map_err(|e| {
-            converge_optimization::Error::invalid_input(format!("Invalid input: {e}"))
-        })?;
+        let input: TrendDetectionInput = serde_json::from_value(inputs.clone())
+            .map_err(|e| converge_pack::GateError::invalid_input(format!("Invalid input: {e}")))?;
         input.validate()
     }
 
@@ -74,7 +73,7 @@ impl Pack for TrendDetectionPack {
 
     fn check_invariants(&self, plan: &ProposedPlan) -> Result<Vec<InvariantResult>> {
         let output: TrendDetectionOutput = serde_json::from_value(plan.plan.clone())
-            .map_err(|e| converge_optimization::Error::invalid_input(e.to_string()))?;
+            .map_err(|e| converge_pack::GateError::invalid_input(e.to_string()))?;
 
         let mut results = vec![];
 
@@ -90,7 +89,7 @@ impl Pack for TrendDetectionPack {
         } else {
             results.push(InvariantResult::fail(
                 "valid-segments",
-                converge_optimization::gate::Violation::new(
+                converge_pack::gate::Violation::new(
                     "valid-segments",
                     1.0,
                     "Segments do not cover full series",
@@ -103,7 +102,7 @@ impl Pack for TrendDetectionPack {
         if output.changepoints.len() > series_len / 2 && series_len > 4 {
             results.push(InvariantResult::fail(
                 "excessive-changepoints",
-                converge_optimization::gate::Violation::new(
+                converge_pack::gate::Violation::new(
                     "excessive-changepoints",
                     output.changepoints.len() as f64,
                     "Too many changepoints relative to series length",

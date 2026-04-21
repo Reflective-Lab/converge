@@ -5,7 +5,7 @@
 //! via the standard Engine.
 
 use converge_kernel::{Budget, ContextKey, ContextState, Engine};
-use converge_optimization::suggestor::SolverSuggestor;
+use converge_pack::PackSuggestor;
 
 use converge_analytics::packs::{
     AnomalyDetectionPack, ClassificationPack, DescriptiveStatsPack, ForecastingPack, RankingPack,
@@ -22,63 +22,63 @@ async fn run_pack(name: &str, input: serde_json::Value) {
 
     match name {
         "anomaly-detection" => {
-            engine.register_suggestor(SolverSuggestor::new(
+            engine.register_suggestor(PackSuggestor::new(
                 AnomalyDetectionPack,
                 ContextKey::Seeds,
                 ContextKey::Strategies,
             ));
         }
         "segmentation" => {
-            engine.register_suggestor(SolverSuggestor::new(
+            engine.register_suggestor(PackSuggestor::new(
                 SegmentationPack,
                 ContextKey::Seeds,
                 ContextKey::Strategies,
             ));
         }
         "ranking" => {
-            engine.register_suggestor(SolverSuggestor::new(
+            engine.register_suggestor(PackSuggestor::new(
                 RankingPack,
                 ContextKey::Seeds,
                 ContextKey::Strategies,
             ));
         }
         "forecasting" => {
-            engine.register_suggestor(SolverSuggestor::new(
+            engine.register_suggestor(PackSuggestor::new(
                 ForecastingPack,
                 ContextKey::Seeds,
                 ContextKey::Strategies,
             ));
         }
         "classification" => {
-            engine.register_suggestor(SolverSuggestor::new(
+            engine.register_suggestor(PackSuggestor::new(
                 ClassificationPack,
                 ContextKey::Seeds,
                 ContextKey::Strategies,
             ));
         }
         "regression" => {
-            engine.register_suggestor(SolverSuggestor::new(
+            engine.register_suggestor(PackSuggestor::new(
                 RegressionPack,
                 ContextKey::Seeds,
                 ContextKey::Strategies,
             ));
         }
         "similarity" => {
-            engine.register_suggestor(SolverSuggestor::new(
+            engine.register_suggestor(PackSuggestor::new(
                 SimilarityPack,
                 ContextKey::Seeds,
                 ContextKey::Strategies,
             ));
         }
         "trend-detection" => {
-            engine.register_suggestor(SolverSuggestor::new(
+            engine.register_suggestor(PackSuggestor::new(
                 TrendDetectionPack,
                 ContextKey::Seeds,
                 ContextKey::Strategies,
             ));
         }
         "descriptive-stats" => {
-            engine.register_suggestor(SolverSuggestor::new(
+            engine.register_suggestor(PackSuggestor::new(
                 DescriptiveStatsPack,
                 ContextKey::Seeds,
                 ContextKey::Strategies,

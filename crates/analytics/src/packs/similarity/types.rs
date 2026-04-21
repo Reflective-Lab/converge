@@ -1,4 +1,4 @@
-use converge_optimization::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -30,19 +30,19 @@ pub struct SimilarityItem {
 impl SimilarityInput {
     pub fn validate(&self) -> Result<()> {
         if self.items.len() < 2 {
-            return Err(converge_optimization::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "At least 2 items required for similarity",
             ));
         }
         let dim = self.items[0].features.len();
         if dim == 0 {
-            return Err(converge_optimization::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "Items must have at least one feature",
             ));
         }
         for (i, item) in self.items.iter().enumerate() {
             if item.features.len() != dim {
-                return Err(converge_optimization::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Item {} has {} features, expected {}",
                     i,
                     item.features.len(),
@@ -52,7 +52,7 @@ impl SimilarityInput {
         }
         if let Some(top_k) = self.top_k {
             if top_k == 0 {
-                return Err(converge_optimization::Error::invalid_input(
+                return Err(converge_pack::GateError::invalid_input(
                     "top_k must be >= 1",
                 ));
             }

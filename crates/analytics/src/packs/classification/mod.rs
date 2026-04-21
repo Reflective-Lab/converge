@@ -4,11 +4,11 @@ mod types;
 pub use solver::*;
 pub use types::*;
 
-use converge_optimization::Result;
-use converge_optimization::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 use converge_optimization::packs::{
     InvariantDef, InvariantResult, Pack, PackSolveResult, default_gate_evaluation,
 };
+use converge_pack::gate::GateResult as Result;
+use converge_pack::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 
 pub struct ClassificationPack;
 
@@ -22,9 +22,8 @@ impl Pack for ClassificationPack {
     }
 
     fn validate_inputs(&self, inputs: &serde_json::Value) -> Result<()> {
-        let input: ClassificationInput = serde_json::from_value(inputs.clone()).map_err(|e| {
-            converge_optimization::Error::invalid_input(format!("Invalid input: {e}"))
-        })?;
+        let input: ClassificationInput = serde_json::from_value(inputs.clone())
+            .map_err(|e| converge_pack::GateError::invalid_input(format!("Invalid input: {e}")))?;
         input.validate()
     }
 
@@ -76,7 +75,7 @@ impl Pack for ClassificationPack {
 
     fn check_invariants(&self, plan: &ProposedPlan) -> Result<Vec<InvariantResult>> {
         let output: ClassificationOutput = serde_json::from_value(plan.plan.clone())
-            .map_err(|e| converge_optimization::Error::invalid_input(e.to_string()))?;
+            .map_err(|e| converge_pack::GateError::invalid_input(e.to_string()))?;
 
         let mut results = vec![];
 
@@ -90,7 +89,7 @@ impl Pack for ClassificationPack {
         } else {
             results.push(InvariantResult::fail(
                 "valid-probabilities",
-                converge_optimization::gate::Violation::new(
+                converge_pack::gate::Violation::new(
                     "valid-probabilities",
                     1.0,
                     "Probability outside [0, 1] range",
@@ -103,7 +102,7 @@ impl Pack for ClassificationPack {
         if ratio > 0.9 {
             results.push(InvariantResult::fail(
                 "class-imbalance",
-                converge_optimization::gate::Violation::new(
+                converge_pack::gate::Violation::new(
                     "class-imbalance",
                     ratio,
                     format!("{:.0}% of predictions in one class", ratio * 100.0),

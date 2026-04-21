@@ -13,7 +13,7 @@ use converge_kernel::{
     AgentEffect, Budget, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
 };
 use converge_optimization::packs::budget_allocation::BudgetAllocationPack;
-use converge_optimization::suggestor::SolverSuggestor;
+use converge_pack::PackSuggestor;
 use converge_policy::{engine::PolicyEngine, suggestor::PolicyGateSuggestor};
 use std::sync::Arc;
 
@@ -122,7 +122,7 @@ async fn main() {
     engine.register_suggestor(IntentSeeder);
 
     // 2. Optimization solver — finds the allocation
-    engine.register_suggestor(SolverSuggestor::new(
+    engine.register_suggestor(PackSuggestor::new(
         BudgetAllocationPack,
         ContextKey::Seeds,
         ContextKey::Strategies,

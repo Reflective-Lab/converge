@@ -1,6 +1,6 @@
 use super::types::*;
-use converge_optimization::Result;
-use converge_optimization::gate::{ProblemSpec, ReplayEnvelope, SolverReport};
+use converge_pack::gate::GateResult as Result;
+use converge_pack::gate::{ProblemSpec, ReplayEnvelope, SolverReport};
 
 pub struct LinearRegressionSolver;
 

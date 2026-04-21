@@ -1,4 +1,4 @@
-use converge_optimization::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -21,22 +21,22 @@ fn default_sensitivity() -> f64 {
 impl TrendDetectionInput {
     pub fn validate(&self) -> Result<()> {
         if self.values.len() < 3 {
-            return Err(converge_optimization::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "At least 3 values required for trend detection",
             ));
         }
         if self.window < 2 {
-            return Err(converge_optimization::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "Window must be >= 2",
             ));
         }
         if self.window > self.values.len() {
-            return Err(converge_optimization::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "Window cannot exceed number of values",
             ));
         }
         if self.sensitivity <= 0.0 {
-            return Err(converge_optimization::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "Sensitivity must be positive",
             ));
         }

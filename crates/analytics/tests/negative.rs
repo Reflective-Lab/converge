@@ -5,8 +5,8 @@ use converge_analytics::packs::{
     RegressionPack, SegmentationPack, SimilarityPack, TrendDetectionPack,
 };
 use converge_kernel::{Budget, ContextKey, ContextState, Engine};
-use converge_optimization::packs::Pack;
-use converge_optimization::suggestor::SolverSuggestor;
+use converge_pack::Pack;
+use converge_pack::PackSuggestor;
 
 fn budget() -> Budget {
     Budget {
@@ -193,7 +193,7 @@ fn descriptive_stats_rejects_invalid_percentile() {
 
 async fn run_with_garbage<P: Pack + 'static>(pack: P) {
     let mut engine = Engine::with_budget(budget());
-    engine.register_suggestor(SolverSuggestor::new(
+    engine.register_suggestor(PackSuggestor::new(
         pack,
         ContextKey::Seeds,
         ContextKey::Strategies,
@@ -258,7 +258,7 @@ async fn run_idempotent<P: Pack + 'static>(pack: P, input: serde_json::Value) {
         max_cycles: 10,
         max_facts: 100,
     });
-    engine.register_suggestor(SolverSuggestor::new(
+    engine.register_suggestor(PackSuggestor::new(
         pack,
         ContextKey::Seeds,
         ContextKey::Strategies,
@@ -379,7 +379,7 @@ async fn descriptive_stats_idempotent() {
 #[tokio::test]
 async fn anomaly_detection_constant_data_produces_no_anomalies() {
     let mut engine = Engine::with_budget(budget());
-    engine.register_suggestor(SolverSuggestor::new(
+    engine.register_suggestor(PackSuggestor::new(
         AnomalyDetectionPack,
         ContextKey::Seeds,
         ContextKey::Strategies,
@@ -403,7 +403,7 @@ async fn anomaly_detection_constant_data_produces_no_anomalies() {
 #[tokio::test]
 async fn descriptive_stats_single_value() {
     let mut engine = Engine::with_budget(budget());
-    engine.register_suggestor(SolverSuggestor::new(
+    engine.register_suggestor(PackSuggestor::new(
         DescriptiveStatsPack,
         ContextKey::Seeds,
         ContextKey::Strategies,
