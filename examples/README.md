@@ -9,6 +9,7 @@ of the workspace.
 just examples
 just example hello-convergence
 just example formation-mixed
+just example intent-codec-loop
 ```
 
 Most example package names follow the directory directly:
@@ -28,6 +29,9 @@ Most example package names follow the directory directly:
 | [vendor-selection](vendor-selection/) | Multi-criteria selection with default Cedar-backed flow gating | `just example vendor-selection` |
 | [loan-application](loan-application/) | Domain suggestors, policy checks, and HITL escalation | `just example loan-application` |
 | [formation-mixed](formation-mixed/) | One loop mixing optimization, policy, and LLM-style reasoning | `just example formation-mixed` |
+| [intent-codec-loop](intent-codec-loop/) | Gherkin-ish DD intent compiled into formation and provider matching inside one engine run | `just example intent-codec-loop` |
+| [analytics-packs](analytics-packs/) | Built-in analytics suggestors participating in one loop | `just example analytics-packs` |
+| [live-formation](live-formation/) | Full self-assembly: bipartite provider + formation matching drive a 5-agent market entry decision | `just example live-formation` |
 
 ## Contract Notes
 
@@ -37,7 +41,7 @@ Most example package names follow the directory directly:
 
 ## For Consumers
 
-Start with `hello-convergence`, then read `formation-mixed`.
+Start with `hello-convergence`, then read `formation-mixed`, then `intent-codec-loop`.
 
 That pairing shows the stable contract clearly:
 
@@ -48,6 +52,13 @@ That pairing shows the stable contract clearly:
 - `Context` / `ContextState`
 
 Everything else is composition on top.
+
+`intent-codec-loop` adds the missing formation story:
+
+- loose intent enters as data
+- an intent codec suggestor compiles that into requests
+- formation and provider matching answer those requests in the same loop
+- the selected members then emit role-specific outputs until fixed point
 
 ## Three Things To Know Before You Build
 

@@ -26,6 +26,8 @@ members = [
     "examples/vendor-selection",
     "examples/loan-application",
     "examples/formation-mixed",
+    "examples/live-formation",
+    "examples/intent-codec-loop",
     "examples/analytics-packs",
 ]
 default-members = [
