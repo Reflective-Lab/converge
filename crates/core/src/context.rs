@@ -11,18 +11,20 @@ use crate::error::ConvergeError;
 use std::collections::HashMap;
 
 // Re-export canonical types from converge-pack
-pub use converge_pack::{ContextKey, Fact, ProposedFact, ValidationError};
+pub use converge_pack::{
+    ContextKey, Fact, FactId, ProposalId, ProposedFact, Timestamp, ValidationError,
+};
 
-pub(crate) fn new_fact(key: ContextKey, id: impl Into<String>, content: impl Into<String>) -> Fact {
+pub(crate) fn new_fact(key: ContextKey, id: impl Into<FactId>, content: impl Into<String>) -> Fact {
     converge_pack::fact::kernel_authority::new_fact(key, id, content)
 }
 
 pub(crate) fn new_fact_with_promotion(
     key: ContextKey,
-    id: impl Into<String>,
+    id: impl Into<FactId>,
     content: impl Into<String>,
     promotion_record: converge_pack::FactPromotionRecord,
-    created_at: impl Into<String>,
+    created_at: impl Into<Timestamp>,
 ) -> Fact {
     converge_pack::fact::kernel_authority::new_fact_with_promotion(
         key,
@@ -129,7 +131,7 @@ impl ContextState {
                 return Ok(false);
             }
             return Err(ConvergeError::Conflict {
-                id: proposal.id,
+                id: proposal.id.to_string(),
                 existing: existing.content.clone(),
                 new: proposal.content,
                 context: Box::new(self.clone()),
@@ -144,7 +146,7 @@ impl ContextState {
     pub fn add_input(
         &mut self,
         key: ContextKey,
-        id: impl Into<String>,
+        id: impl Into<ProposalId>,
         content: impl Into<String>,
     ) -> Result<bool, ConvergeError> {
         self.add_input_with_provenance(key, id, content, "context-input")
@@ -154,7 +156,7 @@ impl ContextState {
     pub fn add_input_with_provenance(
         &mut self,
         key: ContextKey,
-        id: impl Into<String>,
+        id: impl Into<ProposalId>,
         content: impl Into<String>,
         provenance: impl Into<String>,
     ) -> Result<bool, ConvergeError> {
@@ -172,7 +174,7 @@ impl ContextState {
     }
 
     /// Removes a specific pending proposal if it exists.
-    pub(crate) fn remove_proposal(&mut self, key: ContextKey, id: &str) {
+    pub(crate) fn remove_proposal(&mut self, key: ContextKey, id: &ProposalId) {
         if let Some(proposals) = self.proposals.get_mut(&key) {
             proposals.retain(|proposal| proposal.id != id);
             if proposals.is_empty() {
@@ -194,7 +196,7 @@ impl ContextState {
                 return Ok(false);
             }
             return Err(ConvergeError::Conflict {
-                id: fact.id,
+                id: fact.id.to_string(),
                 existing: existing.content.clone(),
                 new: fact.content,
                 context: Box::new(self.clone()),
@@ -293,6 +295,33 @@ mod tests {
         assert!(ctx.add_proposal(proposal).unwrap());
         assert!(ctx.has_pending_proposals());
         assert_eq!(ctx.get_proposals(ContextKey::Hypotheses).len(), 1);
+    }
+
+    #[test]
+    fn conflicting_staged_inputs_are_rejected_before_promotion() {
+        let mut ctx = ContextState::new();
+
+        assert!(
+            ctx.add_input_with_provenance(ContextKey::Seeds, "seed-1", "version A", "user")
+                .unwrap()
+        );
+
+        let result =
+            ctx.add_input_with_provenance(ContextKey::Seeds, "seed-1", "version B", "user");
+
+        match result {
+            Err(ConvergeError::Conflict {
+                id, existing, new, ..
+            }) => {
+                assert_eq!(id, "seed-1");
+                assert_eq!(existing, "version A");
+                assert_eq!(new, "version B");
+            }
+            _ => panic!("Expected Conflict error, got {result:?}"),
+        }
+
+        assert!(ctx.has_pending_proposals());
+        assert_eq!(ctx.get_proposals(ContextKey::Seeds).len(), 1);
     }
 
     /// Test that Context implements the converge_pack::Context trait.

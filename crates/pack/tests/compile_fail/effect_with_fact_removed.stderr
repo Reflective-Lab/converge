@@ -1,0 +1,20 @@
+error[E0599]: no function or associated item named `with_fact` found for struct `AgentEffect` in the current scope
+ --> tests/compile_fail/effect_with_fact_removed.rs:7:26
+  |
+7 |     let _ = AgentEffect::with_fact("Seeds", "seed-1", "seed content");
+  |                          ^^^^^^^^^ function or associated item not found in `AgentEffect`
+  |
+note: if you're trying to build a new `AgentEffect` consider using one of the following associated functions:
+      AgentEffect::empty
+      AgentEffect::with_proposal
+      AgentEffect::with_proposals
+ --> src/effect.rs
+  |
+  |     pub fn empty() -> Self {
+  |     ^^^^^^^^^^^^^^^^^^^^^^
+...
+  |     pub fn with_proposal(proposal: ProposedFact) -> Self {
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+  |     pub fn with_proposals(proposals: Vec<ProposedFact>) -> Self {
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

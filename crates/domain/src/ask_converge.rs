@@ -48,14 +48,14 @@ fn parse_sources(ctx: &dyn converge_core::Context) -> Vec<AskSource> {
             let payload: Option<AskSourcePayload> = serde_json::from_str(&seed.content).ok();
             if let Some(payload) = payload {
                 AskSource {
-                    id: payload.id.unwrap_or_else(|| seed.id.clone()),
+                    id: payload.id.unwrap_or_else(|| seed.id.to_string()),
                     title: payload.title,
                     url: payload.url,
                     content: payload.content,
                 }
             } else {
                 AskSource {
-                    id: seed.id.clone(),
+                    id: seed.id.to_string(),
                     title: None,
                     url: None,
                     content: seed.content.clone(),

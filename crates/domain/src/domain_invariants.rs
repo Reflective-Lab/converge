@@ -26,7 +26,8 @@ impl Invariant for AuthorityRequired {
             for fact in ctx.get(key) {
                 if fact.content.contains("access:granted") {
                     let has_authority = ctx.get(ContextKey::Signals).iter().any(|f| {
-                        f.content.contains("authority:approved") && f.content.contains(&fact.id)
+                        f.content.contains("authority:approved")
+                            && f.content.contains(fact.id.as_str())
                     });
 
                     if !has_authority {

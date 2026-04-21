@@ -253,3 +253,160 @@ impl<T: Validator> DynValidator for T {
         Box::pin(Validator::validate(self, proposal, policy))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::traits::error::{CapabilityError, ErrorCategory};
+
+    // ── ValidatorError Display ────────────────────────────────────────────────
+
+    #[test]
+    fn display_check_failed() {
+        let e = ValidatorError::CheckFailed {
+            check_name: "schema".into(),
+            reason: "missing required field".into(),
+        };
+        let s = e.to_string();
+        assert!(s.contains("schema"));
+        assert!(s.contains("missing required field"));
+    }
+
+    #[test]
+    fn display_policy_violation() {
+        let e = ValidatorError::PolicyViolation {
+            policy: "no-pii".into(),
+            message: "SSN detected".into(),
+        };
+        let s = e.to_string();
+        assert!(s.contains("no-pii"));
+        assert!(s.contains("SSN detected"));
+    }
+
+    #[test]
+    fn display_missing_evidence() {
+        let e = ValidatorError::MissingEvidence {
+            expected: "receipt attachment".into(),
+        };
+        assert!(e.to_string().contains("receipt attachment"));
+    }
+
+    #[test]
+    fn display_unavailable() {
+        let e = ValidatorError::Unavailable {
+            message: "connection refused".into(),
+        };
+        assert!(e.to_string().contains("connection refused"));
+    }
+
+    #[test]
+    fn display_timeout() {
+        let e = ValidatorError::Timeout {
+            elapsed: Duration::from_secs(5),
+            deadline: Duration::from_secs(3),
+        };
+        let s = e.to_string();
+        assert!(s.contains("5s"));
+        assert!(s.contains("3s"));
+    }
+
+    #[test]
+    fn display_internal() {
+        let e = ValidatorError::Internal {
+            message: "null pointer".into(),
+        };
+        assert!(e.to_string().contains("null pointer"));
+    }
+
+    // ── CapabilityError classification ───────────────────────────────────────
+
+    #[test]
+    fn category_check_failed_is_invalid_input() {
+        let e = ValidatorError::CheckFailed {
+            check_name: "x".into(),
+            reason: "y".into(),
+        };
+        assert_eq!(e.category(), ErrorCategory::InvalidInput);
+        assert!(!e.is_transient());
+        assert!(!e.is_retryable());
+    }
+
+    #[test]
+    fn category_policy_violation_is_invalid_input() {
+        let e = ValidatorError::PolicyViolation {
+            policy: "x".into(),
+            message: "y".into(),
+        };
+        assert_eq!(e.category(), ErrorCategory::InvalidInput);
+        assert!(!e.is_transient());
+    }
+
+    #[test]
+    fn category_missing_evidence_is_invalid_input() {
+        let e = ValidatorError::MissingEvidence {
+            expected: "x".into(),
+        };
+        assert_eq!(e.category(), ErrorCategory::InvalidInput);
+    }
+
+    #[test]
+    fn category_unavailable_is_transient_and_retryable() {
+        let e = ValidatorError::Unavailable {
+            message: "down".into(),
+        };
+        assert_eq!(e.category(), ErrorCategory::Unavailable);
+        assert!(e.is_transient());
+        assert!(e.is_retryable());
+    }
+
+    #[test]
+    fn category_timeout_is_transient_and_retryable() {
+        let e = ValidatorError::Timeout {
+            elapsed: Duration::from_secs(1),
+            deadline: Duration::from_secs(1),
+        };
+        assert_eq!(e.category(), ErrorCategory::Timeout);
+        assert!(e.is_transient());
+        assert!(e.is_retryable());
+    }
+
+    #[test]
+    fn category_internal_is_retryable_but_not_transient() {
+        let e = ValidatorError::Internal {
+            message: "oom".into(),
+        };
+        assert_eq!(e.category(), ErrorCategory::Internal);
+        assert!(!e.is_transient());
+        assert!(e.is_retryable());
+    }
+
+    #[test]
+    fn retry_after_always_none() {
+        let errors: Vec<ValidatorError> = vec![
+            ValidatorError::CheckFailed {
+                check_name: "x".into(),
+                reason: "y".into(),
+            },
+            ValidatorError::Unavailable {
+                message: "x".into(),
+            },
+            ValidatorError::Timeout {
+                elapsed: Duration::from_secs(1),
+                deadline: Duration::from_secs(1),
+            },
+        ];
+        for e in &errors {
+            assert!(e.retry_after().is_none());
+        }
+    }
+
+    // ── std::error::Error ────────────────────────────────────────────────────
+
+    #[test]
+    fn validator_error_is_std_error() {
+        let e: Box<dyn std::error::Error> = Box::new(ValidatorError::Internal {
+            message: "test".into(),
+        });
+        assert!(e.to_string().contains("test"));
+    }
+}

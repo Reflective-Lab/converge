@@ -6,22 +6,24 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::semantic::{CertificateFingerprint, JwtId, OrgId, RoleId, ServiceId, SpiffeId, UserId};
+
 /// Identity of a service extracted from mTLS client certificate.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ServiceIdentity {
     /// Service identifier (from cert CN or SPIFFE SAN).
-    pub service_id: String,
+    pub service_id: ServiceId,
 
     /// Optional SPIFFE ID if using SPIFFE/SPIRE.
-    pub spiffe_id: Option<String>,
+    pub spiffe_id: Option<SpiffeId>,
 
     /// Certificate fingerprint for audit logging.
-    pub cert_fingerprint: Option<String>,
+    pub cert_fingerprint: Option<CertificateFingerprint>,
 }
 
 impl ServiceIdentity {
     /// Create a new service identity.
-    pub fn new(service_id: impl Into<String>) -> Self {
+    pub fn new(service_id: impl Into<ServiceId>) -> Self {
         Self {
             service_id: service_id.into(),
             spiffe_id: None,
@@ -30,14 +32,16 @@ impl ServiceIdentity {
     }
 
     /// Create a service identity from a SPIFFE ID.
-    pub fn from_spiffe(spiffe_id: impl Into<String>) -> Self {
+    pub fn from_spiffe(spiffe_id: impl Into<SpiffeId>) -> Self {
         let spiffe = spiffe_id.into();
         // Extract service name from spiffe://trust-domain/path/to/service
         let service_id = spiffe
+            .as_str()
             .strip_prefix("spiffe://")
             .and_then(|s| s.rsplit('/').next())
-            .unwrap_or(&spiffe)
-            .to_string();
+            .unwrap_or(spiffe.as_str())
+            .to_string()
+            .into();
 
         Self {
             service_id,
@@ -48,7 +52,7 @@ impl ServiceIdentity {
 
     /// Set the certificate fingerprint.
     #[must_use]
-    pub fn with_fingerprint(mut self, fingerprint: impl Into<String>) -> Self {
+    pub fn with_fingerprint(mut self, fingerprint: impl Into<CertificateFingerprint>) -> Self {
         self.cert_fingerprint = Some(fingerprint.into());
         self
     }
@@ -58,24 +62,24 @@ impl ServiceIdentity {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UserIdentity {
     /// User's unique identifier (sub claim).
-    pub user_id: String,
+    pub user_id: UserId,
 
     /// Optional email address.
     pub email: Option<String>,
 
     /// Roles assigned to the user.
-    pub roles: Vec<String>,
+    pub roles: Vec<RoleId>,
 
     /// Optional organization/tenant ID.
-    pub org_id: Option<String>,
+    pub org_id: Option<OrgId>,
 
     /// JWT ID for audit logging.
-    pub jti: Option<String>,
+    pub jti: Option<JwtId>,
 }
 
 impl UserIdentity {
     /// Create a new user identity.
-    pub fn new(user_id: impl Into<String>) -> Self {
+    pub fn new(user_id: impl Into<UserId>) -> Self {
         Self {
             user_id: user_id.into(),
             email: None,
@@ -94,27 +98,27 @@ impl UserIdentity {
 
     /// Set the roles.
     #[must_use]
-    pub fn with_roles(mut self, roles: Vec<String>) -> Self {
+    pub fn with_roles(mut self, roles: Vec<RoleId>) -> Self {
         self.roles = roles;
         self
     }
 
     /// Set the organization ID.
     #[must_use]
-    pub fn with_org_id(mut self, org_id: impl Into<String>) -> Self {
+    pub fn with_org_id(mut self, org_id: impl Into<OrgId>) -> Self {
         self.org_id = Some(org_id.into());
         self
     }
 
     /// Set the JWT ID.
     #[must_use]
-    pub fn with_jti(mut self, jti: impl Into<String>) -> Self {
+    pub fn with_jti(mut self, jti: impl Into<JwtId>) -> Self {
         self.jti = Some(jti.into());
         self
     }
 
     /// Check if user has a specific role.
-    pub fn has_role(&self, role: &str) -> bool {
+    pub fn has_role(&self, role: &RoleId) -> bool {
         self.roles.iter().any(|r| r == role)
     }
 }
@@ -167,7 +171,7 @@ impl VerifiedIdentity {
         self.user
             .as_ref()
             .map(|u| u.user_id.as_str())
-            .unwrap_or(&self.service.service_id)
+            .unwrap_or(self.service.service_id.as_str())
     }
 
     fn now() -> u64 {
@@ -195,15 +199,15 @@ mod tests {
         assert_eq!(svc.service_id, "runtime");
         assert_eq!(
             svc.spiffe_id,
-            Some("spiffe://example.org/ns/prod/sa/runtime".to_string())
+            Some("spiffe://example.org/ns/prod/sa/runtime".into())
         );
     }
 
     #[test]
     fn test_user_identity_roles() {
-        let user = UserIdentity::new("user-123").with_roles(vec!["admin".to_string()]);
-        assert!(user.has_role("admin"));
-        assert!(!user.has_role("viewer"));
+        let user = UserIdentity::new("user-123").with_roles(vec!["admin".into()]);
+        assert!(user.has_role(&RoleId::new("admin")));
+        assert!(!user.has_role(&RoleId::new("viewer")));
     }
 
     #[test]

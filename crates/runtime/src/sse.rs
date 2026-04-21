@@ -759,7 +759,7 @@ pub async fn execute_streaming_job(
         .seeds
         .iter()
         .map(|s| crate::templates::SeedFact {
-            id: s.id.clone(),
+            id: s.id.clone().into(),
             content: s.content.clone(),
         })
         .collect();
@@ -825,7 +825,7 @@ pub async fn execute_ask_stream(
 
     let mut seeds = Vec::with_capacity(1 + request.sources.len());
     seeds.push(crate::templates::SeedFact {
-        id: "ask:question".to_string(),
+        id: "ask:question".into(),
         content: request.question.clone(),
     });
 
@@ -842,7 +842,7 @@ pub async fn execute_ask_stream(
             "content": source.content,
         });
         seeds.push(crate::templates::SeedFact {
-            id: format!("ask:source:{}", index + 1),
+            id: format!("ask:source:{}", index + 1).into(),
             content: payload.to_string(),
         });
     }

@@ -85,7 +85,7 @@ mod tests {
 
     fn make_envelope(event_id: &str) -> ExperienceEventEnvelope {
         let event = ExperienceEvent::OutcomeRecorded {
-            chain_id: "chain-1".to_string(),
+            chain_id: "chain-1".into(),
             step: DecisionStep::Planning,
             passed: true,
             stop_reason: None,
@@ -149,7 +149,7 @@ mod tests {
     #[test]
     fn tenant_id_with_injection_rejected() {
         let mut envelope = make_envelope("evt-1");
-        envelope.tenant_id = Some("tenant'; DROP TABLE event;--".to_string());
+        envelope.tenant_id = Some("tenant'; DROP TABLE event;--".into());
         let err = validate_envelope(&envelope).unwrap_err();
         assert!(err.to_string().contains("tenant_id"));
         assert!(err.to_string().contains("invalid characters"));
@@ -158,7 +158,7 @@ mod tests {
     #[test]
     fn correlation_id_with_injection_rejected() {
         let mut envelope = make_envelope("evt-1");
-        envelope.correlation_id = Some("corr\x00id".to_string());
+        envelope.correlation_id = Some("corr\x00id".into());
         let err = validate_envelope(&envelope).unwrap_err();
         assert!(err.to_string().contains("correlation_id"));
     }

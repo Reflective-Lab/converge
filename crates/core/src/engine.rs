@@ -22,7 +22,7 @@ use crate::agent::{Suggestor, SuggestorId};
 use crate::context::{ContextKey, ContextState, Fact, ProposedFact, ValidationError};
 use crate::effect::AgentEffect;
 use crate::error::ConvergeError;
-use crate::experience_store::ExperienceEvent;
+use crate::experience_store::{BudgetResource, ExperienceEvent};
 use crate::gates::StopReason;
 use crate::gates::hitl::{GateDecision, GateEvent, GateRequest, GateVerdict, TimeoutPolicy};
 use crate::gates::promotion::PromotionGate;
@@ -32,9 +32,9 @@ use crate::invariant::{Invariant, InvariantError, InvariantId, InvariantRegistry
 use crate::kernel_boundary::DecisionStep;
 use crate::truth::{CriterionEvaluator, CriterionOutcome, CriterionResult};
 use crate::types::{
-    Actor, CaptureContext, ContentHash, Draft, EvidenceRef, GateId, LocalTrace, ObservationId,
-    ObservationProvenance, Proposal, ProposalId, ProposedContent, ProposedContentKind, TraceLink,
-    TypesRootIntent,
+    Actor, BackendId, CaptureContext, ChainId, ContentHash, Draft, EvidenceRef, GateId, LocalTrace,
+    ObservationId, ObservationProvenance, PackId, Proposal, ProposalId, ProposedContent,
+    ProposedContentKind, TraceLink, TypesRootIntent,
 };
 
 /// Callback trait for streaming fact emissions during convergence.
@@ -203,7 +203,7 @@ pub struct Engine {
     /// Registered suggestors in order of registration.
     agents: Vec<Box<dyn Suggestor>>,
     /// Optional pack ownership for registered suggestors.
-    agent_packs: Vec<Option<String>>,
+    agent_packs: Vec<Option<PackId>>,
     /// Dependency index: `ContextKey` → `SuggestorId`s interested in that key.
     index: HashMap<ContextKey, Vec<SuggestorId>>,
     /// Suggestors with no dependencies (run on every cycle).
@@ -219,12 +219,12 @@ pub struct Engine {
     /// Optional HITL policy for gating proposals.
     hitl_policy: Option<EngineHitlPolicy>,
     /// Optional active pack filter for the current run.
-    active_packs: Option<HashSet<String>>,
+    active_packs: Option<HashSet<PackId>>,
     /// Optional event observer for audit trail capture.
     event_observer: Option<Arc<dyn ExperienceEventObserver>>,
     /// Proposal IDs that were HITL-rejected. Re-proposals with the same ID
     /// are silently discarded (a human already said no).
-    rejected_proposals: HashSet<String>,
+    rejected_proposals: HashSet<ProposalId>,
 }
 
 impl Default for Engine {
@@ -448,7 +448,7 @@ impl Engine {
     /// suggestors may participate in a run.
     pub fn register_suggestor_in_pack(
         &mut self,
-        pack_id: impl Into<String>,
+        pack_id: impl Into<PackId>,
         suggestor: impl Suggestor + 'static,
     ) -> SuggestorId {
         self.register_internal(Some(pack_id.into()), suggestor)
@@ -456,7 +456,7 @@ impl Engine {
 
     fn register_internal(
         &mut self,
-        pack_id: Option<String>,
+        pack_id: Option<PackId>,
         suggestor: impl Suggestor + 'static,
     ) -> SuggestorId {
         let id = SuggestorId(self.next_id);
@@ -491,7 +491,7 @@ impl Engine {
     pub fn set_active_packs<I, S>(&mut self, pack_ids: I)
     where
         I: IntoIterator<Item = S>,
-        S: Into<String>,
+        S: Into<PackId>,
     {
         let packs = pack_ids.into_iter().map(Into::into).collect::<HashSet<_>>();
         self.active_packs = (!packs.is_empty()).then_some(packs);
@@ -822,23 +822,29 @@ impl Engine {
 
     fn pack_validation_summary(summary: &crate::types::ValidationSummary) -> FactValidationSummary {
         FactValidationSummary::new(
-            summary.checks_passed.clone(),
-            summary.checks_skipped.clone(),
+            summary
+                .checks_passed
+                .iter()
+                .cloned()
+                .map(Into::into)
+                .collect(),
+            summary
+                .checks_skipped
+                .iter()
+                .cloned()
+                .map(Into::into)
+                .collect(),
             summary.warnings.clone(),
         )
     }
 
     fn pack_evidence_ref(evidence: &crate::types::EvidenceRef) -> FactEvidenceRef {
         match evidence {
-            crate::types::EvidenceRef::Observation(id) => {
-                FactEvidenceRef::Observation(id.as_str().to_string())
-            }
+            crate::types::EvidenceRef::Observation(id) => FactEvidenceRef::Observation(id.clone()),
             crate::types::EvidenceRef::HumanApproval(id) => {
-                FactEvidenceRef::HumanApproval(id.as_str().to_string())
+                FactEvidenceRef::HumanApproval(id.clone())
             }
-            crate::types::EvidenceRef::Derived(id) => {
-                FactEvidenceRef::Derived(id.as_str().to_string())
-            }
+            crate::types::EvidenceRef::Derived(id) => FactEvidenceRef::Derived(id.clone()),
         }
     }
 
@@ -847,7 +853,7 @@ impl Engine {
             crate::types::TraceLink::Local(local) => FactTraceLink::Local(FactLocalTrace::new(
                 local.trace_id.clone(),
                 local.span_id.clone(),
-                local.parent_span_id.clone(),
+                local.parent_span_id.clone().map(Into::into),
                 local.sampled,
             )),
             crate::types::TraceLink::Remote(remote) => FactTraceLink::Remote(FactRemoteTrace::new(
@@ -861,8 +867,8 @@ impl Engine {
 
     fn pack_promotion_record(record: &crate::types::PromotionRecord) -> FactPromotionRecord {
         FactPromotionRecord::new(
-            record.gate_id.as_str(),
-            record.policy_version_hash.to_hex(),
+            record.gate_id.clone(),
+            record.policy_version_hash.clone(),
             Self::pack_actor(&record.approver),
             Self::pack_validation_summary(&record.validation_summary),
             record
@@ -871,7 +877,7 @@ impl Engine {
                 .map(Self::pack_evidence_ref)
                 .collect(),
             Self::pack_trace_link(&record.trace_link),
-            record.promoted_at.as_str(),
+            record.promoted_at.clone(),
         )
     }
 
@@ -892,7 +898,7 @@ impl Engine {
         );
 
         let draft = Proposal::<Draft>::new(
-            ProposalId::new(&proposal.id),
+            ProposalId::new(proposal.id.as_str()),
             ProposedContent::new(
                 self.proposal_kind_for(proposal.key),
                 proposal.content.clone(),
@@ -926,10 +932,10 @@ impl Engine {
 
         Ok(crate::context::new_fact_with_promotion(
             proposal.key,
-            proposal.id.clone(),
+            crate::context::FactId::new(proposal.id.as_str()),
             governed.content().content.clone(),
             Self::pack_promotion_record(governed.promotion_record()),
-            governed.created_at().as_str(),
+            governed.created_at().clone(),
         ))
     }
 
@@ -950,7 +956,7 @@ impl Engine {
                         ExperienceEvent::FactPromoted {
                             proposal_id: proposal.id.clone(),
                             fact_id: fact.id.clone(),
-                            promoted_by: "context-input".to_string(),
+                            promoted_by: "context-input".into(),
                             reason: "staged context input promoted".to_string(),
                             requires_human: false,
                         },
@@ -1001,9 +1007,9 @@ impl Engine {
                         emit_experience_event(
                             event_observer,
                             ExperienceEvent::FactPromoted {
-                                proposal_id,
+                                proposal_id: proposal_id.clone(),
                                 fact_id: fact.id.clone(),
-                                promoted_by: promoted_by.clone(),
+                                promoted_by: promoted_by.clone().into(),
                                 reason: "proposal validated and promoted in engine merge"
                                     .to_string(),
                                 requires_human: false,
@@ -1615,14 +1621,14 @@ fn emit_terminal_event(
                 .filter(|outcome| outcome.criterion.required)
                 .all(|outcome| matches!(outcome.result, CriterionResult::Met { .. }));
             observer.on_event(&ExperienceEvent::OutcomeRecorded {
-                chain_id: intent.id.as_str().to_string(),
+                chain_id: ChainId::new(intent.id.as_str()),
                 step: DecisionStep::Planning,
                 passed,
-                stop_reason: Some(stop_reason_label(&result.stop_reason)),
+                stop_reason: Some(result.stop_reason.clone()),
                 latency_ms: None,
                 tokens: None,
                 cost_microdollars: None,
-                backend: Some("converge-engine".to_string()),
+                backend: Some(BackendId::new("converge-engine")),
                 metadata: Default::default(),
             });
         }
@@ -1630,49 +1636,31 @@ fn emit_terminal_event(
             let stop_reason = error.stop_reason();
             if let ConvergeError::BudgetExhausted { kind } = error {
                 observer.on_event(&ExperienceEvent::BudgetExceeded {
-                    chain_id: intent.id.as_str().to_string(),
-                    resource: "engine-budget".to_string(),
+                    chain_id: ChainId::new(intent.id.as_str()),
+                    resource: BudgetResource::EngineBudget,
                     limit: kind.clone(),
                     observed: None,
                 });
             }
             observer.on_event(&ExperienceEvent::OutcomeRecorded {
-                chain_id: intent.id.as_str().to_string(),
+                chain_id: ChainId::new(intent.id.as_str()),
                 step: DecisionStep::Planning,
                 passed: false,
-                stop_reason: Some(stop_reason_label(&stop_reason)),
+                stop_reason: Some(stop_reason),
                 latency_ms: None,
                 tokens: None,
                 cost_microdollars: None,
-                backend: Some("converge-engine".to_string()),
+                backend: Some(BackendId::new("converge-engine")),
                 metadata: Default::default(),
             });
         }
     }
 }
 
-fn stop_reason_label(stop_reason: &StopReason) -> String {
-    match stop_reason {
-        StopReason::Converged => "converged".to_string(),
-        StopReason::CriteriaMet { .. } => "criteria-met".to_string(),
-        StopReason::UserCancelled => "user-cancelled".to_string(),
-        StopReason::HumanInterventionRequired { .. } => "human-intervention-required".to_string(),
-        StopReason::CycleBudgetExhausted { .. } => "cycle-budget-exhausted".to_string(),
-        StopReason::FactBudgetExhausted { .. } => "fact-budget-exhausted".to_string(),
-        StopReason::TokenBudgetExhausted { .. } => "token-budget-exhausted".to_string(),
-        StopReason::TimeBudgetExhausted { .. } => "time-budget-exhausted".to_string(),
-        StopReason::InvariantViolated { .. } => "invariant-violated".to_string(),
-        StopReason::PromotionRejected { .. } => "promotion-rejected".to_string(),
-        StopReason::Error { .. } => "error".to_string(),
-        StopReason::AgentRefused { .. } => "agent-refused".to_string(),
-        StopReason::HitlGatePending { .. } => "hitl-gate-pending".to_string(),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::context::ProposedFact;
+    use crate::context::{ProposalId, ProposedFact};
     use crate::truth::{CriterionEvaluator, CriterionResult};
     use crate::{Criterion, TypesBudgets, TypesIntentId, TypesIntentKind, TypesRootIntent};
     use std::sync::Mutex;
@@ -1681,7 +1669,7 @@ mod tests {
 
     fn proposal(
         key: ContextKey,
-        id: impl Into<String>,
+        id: impl Into<ProposalId>,
         content: impl Into<String>,
         provenance: impl Into<String>,
     ) -> ProposedFact {
@@ -1850,7 +1838,7 @@ mod tests {
         ) -> CriterionResult {
             CriterionResult::Blocked {
                 reason: "human approval required".to_string(),
-                approval_ref: Some("approval:test".to_string()),
+                approval_ref: Some("approval:test".into()),
             }
         }
     }

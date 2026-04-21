@@ -1,7 +1,7 @@
 // Copyright 2024-2026 Reflective Labs
 
 use anyhow::{Context as _, Result, anyhow};
-use converge_pack::{AgentEffect, Context, ContextKey, ProposedFact, Suggestor};
+use converge_pack::{AgentEffect, Context, ContextKey, ProposalId, ProposedFact, Suggestor};
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -18,7 +18,7 @@ fn proposal(
     id: impl Into<String>,
     content: impl Into<String>,
 ) -> ProposedFact {
-    ProposedFact::new(key, id, content, provenance)
+    ProposedFact::new(key, ProposalId::new(id.into()), content, provenance)
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

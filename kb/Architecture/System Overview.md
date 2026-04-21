@@ -85,6 +85,8 @@ Key properties:
 - suggestors never call each other
 - proposals become facts only through the engine
 - deterministic ordering follows registration order
+- semantic IDs, hashes, and timestamps cross the public contract as typed values
+- wildcard matching at the runtime perimeter uses explicit selector types, not magic `"*"` strings
 - budgets and typed stop reasons make termination explicit
 
 ## Built-In Packs vs Other Suggestors

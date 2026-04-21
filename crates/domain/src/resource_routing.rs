@@ -801,11 +801,11 @@ mod tests {
         assert_eq!(r1.cycles, r2.cycles);
 
         // Same assignments (compare content, ignoring timestamps that may differ across runs)
-        let content = |facts: &[converge_core::Fact]| -> Vec<(String, String)> {
+        let content = |facts: &[converge_core::Fact]| {
             facts
                 .iter()
                 .map(|f| (f.id.clone(), f.content.clone()))
-                .collect()
+                .collect::<Vec<_>>()
         };
         assert_eq!(
             content(r1.context.get(ContextKey::Strategies)),

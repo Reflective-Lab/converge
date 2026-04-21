@@ -13,6 +13,8 @@
 //! - Constraints should be typed (not just String) - uses ConstraintKind enum
 
 use serde::{Deserialize, Serialize};
+
+use super::id::CriterionId;
 use typed_builder::TypedBuilder;
 
 // ============================================================================
@@ -77,10 +79,6 @@ impl IntentId {
     }
 
     /// Generates a new unique intent ID.
-    #[deprecated(
-        since = "2.0.0",
-        note = "Use converge-runtime with Randomness trait for random ID generation"
-    )]
     #[must_use]
     pub fn generate() -> Self {
         use std::time::{SystemTime, UNIX_EPOCH};
@@ -226,7 +224,7 @@ impl FrameConstraint {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Criterion {
     /// Criterion identifier.
-    pub id: String,
+    pub id: CriterionId,
     /// Human-readable description.
     pub description: String,
     /// Whether this criterion is required for success.
@@ -235,7 +233,7 @@ pub struct Criterion {
 
 impl Criterion {
     /// Create a new criterion.
-    pub fn new(id: impl Into<String>, description: impl Into<String>, required: bool) -> Self {
+    pub fn new(id: impl Into<CriterionId>, description: impl Into<String>, required: bool) -> Self {
         Self {
             id: id.into(),
             description: description.into(),
@@ -244,12 +242,12 @@ impl Criterion {
     }
 
     /// Create a required criterion.
-    pub fn required(id: impl Into<String>, description: impl Into<String>) -> Self {
+    pub fn required(id: impl Into<CriterionId>, description: impl Into<String>) -> Self {
         Self::new(id, description, true)
     }
 
     /// Create an optional criterion.
-    pub fn optional(id: impl Into<String>, description: impl Into<String>) -> Self {
+    pub fn optional(id: impl Into<CriterionId>, description: impl Into<String>) -> Self {
         Self::new(id, description, false)
     }
 }

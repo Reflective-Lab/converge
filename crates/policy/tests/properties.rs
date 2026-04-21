@@ -3,6 +3,8 @@ mod common;
 use ed25519_dalek::SigningKey;
 use proptest::prelude::*;
 
+use converge_core::AuthorityLevel;
+use converge_pack::ResourceId;
 use converge_policy::{
     PolicyOutcome,
     delegation::{IssueDelegationReq, issue, verify},
@@ -75,7 +77,7 @@ proptest! {
 
         let mut req = make_request("supervisory", "commit");
         req.principal.id = "agent:test".into();
-        req.resource.id = format!("flow:test-{resource_suffix}");
+        req.resource.id = ResourceId::new(format!("flow:test-{resource_suffix}"));
         req.context.as_mut().expect("context should exist").amount = Some(amount);
 
         let issued = issue(
@@ -83,8 +85,8 @@ proptest! {
             IssueDelegationReq {
                 sub: req.principal.id.clone(),
                 issuer: "human:approver".into(),
-                delegated_authority: "supervisory".into(),
-                actions: vec![req.action.clone()],
+                delegated_authority: AuthorityLevel::Supervisory,
+                actions: vec![req.action],
                 resource_pattern: "flow:test-*".into(),
                 max_amount: Some(max_amount),
                 nbf_epoch: 0,
@@ -111,7 +113,7 @@ proptest! {
 
         let mut req = make_request("supervisory", "commit");
         req.principal.id = "agent:test".into();
-        req.resource.id = format!("flow:test-{resource_suffix}");
+        req.resource.id = ResourceId::new(format!("flow:test-{resource_suffix}"));
         req.context.as_mut().expect("context should exist").amount = Some(max_amount + overage);
 
         let issued = issue(
@@ -119,8 +121,8 @@ proptest! {
             IssueDelegationReq {
                 sub: req.principal.id.clone(),
                 issuer: "human:approver".into(),
-                delegated_authority: "supervisory".into(),
-                actions: vec![req.action.clone()],
+                delegated_authority: AuthorityLevel::Supervisory,
+                actions: vec![req.action],
                 resource_pattern: "flow:test-*".into(),
                 max_amount: Some(max_amount),
                 nbf_epoch: 0,

@@ -94,9 +94,9 @@ pub use boundary::{AuthorityGrant, AuthorityGrantor, AuthorityScope, constitutio
 
 // Flow gate authorization contract
 pub use authorization::{
-    AllowAllFlowGateAuthorizer, FlowAction, FlowGateAuthorizer, FlowGateContext, FlowGateDecision,
-    FlowGateError, FlowGateInput, FlowGateOutcome, FlowGatePrincipal, FlowGateResource,
-    RejectAllFlowGateAuthorizer,
+    AllowAllFlowGateAuthorizer, AuthorityLevel, FlowAction, FlowGateAuthorizer, FlowGateContext,
+    FlowGateDecision, FlowGateError, FlowGateInput, FlowGateOutcome, FlowGatePrincipal,
+    FlowGateResource, FlowPhase, RejectAllFlowGateAuthorizer,
 };
 
 // HITL gate types

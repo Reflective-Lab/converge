@@ -14,6 +14,8 @@ use thiserror::Error;
 
 use crate::decision::{PolicyDecision, PolicyOutcome};
 use crate::types::{ContextIn, DecideRequest};
+use converge_core::{AuthorityLevel, FlowAction};
+use converge_pack::{DomainId, GateId, PolicyVersionId, ResourceKind};
 
 #[derive(Debug, Error)]
 pub enum EngineError {
@@ -70,17 +72,20 @@ impl PolicyEngine {
         let p_attrs: HashMap<String, RestrictedExpression> = HashMap::from([
             (
                 "authority".to_string(),
-                RestrictedExpression::new_string(req.principal.authority.clone()),
+                RestrictedExpression::new_string(req.principal.authority.as_str().to_string()),
             ),
             (
                 "policy_version".to_string(),
                 RestrictedExpression::new_string(
-                    req.principal.policy_version.clone().unwrap_or_default(),
+                    req.principal
+                        .policy_version
+                        .as_ref()
+                        .map_or_else(String::new, PolicyVersionId::to_string),
                 ),
             ),
             (
                 "domains".to_string(),
-                string_set(req.principal.domains.clone()),
+                string_set(req.principal.domains.iter().map(DomainId::to_string)),
             ),
         ]);
         let principal_entity = Entity::new(p_uid.clone(), p_attrs, HashSet::new());
@@ -96,16 +101,29 @@ impl PolicyEngine {
             (
                 "resource_type".to_string(),
                 RestrictedExpression::new_string(
-                    req.resource.resource_type.clone().unwrap_or_default(),
+                    req.resource
+                        .resource_type
+                        .as_ref()
+                        .map_or_else(String::new, ResourceKind::to_string),
                 ),
             ),
             (
                 "phase".to_string(),
-                RestrictedExpression::new_string(req.resource.phase.clone().unwrap_or_default()),
+                RestrictedExpression::new_string(
+                    req.resource
+                        .phase
+                        .map_or_else(String::new, |phase| phase.as_str().to_string()),
+                ),
             ),
             (
                 "gates_passed".to_string(),
-                string_set(req.resource.gates_passed.clone().unwrap_or_default()),
+                string_set(
+                    req.resource
+                        .gates_passed
+                        .iter()
+                        .flatten()
+                        .map(GateId::to_string),
+                ),
             ),
         ]);
         let resource_entity = Entity::new(r_uid.clone(), r_attrs, HashSet::new());
@@ -120,14 +138,14 @@ impl PolicyEngine {
             "amount": ctx.amount.unwrap_or(0),
             "human_approval_present": ctx.human_approval_present.unwrap_or(false),
             "required_gates_met": ctx.required_gates_met.unwrap_or(false),
-            "principal_domains": req.principal.domains.clone(),
-            "gates_passed": req.resource.gates_passed.clone().unwrap_or_default(),
+            "principal_domains": req.principal.domains.iter().map(DomainId::as_str).collect::<Vec<_>>(),
+            "gates_passed": req.resource.gates_passed.iter().flatten().map(GateId::as_str).collect::<Vec<_>>(),
         });
         let context = Context::from_json_value(ctx_json, None)
             .map_err(|e| EngineError::ContextBuild(e.to_string()))?;
 
         // Build action UID
-        let action_uid: EntityUid = format!("Action::\"{}\"", req.action)
+        let action_uid: EntityUid = format!("Action::\"{}\"", req.action.as_str())
             .parse()
             .map_err(|e: cedar_policy::ParseErrors| EngineError::RequestBuild(e.to_string()))?;
 
@@ -139,7 +157,7 @@ impl PolicyEngine {
         let outcome = match cedar_decision {
             cedar_policy::Decision::Allow => PolicyOutcome::Promote,
             cedar_policy::Decision::Deny => {
-                if should_escalate(&req.action, &req.principal.authority, &ctx) {
+                if should_escalate(req.action, req.principal.authority, &ctx) {
                     PolicyOutcome::Escalate
                 } else {
                     PolicyOutcome::Reject
@@ -162,13 +180,13 @@ impl PolicyEngine {
             outcome,
             reason,
             req.principal.id.clone(),
-            req.action.clone(),
+            req.action,
             req.resource.id.clone(),
         ))
     }
 }
 
-fn string_set(values: Vec<String>) -> RestrictedExpression {
+fn string_set(values: impl IntoIterator<Item = String>) -> RestrictedExpression {
     RestrictedExpression::new_set(values.into_iter().map(RestrictedExpression::new_string))
 }
 
@@ -178,12 +196,12 @@ fn string_set(values: Vec<String>) -> RestrictedExpression {
 /// - The action is a commitment-level action (commit, promote)
 /// - The principal has authority that could be unlocked with human approval
 /// - Human approval is not yet present
-fn should_escalate(action: &str, authority: &str, ctx: &ContextIn) -> bool {
-    let commitment_actions = ["commit", "promote"];
-    let escalatable_authorities = ["supervisory", "participatory"];
-
-    commitment_actions.contains(&action)
-        && escalatable_authorities.contains(&authority)
+fn should_escalate(action: FlowAction, authority: AuthorityLevel, ctx: &ContextIn) -> bool {
+    matches!(action, FlowAction::Commit | FlowAction::Promote)
+        && matches!(
+            authority,
+            AuthorityLevel::Supervisory | AuthorityLevel::Participatory
+        )
         && !ctx.human_approval_present.unwrap_or(false)
 }
 
@@ -191,6 +209,8 @@ fn should_escalate(action: &str, authority: &str, ctx: &ContextIn) -> bool {
 mod tests {
     use super::*;
     use crate::types::{PrincipalIn, ResourceIn};
+    use converge_core::FlowPhase;
+    use converge_pack::{DomainId, GateId, PolicyVersionId, ResourceKind};
 
     fn test_engine() -> PolicyEngine {
         let policy = std::fs::read_to_string("policies/policy.cedar")
@@ -199,25 +219,25 @@ mod tests {
     }
 
     fn make_request(
-        authority: &str,
-        action: &str,
+        authority: AuthorityLevel,
+        action: FlowAction,
         amount: i64,
         human_approval: bool,
     ) -> DecideRequest {
         DecideRequest {
             principal: PrincipalIn {
                 id: "agent:test".into(),
-                authority: authority.into(),
-                domains: vec!["test".into()],
-                policy_version: None,
+                authority,
+                domains: vec![DomainId::new("test")],
+                policy_version: None::<PolicyVersionId>,
             },
             resource: ResourceIn {
                 id: "flow:test-001".into(),
-                resource_type: Some("quote".into()),
-                phase: Some("convergence".into()),
-                gates_passed: Some(vec!["evidence".into()]),
+                resource_type: Some(ResourceKind::new("quote")),
+                phase: Some(FlowPhase::Convergence),
+                gates_passed: Some(vec![GateId::new("evidence")]),
             },
-            action: action.into(),
+            action,
             context: Some(ContextIn {
                 commitment_type: Some("quote".into()),
                 amount: Some(amount),
@@ -231,7 +251,7 @@ mod tests {
     #[test]
     fn advisory_can_propose() {
         let engine = test_engine();
-        let req = make_request("advisory", "propose", 5000, false);
+        let req = make_request(AuthorityLevel::Advisory, FlowAction::Propose, 5000, false);
         let decision = engine.evaluate(&req).unwrap();
         assert_eq!(decision.outcome, PolicyOutcome::Promote);
     }
@@ -239,7 +259,7 @@ mod tests {
     #[test]
     fn advisory_cannot_commit() {
         let engine = test_engine();
-        let req = make_request("advisory", "commit", 5000, false);
+        let req = make_request(AuthorityLevel::Advisory, FlowAction::Commit, 5000, false);
         let decision = engine.evaluate(&req).unwrap();
         assert_ne!(decision.outcome, PolicyOutcome::Promote);
     }
@@ -247,7 +267,7 @@ mod tests {
     #[test]
     fn supervisory_can_commit_with_approval() {
         let engine = test_engine();
-        let req = make_request("supervisory", "commit", 25000, true);
+        let req = make_request(AuthorityLevel::Supervisory, FlowAction::Commit, 25000, true);
         let decision = engine.evaluate(&req).unwrap();
         assert_eq!(decision.outcome, PolicyOutcome::Promote);
     }
@@ -255,7 +275,12 @@ mod tests {
     #[test]
     fn supervisory_escalates_without_approval() {
         let engine = test_engine();
-        let req = make_request("supervisory", "commit", 25000, false);
+        let req = make_request(
+            AuthorityLevel::Supervisory,
+            FlowAction::Commit,
+            25000,
+            false,
+        );
         let decision = engine.evaluate(&req).unwrap();
         assert_eq!(decision.outcome, PolicyOutcome::Escalate);
     }
@@ -263,7 +288,7 @@ mod tests {
     #[test]
     fn sovereign_can_commit_autonomously() {
         let engine = test_engine();
-        let req = make_request("sovereign", "commit", 25000, false);
+        let req = make_request(AuthorityLevel::Sovereign, FlowAction::Commit, 25000, false);
         let decision = engine.evaluate(&req).unwrap();
         assert_eq!(decision.outcome, PolicyOutcome::Promote);
     }

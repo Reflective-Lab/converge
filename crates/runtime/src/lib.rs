@@ -45,6 +45,7 @@ pub mod error;
 pub mod execution;
 pub mod handlers;
 pub mod pilot;
+mod semantic;
 pub mod sse;
 
 // Public modules for use by converge-app

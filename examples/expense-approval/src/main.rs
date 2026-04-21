@@ -7,10 +7,10 @@
 //! gate decisions projected from flow state.
 
 use converge_kernel::{
-    AgentEffect, Context, ContextKey, ContextState, Engine, EngineHitlPolicy, FlowAction,
-    FlowGateAuthorizer, FlowGateContext, FlowGateInput, FlowGateOutcome, FlowGatePrincipal,
-    FlowGateResource, GateDecision, ProposedFact, RunResult, Suggestor, TimeoutAction,
-    TimeoutPolicy,
+    AgentEffect, AuthorityLevel, Context, ContextKey, ContextState, Engine, EngineHitlPolicy,
+    FlowAction, FlowGateAuthorizer, FlowGateContext, FlowGateInput, FlowGateOutcome,
+    FlowGatePrincipal, FlowGateResource, FlowPhase, GateDecision, ProposedFact, RunResult,
+    Suggestor, TimeoutAction, TimeoutPolicy,
 };
 use converge_policy::PolicyEngine;
 use std::path::PathBuf;
@@ -58,15 +58,15 @@ fn expense_policy_input(
     FlowGateInput {
         principal: FlowGatePrincipal {
             id: "agent:finance-supervisor".into(),
-            authority: "supervisory".into(),
+            authority: AuthorityLevel::Supervisory,
             domains: vec!["finance".into()],
             policy_version: Some("expense_v1".into()),
         },
         resource: FlowGateResource {
             id: "expense:demo-001".into(),
             kind: "expense".into(),
-            phase: "commitment".into(),
-            gates_passed,
+            phase: FlowPhase::Commitment,
+            gates_passed: gates_passed.into_iter().map(Into::into).collect(),
         },
         action,
         context: FlowGateContext {
@@ -385,7 +385,7 @@ impl Suggestor for ApprovalSimulationAgent {
 
             let proposal = ProposedFact {
                 key: ContextKey::Proposals,
-                id: format!("{current}-approval"),
+                id: format!("{current}-approval").into(),
                 content: format!("Approved by {current}"),
                 confidence: 0.95,
                 provenance: format!("{current} approval agent"),

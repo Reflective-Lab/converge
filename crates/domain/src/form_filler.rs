@@ -393,7 +393,7 @@ impl Suggestor for ProposalEmitterAgent {
             .filter(|field| !field.normalized_value.trim().is_empty())
             .map(|field| ProposedFact {
                 key: ContextKey::Proposals,
-                id: format!("{}{}", PROPOSAL_PREFIX, field.field_id),
+                id: format!("{}{}", PROPOSAL_PREFIX, field.field_id).into(),
                 content: serde_json::json!({
                     "field_id": field.field_id,
                     "value": field.normalized_value,

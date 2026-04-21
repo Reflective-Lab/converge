@@ -227,7 +227,7 @@ impl RetrievalResult {
 
         ProposedFact {
             key: target_key,
-            id: format!("retrieved-{}", self.id),
+            id: format!("retrieved-{}", self.id).into(),
             content: self.content.clone(),
             confidence: self.final_score,
             provenance,

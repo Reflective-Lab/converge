@@ -34,7 +34,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::context::ContextState;
+use crate::context::{ContextState, FactId};
 
 /// The class of an invariant determines when it's checked and how violations are handled.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -81,7 +81,7 @@ pub struct Violation {
     /// Human-readable description of what went wrong.
     pub reason: String,
     /// Optional: which facts contributed to the violation.
-    pub fact_ids: Vec<String>,
+    pub fact_ids: Vec<FactId>,
 }
 
 impl Violation {
@@ -96,7 +96,7 @@ impl Violation {
 
     /// Creates a violation with associated fact IDs.
     #[must_use]
-    pub fn with_facts(reason: impl Into<String>, fact_ids: Vec<String>) -> Self {
+    pub fn with_facts(reason: impl Into<String>, fact_ids: Vec<FactId>) -> Self {
         Self {
             reason: reason.into(),
             fact_ids,

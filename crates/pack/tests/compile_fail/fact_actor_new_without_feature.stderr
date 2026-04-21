@@ -1,0 +1,11 @@
+error[E0599]: no function or associated item named `new` found for struct `FactActor` in the current scope
+ --> tests/compile_fail/fact_actor_new_without_feature.rs:7:24
+  |
+7 |     let _ = FactActor::new("converge-engine", FactActorKind::System);
+  |                        ^^^ function or associated item not found in `FactActor`
+  |
+help: there is a method `ne` with a similar name, but with different arguments
+ --> $RUST/core/src/cmp.rs
+  |
+  |     fn ne(&self, other: &Rhs) -> bool {
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

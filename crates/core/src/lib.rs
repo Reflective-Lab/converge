@@ -200,12 +200,14 @@ mod engine;
 mod error;
 pub mod eval;
 pub mod experience_store;
+pub mod formation;
 pub mod gates;
 pub mod governed_artifact;
 pub mod integrity;
 pub mod invariant;
 pub mod kernel_boundary;
 pub mod model_selection;
+pub mod profile;
 pub mod prompt;
 pub mod recall;
 pub mod root_intent;
@@ -219,6 +221,11 @@ pub mod validation;
 pub use agent::{Suggestor, SuggestorId};
 pub use context::{ContextKey, ContextState, Fact, ProposedFact, ValidationError};
 pub use effect::AgentEffect;
+pub use formation::{
+    DeliberatedFormation, Formation, FormationDecision, FormationKind, FormationOutcome,
+    OpenClawFormation, ScoredFormation, ScoringWeights, StaticFormation,
+};
+pub use profile::{ProfileSnapshot, SuggestorCapability, SuggestorProfile, SuggestorRole};
 
 /// Re-export the Context trait from converge-pack as its canonical name.
 pub use converge_pack::Context;
@@ -229,9 +236,9 @@ pub use engine::{
 pub use error::ConvergeError;
 pub use eval::{Eval, EvalId, EvalOutcome, EvalRegistry, EvalResult};
 pub use experience_store::{
-    ArtifactKind, ArtifactQuery, ContractResultSnapshot, EventQuery, ExperienceEvent,
-    ExperienceEventEnvelope, ExperienceEventKind, ExperienceStore, ExperienceStoreError,
-    ExperienceStoreResult, PolicySnapshot, TimeRange,
+    ArtifactKind, ArtifactQuery, BudgetResource, ContractResultSnapshot, EventQuery,
+    ExperienceEvent, ExperienceEventEnvelope, ExperienceEventKind, ExperienceStore,
+    ExperienceStoreError, ExperienceStoreResult, HypothesisOutcome, PolicySnapshot, TimeRange,
 };
 pub use integrity::{IntegrityProof, LamportClock, MerkleRoot, TrackedContext};
 pub use invariant::{Invariant, InvariantClass, InvariantError, InvariantResult, Violation};
@@ -239,7 +246,10 @@ pub use model_selection::{
     AgentRequirements, ComplianceLevel, CostClass, CostTier, DataSovereignty, Jurisdiction,
     LatencyClass, ModelSelectorTrait, RequiredCapabilities, SelectionCriteria, TaskComplexity,
 };
-pub use prompt::{AgentPrompt, AgentRole, Constraint, OutputContract, PromptContext, PromptFormat};
+pub use prompt::{
+    AgentPrompt, AgentRole, Constraint, OutputContract, OutputFormat, OutputKind, PromptContext,
+    PromptFormat,
+};
 pub use root_intent::{
     Budgets, ConstraintSeverity, IntentConstraint, IntentKind, IntentValidationError, Objective,
     RootIntent, Scope, ScopeConstraint, SuccessCriteria, SuccessCriterion,
@@ -248,7 +258,10 @@ pub use root_intent::{
 pub use truth::{
     CriterionEvaluator, CriterionOutcome, CriterionResult, TruthCatalog, TruthDefinition, TruthKind,
 };
-pub use types::IntentId;
+pub use types::{
+    ApprovalPointId, BackendId, ChainId, ConstraintName, ConstraintValue, CorrelationId,
+    CriterionId, EventId, IntentId, PackId, PolicyId, TenantId, TraceLinkId, TruthId,
+};
 
 // Re-export core capability types for convenience
 pub use capability::{
@@ -419,6 +432,7 @@ pub use gates::{
     // Boundary types (constitutional kernel-platform contract)
     AuthorityGrant,
     AuthorityGrantor,
+    AuthorityLevel,
     AuthorityScope,
     // Validation types
     CheckResult,
@@ -436,6 +450,7 @@ pub use gates::{
     FlowGateOutcome,
     FlowGatePrincipal,
     FlowGateResource,
+    FlowPhase,
     // Gate implementation
     PromotionGate,
     // Trait

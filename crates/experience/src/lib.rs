@@ -26,9 +26,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 
 use converge_core::{
-    ArtifactKind, EventQuery, ExperienceEvent, ExperienceEventEnvelope, ExperienceEventKind,
-    ExperienceStore, ExperienceStoreError, ExperienceStoreResult, LifecycleEvent, ReplayTrace,
-    TimeRange,
+    ArtifactId, ArtifactKind, EventId, EventQuery, ExperienceEvent, ExperienceEventEnvelope,
+    ExperienceEventKind, ExperienceStore, ExperienceStoreError, ExperienceStoreResult,
+    LifecycleEvent, ReplayTrace, TimeRange, TraceLinkId,
 };
 use serde::{Deserialize, Serialize};
 
@@ -36,7 +36,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Default)]
 pub struct InMemoryExperienceStore {
     events: RwLock<Vec<ExperienceEventEnvelope>>,
-    trace_links: RwLock<HashMap<String, ReplayTrace>>,
+    trace_links: RwLock<HashMap<TraceLinkId, ReplayTrace>>,
     next_event_id: AtomicU64,
 }
 
@@ -47,9 +47,9 @@ impl InMemoryExperienceStore {
         Self::default()
     }
 
-    fn next_id(&self) -> String {
+    fn next_id(&self) -> EventId {
         let id = self.next_event_id.fetch_add(1, Ordering::Relaxed);
-        format!("evt-{}", id)
+        EventId::new(format!("evt-{}", id))
     }
 
     fn record_trace_link(&self, event: &ExperienceEvent) {
@@ -104,12 +104,12 @@ impl ExperienceStore for InMemoryExperienceStore {
 
     fn write_artifact_state_transition(
         &self,
-        artifact_id: &str,
+        artifact_id: &ArtifactId,
         artifact_kind: ArtifactKind,
         event: LifecycleEvent,
     ) -> ExperienceStoreResult<()> {
         let payload = ExperienceEvent::ArtifactStateTransitioned {
-            artifact_id: artifact_id.to_string(),
+            artifact_id: artifact_id.clone(),
             artifact_kind,
             event,
         };
@@ -117,7 +117,10 @@ impl ExperienceStore for InMemoryExperienceStore {
         self.append_event(envelope)
     }
 
-    fn get_trace_link(&self, trace_link_id: &str) -> ExperienceStoreResult<Option<ReplayTrace>> {
+    fn get_trace_link(
+        &self,
+        trace_link_id: &TraceLinkId,
+    ) -> ExperienceStoreResult<Option<ReplayTrace>> {
         let map = self
             .trace_links
             .read()
@@ -165,7 +168,10 @@ impl<S: ExperienceStore> StoreObserver<S> {
 
 impl<S: ExperienceStore + 'static> ExperienceEventObserver for StoreObserver<S> {
     fn on_event(&self, event: &ExperienceEvent) {
-        let id = format!("evt-{}", self.next_id.fetch_add(1, Ordering::Relaxed));
+        let id = EventId::new(format!(
+            "evt-{}",
+            self.next_id.fetch_add(1, Ordering::Relaxed)
+        ));
         let envelope = ExperienceEventEnvelope::new(id, event.clone());
         let _ = self.store.append_event(envelope);
     }
@@ -311,7 +317,7 @@ mod tests {
     fn query_filters_by_tenant_and_kind() {
         let store = InMemoryExperienceStore::new();
         let event = ExperienceEvent::OutcomeRecorded {
-            chain_id: "chain-1".to_string(),
+            chain_id: "chain-1".into(),
             step: DecisionStep::Planning,
             passed: true,
             stop_reason: None,
@@ -325,7 +331,7 @@ mod tests {
         store.append_event(envelope).expect("append event");
 
         let query = EventQuery {
-            tenant_id: Some("tenant-a".to_string()),
+            tenant_id: Some("tenant-a".into()),
             kinds: vec![ExperienceEventKind::OutcomeRecorded],
             ..Default::default()
         };
@@ -333,7 +339,7 @@ mod tests {
         assert_eq!(results.len(), 1);
 
         let query_other = EventQuery {
-            tenant_id: Some("tenant-b".to_string()),
+            tenant_id: Some("tenant-b".into()),
             kinds: vec![ExperienceEventKind::OutcomeRecorded],
             ..Default::default()
         };
@@ -357,10 +363,10 @@ mod tests {
             ExperienceEventEnvelope::new(
                 "evt-2",
                 ExperienceEvent::OutcomeRecorded {
-                    chain_id: "chain-1".to_string(),
+                    chain_id: "chain-1".into(),
                     step: DecisionStep::Planning,
                     passed: true,
-                    stop_reason: Some("converged".into()),
+                    stop_reason: Some(converge_core::StopReason::converged()),
                     latency_ms: None,
                     tokens: None,
                     cost_microdollars: None,
@@ -371,8 +377,8 @@ mod tests {
             ExperienceEventEnvelope::new(
                 "evt-3",
                 ExperienceEvent::BudgetExceeded {
-                    chain_id: "chain-1".to_string(),
-                    resource: "engine-budget".into(),
+                    chain_id: "chain-1".into(),
+                    resource: converge_core::BudgetResource::EngineBudget,
                     limit: "max_cycles (20)".into(),
                     observed: None,
                 },
@@ -406,14 +412,14 @@ mod tests {
             replayability: converge_core::Replayability::BestEffort,
         });
         let event = ExperienceEvent::ReplayTraceRecorded {
-            trace_link_id: "trace-1".to_string(),
+            trace_link_id: "trace-1".into(),
             trace_link: trace_link.clone(),
         };
         let envelope = ExperienceEventEnvelope::new("evt-2", event);
         store.append_event(envelope).expect("append event");
 
         let fetched = store
-            .get_trace_link("trace-1")
+            .get_trace_link(&TraceLinkId::new("trace-1"))
             .expect("get trace")
             .expect("trace exists");
         assert_eq!(fetched.replayability(), trace_link.replayability());
@@ -423,7 +429,7 @@ mod tests {
     fn store_rejects_malformed_event_id_at_write_boundary() {
         let store = InMemoryExperienceStore::new();
         let event = ExperienceEvent::OutcomeRecorded {
-            chain_id: "chain-1".to_string(),
+            chain_id: "chain-1".into(),
             step: DecisionStep::Planning,
             passed: true,
             stop_reason: None,
@@ -449,7 +455,7 @@ mod tests {
     fn store_rejects_malformed_tenant_id() {
         let store = InMemoryExperienceStore::new();
         let event = ExperienceEvent::OutcomeRecorded {
-            chain_id: "chain-1".to_string(),
+            chain_id: "chain-1".into(),
             step: DecisionStep::Planning,
             passed: true,
             stop_reason: None,
@@ -469,7 +475,7 @@ mod tests {
     fn store_accepts_valid_event() {
         let store = InMemoryExperienceStore::new();
         let event = ExperienceEvent::OutcomeRecorded {
-            chain_id: "chain-1".to_string(),
+            chain_id: "chain-1".into(),
             step: DecisionStep::Planning,
             passed: true,
             stop_reason: None,
@@ -523,7 +529,7 @@ mod proptest_tests {
     fn arb_outcome_event() -> impl Strategy<Value = ExperienceEvent> {
         (valid_chain_id(), arb_step(), any::<bool>(), arb_metadata()).prop_map(
             |(chain_id, step, passed, metadata)| ExperienceEvent::OutcomeRecorded {
-                chain_id,
+                chain_id: chain_id.into(),
                 step,
                 passed,
                 stop_reason: None,
@@ -540,8 +546,8 @@ mod proptest_tests {
     fn arb_budget_event() -> impl Strategy<Value = ExperienceEvent> {
         (valid_chain_id(), valid_id()).prop_map(|(chain_id, resource)| {
             ExperienceEvent::BudgetExceeded {
-                chain_id,
-                resource,
+                chain_id: chain_id.into(),
+                resource: converge_core::BudgetResource::Other(resource),
                 limit: "100".to_string(),
                 observed: Some("150".to_string()),
             }
@@ -592,12 +598,12 @@ mod proptest_tests {
         #[test]
         fn ordering_preserved(events in proptest::collection::vec(arb_envelope(), 2..15)) {
             let store = InMemoryExperienceStore::new();
-            let ids: Vec<String> = events.iter().map(|e| e.event_id.clone()).collect();
+            let ids: Vec<String> = events.iter().map(|e| e.event_id.to_string()).collect();
             for e in events {
                 store.append_event(e).expect("append");
             }
             let results = store.query_events(&EventQuery::default()).expect("query");
-            let result_ids: Vec<String> = results.iter().map(|e| e.event_id.clone()).collect();
+            let result_ids: Vec<String> = results.iter().map(|e| e.event_id.to_string()).collect();
             prop_assert_eq!(ids, result_ids);
         }
     }
@@ -624,8 +630,8 @@ mod proptest_tests {
                 store.append_event(env).expect("append b");
             }
 
-            let qa = EventQuery { tenant_id: Some("tenant-alpha".to_string()), ..Default::default() };
-            let qb = EventQuery { tenant_id: Some("tenant-beta".to_string()), ..Default::default() };
+            let qa = EventQuery { tenant_id: Some("tenant-alpha".into()), ..Default::default() };
+            let qb = EventQuery { tenant_id: Some("tenant-beta".into()), ..Default::default() };
             let ra = store.query_events(&qa).expect("query a");
             let rb = store.query_events(&qb).expect("query b");
 
@@ -712,7 +718,7 @@ mod proptest_tests {
             }
 
             let q = EventQuery {
-                correlation_id: Some("corr-target".to_string()),
+                correlation_id: Some("corr-target".into()),
                 ..Default::default()
             };
             let results = store.query_events(&q).expect("query");
@@ -761,7 +767,7 @@ mod proptest_tests {
         #[test]
         fn metadata_serde_roundtrip(meta in arb_metadata()) {
             let event = ExperienceEvent::OutcomeRecorded {
-                chain_id: "chain-serde".to_string(),
+                chain_id: "chain-serde".into(),
                 step: DecisionStep::Planning,
                 passed: true,
                 stop_reason: None,

@@ -63,15 +63,9 @@ pub use types::{
     SeedFact,
 };
 
-// Legacy type aliases (for backward compatibility)
-#[allow(deprecated)]
-pub use types::{AgentDefinition, AgentType, JobTemplate, TemplateJobRequest, TemplateSummary};
+pub use types::{AgentDefinition, AgentType};
 
 // Schema validation
 pub use validator::{
     PackValidationError, allowed_keys, forbidden_keys, validate_pack_yaml, validate_pack_yaml_str,
 };
-
-// Deprecated types (will be removed)
-#[allow(deprecated)]
-pub use types::ValidationConfigTemplate;

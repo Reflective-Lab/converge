@@ -1,0 +1,23 @@
+error[E0277]: the trait bound `Proposal<Validated>: serde::Deserialize<'de>` is not satisfied
+  --> tests/ui/fail_validated_deserialize.rs:10:34
+   |
+10 |     let _: Proposal<Validated> = serde_json::from_str(json).unwrap();
+   |                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `serde_core::de::Deserialize<'_>` is not implemented for `Proposal<Validated>`
+   |
+   = note: for local types consider adding `#[derive(serde::Deserialize)]` to your `Proposal<Validated>` type
+   = note: for types from other crates check whether the crate offers a `serde` feature flag
+help: the trait `serde_core::de::Deserialize<'_>` is not implemented for `Proposal<Validated>`
+      but it is implemented for `Proposal<converge_core::types::proposal::Draft>`
+  --> $WORKSPACE/crates/core/src/types/proposal.rs
+   |
+   | impl<'de> Deserialize<'de> for Proposal<Draft> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = help: for that trait implementation, expected `converge_core::types::proposal::Draft`, found `Validated`
+note: required by a bound in `serde_json::from_str`
+  --> $CARGO/serde_json-$VERSION/src/de.rs
+   |
+   | pub fn from_str<'a, T>(s: &'a str) -> Result<T>
+   |        -------- required by a bound in this function
+   | where
+   |     T: de::Deserialize<'a>,
+   |        ^^^^^^^^^^^^^^^^^^^ required by this bound in `from_str`

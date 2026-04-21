@@ -323,3 +323,218 @@ impl<T: Promoter> DynPromoter for T {
         Box::pin(Promoter::promote(self, proposal, report, context))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::traits::error::{CapabilityError, ErrorCategory};
+
+    // ── PromoterError Display ────────────────────────────────────────────────
+
+    #[test]
+    fn display_report_mismatch() {
+        let e = PromoterError::ReportMismatch {
+            expected: "p-1".into(),
+            actual: "p-2".into(),
+        };
+        let s = e.to_string();
+        assert!(s.contains("p-1"));
+        assert!(s.contains("p-2"));
+    }
+
+    #[test]
+    fn display_unauthorized() {
+        let e = PromoterError::Unauthorized {
+            actor: "bot-7".into(),
+            reason: "no promote scope".into(),
+        };
+        let s = e.to_string();
+        assert!(s.contains("bot-7"));
+        assert!(s.contains("no promote scope"));
+    }
+
+    #[test]
+    fn display_already_promoted() {
+        let e = PromoterError::AlreadyPromoted {
+            proposal_id: "p-1".into(),
+            fact_id: "f-1".into(),
+        };
+        let s = e.to_string();
+        assert!(s.contains("p-1"));
+        assert!(s.contains("f-1"));
+    }
+
+    #[test]
+    fn display_unavailable() {
+        let e = PromoterError::Unavailable {
+            message: "service down".into(),
+        };
+        assert!(e.to_string().contains("service down"));
+    }
+
+    #[test]
+    fn display_timeout() {
+        let e = PromoterError::Timeout {
+            elapsed: Duration::from_millis(500),
+            deadline: Duration::from_millis(200),
+        };
+        let s = e.to_string();
+        assert!(s.contains("500ms"));
+        assert!(s.contains("200ms"));
+    }
+
+    #[test]
+    fn display_storage_error() {
+        let e = PromoterError::StorageError {
+            message: "write failed".into(),
+        };
+        assert!(e.to_string().contains("write failed"));
+    }
+
+    #[test]
+    fn display_internal() {
+        let e = PromoterError::Internal {
+            message: "bug".into(),
+        };
+        assert!(e.to_string().contains("bug"));
+    }
+
+    // ── CapabilityError classification ───────────────────────────────────────
+
+    #[test]
+    fn category_report_mismatch_is_invalid_input() {
+        let e = PromoterError::ReportMismatch {
+            expected: "x".into(),
+            actual: "y".into(),
+        };
+        assert_eq!(e.category(), ErrorCategory::InvalidInput);
+        assert!(!e.is_transient());
+        assert!(!e.is_retryable());
+    }
+
+    #[test]
+    fn category_unauthorized_is_auth() {
+        let e = PromoterError::Unauthorized {
+            actor: "x".into(),
+            reason: "y".into(),
+        };
+        assert_eq!(e.category(), ErrorCategory::Auth);
+        assert!(!e.is_transient());
+        assert!(!e.is_retryable());
+    }
+
+    #[test]
+    fn category_already_promoted_is_conflict() {
+        let e = PromoterError::AlreadyPromoted {
+            proposal_id: "p".into(),
+            fact_id: "f".into(),
+        };
+        assert_eq!(e.category(), ErrorCategory::Conflict);
+        assert!(!e.is_transient());
+        assert!(!e.is_retryable());
+    }
+
+    #[test]
+    fn category_unavailable_is_transient_and_retryable() {
+        let e = PromoterError::Unavailable {
+            message: "x".into(),
+        };
+        assert_eq!(e.category(), ErrorCategory::Unavailable);
+        assert!(e.is_transient());
+        assert!(e.is_retryable());
+    }
+
+    #[test]
+    fn category_timeout_is_transient_and_retryable() {
+        let e = PromoterError::Timeout {
+            elapsed: Duration::from_secs(1),
+            deadline: Duration::from_secs(1),
+        };
+        assert_eq!(e.category(), ErrorCategory::Timeout);
+        assert!(e.is_transient());
+        assert!(e.is_retryable());
+    }
+
+    #[test]
+    fn category_storage_error_is_internal_transient_retryable() {
+        let e = PromoterError::StorageError {
+            message: "x".into(),
+        };
+        assert_eq!(e.category(), ErrorCategory::Internal);
+        assert!(e.is_transient());
+        assert!(e.is_retryable());
+    }
+
+    #[test]
+    fn category_internal_is_retryable_not_transient() {
+        let e = PromoterError::Internal {
+            message: "x".into(),
+        };
+        assert_eq!(e.category(), ErrorCategory::Internal);
+        assert!(!e.is_transient());
+        assert!(e.is_retryable());
+    }
+
+    #[test]
+    fn retry_after_always_none() {
+        let errors: Vec<PromoterError> = vec![
+            PromoterError::Unavailable {
+                message: "x".into(),
+            },
+            PromoterError::Timeout {
+                elapsed: Duration::from_secs(1),
+                deadline: Duration::from_secs(1),
+            },
+            PromoterError::Internal {
+                message: "x".into(),
+            },
+        ];
+        for e in &errors {
+            assert!(e.retry_after().is_none());
+        }
+    }
+
+    // ── PromotionContext builder ─────────────────────────────────────────────
+
+    fn sample_actor() -> Actor {
+        Actor::human("karl")
+    }
+
+    fn sample_trace() -> TraceLink {
+        TraceLink::local(crate::types::LocalTrace::new("trace-1", "span-1"))
+    }
+
+    #[test]
+    fn promotion_context_new_has_no_evidence() {
+        let ctx = PromotionContext::new(sample_actor(), sample_trace());
+        assert!(ctx.evidence.is_empty());
+    }
+
+    #[test]
+    fn promotion_context_with_evidence() {
+        let evidence = vec![
+            EvidenceRef::observation("obs-1".into()),
+            EvidenceRef::human_approval("approval-1".into()),
+        ];
+        let ctx = PromotionContext::new(sample_actor(), sample_trace()).with_evidence(evidence);
+        assert_eq!(ctx.evidence.len(), 2);
+    }
+
+    #[test]
+    fn promotion_context_with_evidence_ref() {
+        let ctx = PromotionContext::new(sample_actor(), sample_trace())
+            .with_evidence_ref(EvidenceRef::observation("obs-1".into()))
+            .with_evidence_ref(EvidenceRef::derived("art-1".into()));
+        assert_eq!(ctx.evidence.len(), 2);
+    }
+
+    // ── std::error::Error ────────────────────────────────────────────────────
+
+    #[test]
+    fn promoter_error_is_std_error() {
+        let e: Box<dyn std::error::Error> = Box::new(PromoterError::Internal {
+            message: "test".into(),
+        });
+        assert!(e.to_string().contains("test"));
+    }
+}

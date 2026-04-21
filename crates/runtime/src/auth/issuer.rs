@@ -362,6 +362,7 @@ fn generate_token_id() -> String {
 mod tests {
     use super::*;
     use crate::auth::jwt::{JwtValidator, JwtValidatorConfig};
+    use crate::semantic::RoleId;
 
     fn install_crypto_provider() {
         let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
@@ -409,7 +410,7 @@ mod tests {
         let identity = validator.validate(&tokens.access_token).unwrap();
         assert_eq!(identity.user_id, "user-123");
         assert_eq!(identity.email, Some("user@example.com".to_string()));
-        assert!(identity.has_role("admin"));
+        assert!(identity.has_role(&RoleId::new("admin")));
     }
 
     #[test]

@@ -1,7 +1,8 @@
 use converge_core::{
-    FlowAction, FlowGateContext, FlowGateInput, FlowGateOutcome, FlowGatePrincipal,
-    FlowGateResource,
+    AuthorityLevel, FlowAction, FlowGateContext, FlowGateInput, FlowGateOutcome, FlowGatePrincipal,
+    FlowGateResource, FlowPhase,
 };
+use converge_pack::{DomainId, GateId, PolicyVersionId, PrincipalId, ResourceId, ResourceKind};
 use converge_policy::{FLOW_GOVERNANCE_POLICY, FlowGateAuthorizer, PolicyEngine};
 
 fn engine() -> PolicyEngine {
@@ -20,16 +21,16 @@ fn input(
 ) -> FlowGateInput {
     FlowGateInput {
         principal: FlowGatePrincipal {
-            id: format!("agent:{domain}:{authority}"),
-            authority: authority.into(),
-            domains: vec![domain.into()],
-            policy_version: Some("flow_governance_v1".into()),
+            id: PrincipalId::new(format!("agent:{domain}:{authority}")),
+            authority: authority_level(authority),
+            domains: vec![DomainId::new(domain)],
+            policy_version: Some(PolicyVersionId::new("flow_governance_v1")),
         },
         resource: FlowGateResource {
-            id: format!("{kind}:001"),
-            kind: kind.into(),
-            phase: "commitment".into(),
-            gates_passed: gates_passed.into_iter().map(str::to_string).collect(),
+            id: ResourceId::new(format!("{kind}:001")),
+            kind: ResourceKind::new(kind),
+            phase: FlowPhase::Commitment,
+            gates_passed: gates_passed.into_iter().map(GateId::new).collect(),
         },
         action: FlowAction::Commit,
         context: FlowGateContext {
@@ -38,6 +39,16 @@ fn input(
             human_approval_present: Some(human_approval_present),
             required_gates_met: Some(required_gates_met),
         },
+    }
+}
+
+fn authority_level(authority: &str) -> AuthorityLevel {
+    match authority {
+        "advisory" => AuthorityLevel::Advisory,
+        "supervisory" => AuthorityLevel::Supervisory,
+        "participatory" => AuthorityLevel::Participatory,
+        "sovereign" => AuthorityLevel::Sovereign,
+        _ => panic!("unsupported test authority: {authority}"),
     }
 }
 

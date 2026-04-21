@@ -15,14 +15,14 @@ fn invalid_policy_source_is_rejected() {
 }
 
 #[test]
-fn invalid_action_identifier_is_rejected() {
-    let engine = common::test_engine();
-    let mut req: DecideRequest = make_request("advisory", "propose");
-    req.action = "bad\"action".into();
+fn invalid_action_identifier_is_rejected_during_deserialization() {
+    let req: DecideRequest = make_request("advisory", "propose");
+    let mut payload = serde_json::to_value(req).expect("request should serialize");
+    payload["action"] = serde_json::Value::String("bad\"action".to_string());
 
-    let err = engine.evaluate(&req).expect_err("action should fail");
+    let err = serde_json::from_value::<DecideRequest>(payload).expect_err("action should fail");
 
-    assert!(matches!(err, EngineError::RequestBuild(_)));
+    assert!(err.is_data());
 }
 
 #[test]

@@ -73,7 +73,7 @@ impl PolicyLoader {
             // (empty methods means no match, which is probably not intended)
             if rule.methods.is_empty() && !rule.principals.is_empty() {
                 return Err(PolicyLoaderError::Validation(format!(
-                    "rule '{}' has principals but no methods - use ['*'] to match all methods",
+                    "rule '{}' has principals but no methods - use '*' to match all methods",
                     rule.name
                 )));
             }
@@ -141,7 +141,7 @@ rules:
 
         assert_eq!(policy.default_effect, super::super::types::Effect::Deny);
         assert_eq!(policy.rules.len(), 3);
-        assert_eq!(policy.version, Some("1.0".to_string()));
+        assert_eq!(policy.version, Some("1.0".into()));
     }
 
     #[test]

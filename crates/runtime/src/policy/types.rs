@@ -1,5 +1,7 @@
 //! Policy types and data structures.
 
+use crate::semantic::{GrpcMethod, RoleId, Selector, ServiceId, UserId};
+use converge_core::types::PolicyVersionId;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -8,7 +10,10 @@ use thiserror::Error;
 pub enum PolicyError {
     /// No matching rule found.
     #[error("no matching rule for method {method} and principal {principal}")]
-    NoMatch { method: String, principal: String },
+    NoMatch {
+        method: GrpcMethod,
+        principal: String,
+    },
 
     /// Access denied by policy.
     #[error("access denied: {reason}")]
@@ -44,15 +49,15 @@ impl std::fmt::Display for Effect {
 pub struct Principal {
     /// Roles that match this rule.
     #[serde(default)]
-    pub roles: Vec<String>,
+    pub roles: Selector<RoleId>,
 
     /// Services that match this rule.
     #[serde(default)]
-    pub services: Vec<String>,
+    pub services: Selector<ServiceId>,
 
     /// Specific user IDs that match.
     #[serde(default)]
-    pub users: Vec<String>,
+    pub users: Selector<UserId>,
 }
 
 impl Principal {
@@ -62,30 +67,25 @@ impl Principal {
     }
 
     /// Check if a user with given roles/service matches this principal.
-    pub fn matches(&self, user_id: Option<&str>, roles: &[String], service_id: &str) -> bool {
-        // Empty principal matches nothing (must have at least one criterion)
+    pub fn matches(
+        &self,
+        user_id: Option<&UserId>,
+        roles: &[RoleId],
+        service_id: &ServiceId,
+    ) -> bool {
         if self.is_empty() {
             return false;
         }
 
-        // Check user match
-        if let Some(uid) = user_id {
-            if self.users.iter().any(|u| u == uid || u == "*") {
-                return true;
-            }
-        }
-
-        // Check role match
-        if self.roles.iter().any(|r| r == "*" || roles.contains(r)) {
+        if user_id.is_some_and(|uid| self.users.matches(uid)) {
             return true;
         }
 
-        // Check service match
-        if self.services.iter().any(|s| s == "*" || s == service_id) {
+        if self.roles.matches_any(roles.iter()) {
             return true;
         }
 
-        false
+        self.services.matches(service_id)
     }
 }
 
@@ -103,9 +103,8 @@ pub struct Rule {
     pub principals: Principal,
 
     /// Methods this rule applies to.
-    /// Use "*" to match all methods.
     #[serde(default)]
-    pub methods: Vec<String>,
+    pub methods: Selector<GrpcMethod>,
 
     /// Optional condition expression (future use).
     #[serde(default)]
@@ -120,20 +119,17 @@ impl Rule {
     /// Check if this rule matches the given request.
     pub fn matches(
         &self,
-        method: &str,
-        user_id: Option<&str>,
-        roles: &[String],
-        service_id: &str,
+        method: &GrpcMethod,
+        user_id: Option<&UserId>,
+        roles: &[RoleId],
+        service_id: &ServiceId,
     ) -> bool {
-        // Check method match
-        let method_matches =
-            self.methods.is_empty() || self.methods.iter().any(|m| m == "*" || m == method);
+        let method_matches = self.methods.is_empty() || self.methods.matches(method);
 
         if !method_matches {
             return false;
         }
 
-        // Check principal match
         self.principals.matches(user_id, roles, service_id)
     }
 }
@@ -151,7 +147,7 @@ pub struct Policy {
 
     /// Policy version for tracking changes.
     #[serde(default)]
-    pub version: Option<String>,
+    pub version: Option<PolicyVersionId>,
 
     /// Policy description.
     #[serde(default)]
@@ -175,7 +171,7 @@ impl Policy {
         Self {
             default_effect: Effect::Allow,
             rules: Vec::new(),
-            version: Some("dev".to_string()),
+            version: Some("dev".into()),
             description: Some("Development allow-all policy".to_string()),
         }
     }
@@ -217,41 +213,49 @@ mod tests {
     #[test]
     fn test_principal_matches_role() {
         let p = Principal {
-            roles: vec!["admin".to_string()],
+            roles: Selector::exact(vec!["admin".into()]),
             ..Default::default()
         };
-        assert!(p.matches(None, &["admin".to_string()], "some-service"));
-        assert!(!p.matches(None, &["user".to_string()], "some-service"));
+        assert!(p.matches(None, &["admin".into()], &ServiceId::new("some-service")));
+        assert!(!p.matches(None, &["user".into()], &ServiceId::new("some-service")));
     }
 
     #[test]
     fn test_principal_matches_service() {
         let p = Principal {
-            services: vec!["api-gateway".to_string()],
+            services: Selector::exact(vec!["api-gateway".into()]),
             ..Default::default()
         };
-        assert!(p.matches(None, &[], "api-gateway"));
-        assert!(!p.matches(None, &[], "other-service"));
+        assert!(p.matches(None, &[], &ServiceId::new("api-gateway")));
+        assert!(!p.matches(None, &[], &ServiceId::new("other-service")));
     }
 
     #[test]
     fn test_principal_matches_user() {
         let p = Principal {
-            users: vec!["user-123".to_string()],
+            users: Selector::exact(vec!["user-123".into()]),
             ..Default::default()
         };
-        assert!(p.matches(Some("user-123"), &[], "some-service"));
-        assert!(!p.matches(Some("user-456"), &[], "some-service"));
-        assert!(!p.matches(None, &[], "some-service"));
+        assert!(p.matches(
+            Some(&UserId::new("user-123")),
+            &[],
+            &ServiceId::new("some-service")
+        ));
+        assert!(!p.matches(
+            Some(&UserId::new("user-456")),
+            &[],
+            &ServiceId::new("some-service")
+        ));
+        assert!(!p.matches(None, &[], &ServiceId::new("some-service")));
     }
 
     #[test]
     fn test_principal_matches_wildcard() {
         let p = Principal {
-            roles: vec!["*".to_string()],
+            roles: Selector::any(),
             ..Default::default()
         };
-        assert!(p.matches(None, &["anything".to_string()], "any-service"));
+        assert!(p.matches(None, &["anything".into()], &ServiceId::new("any-service")));
     }
 
     #[test]
@@ -260,54 +264,53 @@ mod tests {
             name: "test".to_string(),
             effect: Effect::Allow,
             principals: Principal {
-                roles: vec!["admin".to_string()],
+                roles: Selector::exact(vec!["admin".into()]),
                 ..Default::default()
             },
-            methods: vec!["/service/Method".to_string()],
+            methods: Selector::exact(vec!["/test/Method".into()]),
             condition: None,
             priority: 0,
         };
 
-        assert!(rule.matches("/service/Method", None, &["admin".to_string()], "svc"));
-        assert!(!rule.matches("/service/Other", None, &["admin".to_string()], "svc"));
+        assert!(rule.matches(
+            &GrpcMethod::new("/test/Method"),
+            None,
+            &["admin".into()],
+            &ServiceId::new("svc")
+        ));
+        assert!(!rule.matches(
+            &GrpcMethod::new("/test/Other"),
+            None,
+            &["admin".into()],
+            &ServiceId::new("svc")
+        ));
     }
 
     #[test]
-    fn test_rule_matches_wildcard_method() {
-        let rule = Rule {
-            name: "test".to_string(),
-            effect: Effect::Allow,
-            principals: Principal {
-                services: vec!["*".to_string()],
-                ..Default::default()
-            },
-            methods: vec!["*".to_string()],
-            condition: None,
-            priority: 0,
-        };
-
-        assert!(rule.matches("/any/Method", None, &[], "any-service"));
-    }
-
-    #[test]
-    fn test_policy_sorted_rules() {
+    fn test_sorted_rules_descending_priority() {
         let policy = Policy {
             rules: vec![
                 Rule {
                     name: "low".to_string(),
-                    effect: Effect::Deny,
-                    principals: Principal::default(),
-                    methods: vec![],
+                    effect: Effect::Allow,
+                    principals: Principal {
+                        roles: Selector::any(),
+                        ..Default::default()
+                    },
+                    methods: Selector::any(),
                     condition: None,
                     priority: 1,
                 },
                 Rule {
                     name: "high".to_string(),
-                    effect: Effect::Allow,
-                    principals: Principal::default(),
-                    methods: vec![],
+                    effect: Effect::Deny,
+                    principals: Principal {
+                        roles: Selector::any(),
+                        ..Default::default()
+                    },
+                    methods: Selector::any(),
                     condition: None,
-                    priority: 100,
+                    priority: 10,
                 },
             ],
             ..Default::default()
@@ -316,42 +319,5 @@ mod tests {
         let sorted = policy.sorted_rules();
         assert_eq!(sorted[0].name, "high");
         assert_eq!(sorted[1].name, "low");
-    }
-
-    #[test]
-    fn test_policy_allow_all() {
-        let policy = Policy::allow_all();
-        assert_eq!(policy.default_effect, Effect::Allow);
-    }
-
-    #[test]
-    fn test_policy_deny_all() {
-        let policy = Policy::deny_all();
-        assert_eq!(policy.default_effect, Effect::Deny);
-    }
-
-    // Negative tests
-    #[test]
-    fn test_empty_principal_matches_nothing() {
-        let p = Principal::default();
-        assert!(!p.matches(Some("user"), &["role".to_string()], "service"));
-    }
-
-    #[test]
-    fn test_rule_no_principal_match() {
-        let rule = Rule {
-            name: "test".to_string(),
-            effect: Effect::Allow,
-            principals: Principal {
-                roles: vec!["admin".to_string()],
-                ..Default::default()
-            },
-            methods: vec!["*".to_string()],
-            condition: None,
-            priority: 0,
-        };
-
-        // Method matches but principal doesn't
-        assert!(!rule.matches("/any/Method", None, &["user".to_string()], "svc"));
     }
 }

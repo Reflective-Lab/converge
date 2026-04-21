@@ -133,6 +133,7 @@ pub async fn require_auth(mut request: Request, next: Next) -> Result<Response, 
 mod tests {
     use super::*;
     use crate::auth::{Audience, Claims};
+    use crate::semantic::RoleId;
     use jsonwebtoken::{EncodingKey, Header, encode};
 
     fn install_crypto_provider() {
@@ -197,7 +198,7 @@ mod tests {
         );
         let identity = validate_token_with_mode(mode, &token).await.unwrap();
         assert_eq!(identity.user_id, "user-123");
-        assert!(identity.has_role("admin"));
+        assert!(identity.has_role(&RoleId::new("admin")));
     }
 
     #[tokio::test]

@@ -40,7 +40,7 @@
 //! ```
 
 use crate::context::{ContextKey, ContextState, Fact};
-use crate::types::IntentId;
+use crate::types::{ConstraintName, ConstraintValue, IntentId, Timestamp};
 use std::time::Duration;
 
 /// The class of problem being solved.
@@ -160,14 +160,17 @@ pub enum ScopeConstraint {
     Product(String),
     /// Time window for the analysis.
     TimeWindow {
-        start: Option<String>,
-        end: Option<String>,
+        start: Option<Timestamp>,
+        end: Option<Timestamp>,
         description: String,
     },
     /// Customer segment.
     CustomerSegment(String),
     /// Custom scope constraint.
-    Custom { key: String, value: String },
+    Custom {
+        key: ConstraintName,
+        value: ConstraintValue,
+    },
 }
 
 /// Defines what is in-bounds for the intent.
@@ -232,9 +235,9 @@ pub enum ConstraintSeverity {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct IntentConstraint {
     /// Unique key for this constraint.
-    pub key: String,
+    pub key: ConstraintName,
     /// Human-readable description or value.
-    pub value: String,
+    pub value: ConstraintValue,
     /// Severity level.
     pub severity: ConstraintSeverity,
 }
@@ -242,7 +245,7 @@ pub struct IntentConstraint {
 impl IntentConstraint {
     /// Creates a hard constraint (violation aborts).
     #[must_use]
-    pub fn hard(key: impl Into<String>, value: impl Into<String>) -> Self {
+    pub fn hard(key: impl Into<ConstraintName>, value: impl Into<ConstraintValue>) -> Self {
         Self {
             key: key.into(),
             value: value.into(),
@@ -252,7 +255,7 @@ impl IntentConstraint {
 
     /// Creates a soft constraint (violation is logged).
     #[must_use]
-    pub fn soft(key: impl Into<String>, value: impl Into<String>) -> Self {
+    pub fn soft(key: impl Into<ConstraintName>, value: impl Into<ConstraintValue>) -> Self {
         Self {
             key: key.into(),
             value: value.into(),
@@ -499,7 +502,6 @@ pub struct RootIntent {
 
 impl RootIntent {
     /// Creates a new Root Intent with the given kind.
-    #[allow(deprecated)]
     #[must_use]
     pub fn new(kind: IntentKind) -> Self {
         Self {
@@ -672,7 +674,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[allow(deprecated)]
     fn intent_id_generates_unique_ids() {
         let id1 = IntentId::generate();
         let id2 = IntentId::generate();

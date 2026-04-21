@@ -22,7 +22,7 @@
 //! - [`drafting`]: Content drafting (kernel utility)
 //! - [`form_filler`]: Form filling agents (kernel utility)
 
-use converge_core::{ContextKey, ProposedFact};
+use converge_core::{ContextKey, ProposalId, ProposedFact};
 
 pub mod ask_converge;
 pub mod domain_invariants;
@@ -104,5 +104,5 @@ pub(crate) fn proposal(
     id: impl Into<String>,
     content: impl Into<String>,
 ) -> ProposedFact {
-    ProposedFact::new(key, id, content, provenance)
+    ProposedFact::new(key, ProposalId::new(id.into()), content, provenance)
 }

@@ -10,6 +10,10 @@
 use serde::{Deserialize, Serialize};
 
 use crate::context::ContextKey;
+use crate::types::{
+    ActorId, ApprovalId, ArtifactId, ContentHash, FactId, GateId, ObservationId, ProposalId,
+    SpanId, Timestamp, TraceId, TraceReference, TraceSystemId, ValidationCheckId,
+};
 
 /// Actor kind recorded on a promoted fact.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -25,14 +29,14 @@ pub enum FactActorKind {
 /// Read-only actor record attached to authoritative facts.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct FactActor {
-    id: String,
+    id: ActorId,
     kind: FactActorKind,
 }
 
 impl FactActor {
     /// Returns the actor identifier.
     #[must_use]
-    pub fn id(&self) -> &str {
+    pub fn id(&self) -> &ActorId {
         &self.id
     }
 
@@ -44,7 +48,7 @@ impl FactActor {
 
     #[cfg(feature = "kernel-authority")]
     #[doc(hidden)]
-    pub fn new(id: impl Into<String>, kind: FactActorKind) -> Self {
+    pub fn new(id: impl Into<ActorId>, kind: FactActorKind) -> Self {
         Self {
             id: id.into(),
             kind,
@@ -55,21 +59,21 @@ impl FactActor {
 /// Summary of validation checks attached to an authoritative fact.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
 pub struct FactValidationSummary {
-    checks_passed: Vec<String>,
-    checks_skipped: Vec<String>,
+    checks_passed: Vec<ValidationCheckId>,
+    checks_skipped: Vec<ValidationCheckId>,
     warnings: Vec<String>,
 }
 
 impl FactValidationSummary {
     /// Returns validation checks that passed.
     #[must_use]
-    pub fn checks_passed(&self) -> &[String] {
+    pub fn checks_passed(&self) -> &[ValidationCheckId] {
         &self.checks_passed
     }
 
     /// Returns validation checks that were skipped.
     #[must_use]
-    pub fn checks_skipped(&self) -> &[String] {
+    pub fn checks_skipped(&self) -> &[ValidationCheckId] {
         &self.checks_skipped
     }
 
@@ -82,8 +86,8 @@ impl FactValidationSummary {
     #[cfg(feature = "kernel-authority")]
     #[doc(hidden)]
     pub fn new(
-        checks_passed: Vec<String>,
-        checks_skipped: Vec<String>,
+        checks_passed: Vec<ValidationCheckId>,
+        checks_skipped: Vec<ValidationCheckId>,
         warnings: Vec<String>,
     ) -> Self {
         Self {
@@ -99,39 +103,39 @@ impl FactValidationSummary {
 #[serde(tag = "type", content = "id")]
 pub enum FactEvidenceRef {
     /// Observation used as evidence.
-    Observation(String),
+    Observation(ObservationId),
     /// Human approval used as evidence.
-    HumanApproval(String),
+    HumanApproval(ApprovalId),
     /// Derived artifact used as evidence.
-    Derived(String),
+    Derived(ArtifactId),
 }
 
 /// Local replayable trace reference.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct FactLocalTrace {
-    trace_id: String,
-    span_id: String,
-    parent_span_id: Option<String>,
+    trace_id: TraceId,
+    span_id: SpanId,
+    parent_span_id: Option<SpanId>,
     sampled: bool,
 }
 
 impl FactLocalTrace {
     /// Returns the trace identifier.
     #[must_use]
-    pub fn trace_id(&self) -> &str {
+    pub fn trace_id(&self) -> &TraceId {
         &self.trace_id
     }
 
     /// Returns the span identifier.
     #[must_use]
-    pub fn span_id(&self) -> &str {
+    pub fn span_id(&self) -> &SpanId {
         &self.span_id
     }
 
     /// Returns the parent span identifier.
     #[must_use]
-    pub fn parent_span_id(&self) -> Option<&str> {
-        self.parent_span_id.as_deref()
+    pub fn parent_span_id(&self) -> Option<&SpanId> {
+        self.parent_span_id.as_ref()
     }
 
     /// Returns whether the trace was sampled.
@@ -143,9 +147,9 @@ impl FactLocalTrace {
     #[cfg(feature = "kernel-authority")]
     #[doc(hidden)]
     pub fn new(
-        trace_id: impl Into<String>,
-        span_id: impl Into<String>,
-        parent_span_id: Option<String>,
+        trace_id: impl Into<TraceId>,
+        span_id: impl Into<SpanId>,
+        parent_span_id: Option<SpanId>,
         sampled: bool,
     ) -> Self {
         Self {
@@ -160,8 +164,8 @@ impl FactLocalTrace {
 /// Remote audit-only trace reference.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct FactRemoteTrace {
-    system: String,
-    reference: String,
+    system: TraceSystemId,
+    reference: TraceReference,
     retrieval_auth: Option<String>,
     retention_hint: Option<String>,
 }
@@ -169,13 +173,13 @@ pub struct FactRemoteTrace {
 impl FactRemoteTrace {
     /// Returns the remote system identifier.
     #[must_use]
-    pub fn system(&self) -> &str {
+    pub fn system(&self) -> &TraceSystemId {
         &self.system
     }
 
     /// Returns the remote trace reference.
     #[must_use]
-    pub fn reference(&self) -> &str {
+    pub fn reference(&self) -> &TraceReference {
         &self.reference
     }
 
@@ -194,8 +198,8 @@ impl FactRemoteTrace {
     #[cfg(feature = "kernel-authority")]
     #[doc(hidden)]
     pub fn new(
-        system: impl Into<String>,
-        reference: impl Into<String>,
+        system: impl Into<TraceSystemId>,
+        reference: impl Into<TraceReference>,
         retrieval_auth: Option<String>,
         retention_hint: Option<String>,
     ) -> Self {
@@ -229,25 +233,25 @@ impl FactTraceLink {
 /// Read-only promotion record attached to an authoritative fact.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct FactPromotionRecord {
-    gate_id: String,
-    policy_version_hash: String,
+    gate_id: GateId,
+    policy_version_hash: ContentHash,
     approver: FactActor,
     validation_summary: FactValidationSummary,
     evidence_refs: Vec<FactEvidenceRef>,
     trace_link: FactTraceLink,
-    promoted_at: String,
+    promoted_at: Timestamp,
 }
 
 impl FactPromotionRecord {
     /// Returns the gate identifier that promoted the fact.
     #[must_use]
-    pub fn gate_id(&self) -> &str {
+    pub fn gate_id(&self) -> &GateId {
         &self.gate_id
     }
 
     /// Returns the policy hash used during promotion.
     #[must_use]
-    pub fn policy_version_hash(&self) -> &str {
+    pub fn policy_version_hash(&self) -> &ContentHash {
         &self.policy_version_hash
     }
 
@@ -277,7 +281,7 @@ impl FactPromotionRecord {
 
     /// Returns the promotion timestamp.
     #[must_use]
-    pub fn promoted_at(&self) -> &str {
+    pub fn promoted_at(&self) -> &Timestamp {
         &self.promoted_at
     }
 
@@ -290,17 +294,17 @@ impl FactPromotionRecord {
     #[cfg(feature = "kernel-authority")]
     #[doc(hidden)]
     pub fn new(
-        gate_id: impl Into<String>,
-        policy_version_hash: impl Into<String>,
+        gate_id: impl Into<GateId>,
+        policy_version_hash: ContentHash,
         approver: FactActor,
         validation_summary: FactValidationSummary,
         evidence_refs: Vec<FactEvidenceRef>,
         trace_link: FactTraceLink,
-        promoted_at: impl Into<String>,
+        promoted_at: impl Into<Timestamp>,
     ) -> Self {
         Self {
             gate_id: gate_id.into(),
-            policy_version_hash: policy_version_hash.into(),
+            policy_version_hash,
             approver,
             validation_summary,
             evidence_refs,
@@ -319,13 +323,13 @@ pub struct Fact {
     /// Which context key this fact belongs to.
     key: ContextKey,
     /// Unique identifier within the context key namespace.
-    pub id: String,
+    pub id: FactId,
     /// The fact's content as a string. Interpretation is key-dependent.
     pub content: String,
     /// The immutable promotion record that made this fact authoritative.
     promotion_record: FactPromotionRecord,
     /// When the authoritative fact entered context.
-    created_at: String,
+    created_at: Timestamp,
 }
 
 impl Fact {
@@ -343,7 +347,7 @@ impl Fact {
 
     /// Returns the fact creation timestamp.
     #[must_use]
-    pub fn created_at(&self) -> &str {
+    pub fn created_at(&self) -> &Timestamp {
         &self.created_at
     }
 
@@ -362,21 +366,21 @@ pub mod kernel_authority {
 
     /// Creates a kernel-authoritative fact with default promotion metadata.
     #[must_use]
-    pub fn new_fact(key: ContextKey, id: impl Into<String>, content: impl Into<String>) -> Fact {
+    pub fn new_fact(key: ContextKey, id: impl Into<FactId>, content: impl Into<String>) -> Fact {
         new_fact_with_promotion(
             key,
             id,
             content,
             FactPromotionRecord::new(
                 "kernel-authority",
-                "0000000000000000000000000000000000000000000000000000000000000000",
+                ContentHash::zero(),
                 FactActor::new("converge-kernel", FactActorKind::System),
                 FactValidationSummary::default(),
                 Vec::new(),
                 FactTraceLink::Local(FactLocalTrace::new("kernel-authority", "seed", None, true)),
-                "1970-01-01T00:00:00Z",
+                Timestamp::epoch(),
             ),
-            "1970-01-01T00:00:00Z",
+            Timestamp::epoch(),
         )
     }
 
@@ -384,10 +388,10 @@ pub mod kernel_authority {
     #[must_use]
     pub fn new_fact_with_promotion(
         key: ContextKey,
-        id: impl Into<String>,
+        id: impl Into<FactId>,
         content: impl Into<String>,
         promotion_record: FactPromotionRecord,
-        created_at: impl Into<String>,
+        created_at: impl Into<Timestamp>,
     ) -> Fact {
         Fact {
             key,
@@ -408,7 +412,7 @@ pub struct ProposedFact {
     /// The context key this proposal targets.
     pub key: ContextKey,
     /// Unique identifier encoding origin and target.
-    pub id: String,
+    pub id: ProposalId,
     /// The proposed content.
     pub content: String,
     /// Confidence hint from the source (0.0 - 1.0).
@@ -422,7 +426,7 @@ impl ProposedFact {
     #[must_use]
     pub fn new(
         key: ContextKey,
-        id: impl Into<String>,
+        id: impl Into<ProposalId>,
         content: impl Into<String>,
         provenance: impl Into<String>,
     ) -> Self {
@@ -489,7 +493,9 @@ mod tests {
     fn promotion_record_delegates_replay_eligibility() {
         let local_record = FactPromotionRecord::new(
             "gate-1",
-            "hash-1",
+            ContentHash::from_hex(
+                "1111111111111111111111111111111111111111111111111111111111111111",
+            ),
             FactActor::new("actor-1", FactActorKind::Human),
             FactValidationSummary::default(),
             Vec::new(),
@@ -500,7 +506,9 @@ mod tests {
 
         let remote_record = FactPromotionRecord::new(
             "gate-2",
-            "hash-2",
+            ContentHash::from_hex(
+                "2222222222222222222222222222222222222222222222222222222222222222",
+            ),
             FactActor::new("actor-2", FactActorKind::System),
             FactValidationSummary::default(),
             Vec::new(),
@@ -587,7 +595,7 @@ mod tests {
         let lt = FactLocalTrace::new("trace-1", "span-1", Some("parent-1".into()), false);
         assert_eq!(lt.trace_id(), "trace-1");
         assert_eq!(lt.span_id(), "span-1");
-        assert_eq!(lt.parent_span_id(), Some("parent-1"));
+        assert_eq!(lt.parent_span_id().map(SpanId::as_str), Some("parent-1"));
         assert!(!lt.sampled());
     }
 

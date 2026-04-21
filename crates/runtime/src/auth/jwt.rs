@@ -3,6 +3,7 @@
 //! Validates JWTs issued by the auth service and extracts user claims.
 
 use super::identity::UserIdentity;
+use crate::semantic::RoleId;
 use jsonwebtoken::{DecodingKey, TokenData, Validation, decode};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -205,14 +206,14 @@ impl JwtValidator {
         }
 
         // Build user identity from claims
-        let mut identity = UserIdentity::new(&claims.sub);
+        let mut identity = UserIdentity::new(claims.sub.as_str());
 
         if let Some(email) = claims.email {
             identity = identity.with_email(email);
         }
 
         if let Some(roles) = claims.roles {
-            identity = identity.with_roles(roles);
+            identity = identity.with_roles(roles.into_iter().map(RoleId::from).collect());
         }
 
         if let Some(org_id) = claims.org_id {
@@ -245,6 +246,7 @@ impl JwtValidator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::semantic::RoleId;
     use jsonwebtoken::{EncodingKey, Header, encode};
 
     fn install_crypto_provider() {
@@ -295,8 +297,8 @@ mod tests {
         let identity = validator.validate(&token).unwrap();
         assert_eq!(identity.user_id, "user-123");
         assert_eq!(identity.email, Some("user@example.com".to_string()));
-        assert!(identity.has_role("admin"));
-        assert_eq!(identity.org_id, Some("org-789".to_string()));
+        assert!(identity.has_role(&RoleId::new("admin")));
+        assert_eq!(identity.org_id, Some("org-789".into()));
     }
 
     #[test]

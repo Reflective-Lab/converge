@@ -172,7 +172,7 @@ impl StreamingCallback for RuntimeStreamingCallback {
             sequence: self.next_sequence(),
             cycle,
             key: format!("{:?}", fact.key()),
-            id: fact.id.clone(),
+            id: fact.id.to_string(),
             content: fact.content.clone(),
             timestamp_ns: Self::now_ns(),
         };

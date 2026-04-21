@@ -17,6 +17,7 @@ use tracing::{info, warn};
 
 use super::types::{AgentWiring, PackConfig, PackSummary};
 use super::validator::validate_pack_yaml_str;
+use converge_core::CostClass;
 
 // Type aliases for backward compatibility
 type JobTemplate = PackConfig;
@@ -224,16 +225,16 @@ impl TemplateRegistry {
             },
             agents: vec![
                 AgentWiring {
-                    id: "market_signal".to_string(),
+                    id: "market_signal".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
                         "fast_extraction".to_string(),
                     )),
                 },
                 AgentWiring {
-                    id: "competitor_analysis".to_string(),
+                    id: "competitor_analysis".into(),
                     requirements: Some(super::types::RequirementsConfig::Custom(
                         super::types::CustomRequirements {
-                            cost_class: Some("medium".to_string()),
+                            cost_class: Some(CostClass::Medium),
                             max_latency_ms: Some(15000),
                             requires_reasoning: None,
                             requires_web_search: Some(true),
@@ -242,10 +243,10 @@ impl TemplateRegistry {
                     )),
                 },
                 AgentWiring {
-                    id: "strategy_synthesis".to_string(),
+                    id: "strategy_synthesis".into(),
                     requirements: Some(super::types::RequirementsConfig::Custom(
                         super::types::CustomRequirements {
-                            cost_class: Some("medium".to_string()),
+                            cost_class: Some(CostClass::Medium),
                             max_latency_ms: None,
                             requires_reasoning: Some(true),
                             requires_web_search: None,
@@ -254,10 +255,10 @@ impl TemplateRegistry {
                     )),
                 },
                 AgentWiring {
-                    id: "evaluation".to_string(),
+                    id: "evaluation".into(),
                     requirements: Some(super::types::RequirementsConfig::Custom(
                         super::types::CustomRequirements {
-                            cost_class: Some("expensive".to_string()),
+                            cost_class: Some(CostClass::VeryHigh),
                             max_latency_ms: None,
                             requires_reasoning: Some(true),
                             requires_web_search: None,
@@ -300,10 +301,10 @@ impl TemplateRegistry {
                 max_facts: 64,
             },
             agents: vec![AgentWiring {
-                id: "ask_converge".to_string(),
+                id: "ask_converge".into(),
                 requirements: Some(super::types::RequirementsConfig::Custom(
                     super::types::CustomRequirements {
-                        cost_class: Some("medium".to_string()),
+                        cost_class: Some(CostClass::Medium),
                         max_latency_ms: Some(20000),
                         requires_reasoning: Some(true),
                         requires_web_search: None,
@@ -332,16 +333,16 @@ impl TemplateRegistry {
             },
             agents: vec![
                 AgentWiring {
-                    id: "patent_query_builder".to_string(),
+                    id: "patent_query_builder".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
                         "fast_extraction".to_string(),
                     )),
                 },
                 AgentWiring {
-                    id: "patent_operator_planner".to_string(),
+                    id: "patent_operator_planner".into(),
                     requirements: Some(super::types::RequirementsConfig::Custom(
                         super::types::CustomRequirements {
-                            cost_class: Some("low".to_string()),
+                            cost_class: Some(CostClass::Low),
                             max_latency_ms: Some(8000),
                             requires_reasoning: Some(true),
                             requires_web_search: None,
@@ -350,10 +351,10 @@ impl TemplateRegistry {
                     )),
                 },
                 AgentWiring {
-                    id: "patent_search_executor".to_string(),
+                    id: "patent_search_executor".into(),
                     requirements: Some(super::types::RequirementsConfig::Custom(
                         super::types::CustomRequirements {
-                            cost_class: Some("medium".to_string()),
+                            cost_class: Some(CostClass::Medium),
                             max_latency_ms: Some(20000),
                             requires_reasoning: Some(false),
                             requires_web_search: None,
@@ -362,10 +363,10 @@ impl TemplateRegistry {
                     )),
                 },
                 AgentWiring {
-                    id: "patent_evidence_collector".to_string(),
+                    id: "patent_evidence_collector".into(),
                     requirements: Some(super::types::RequirementsConfig::Custom(
                         super::types::CustomRequirements {
-                            cost_class: Some("medium".to_string()),
+                            cost_class: Some(CostClass::Medium),
                             max_latency_ms: Some(15000),
                             requires_reasoning: Some(true),
                             requires_web_search: None,
@@ -374,10 +375,10 @@ impl TemplateRegistry {
                     )),
                 },
                 AgentWiring {
-                    id: "patent_claims_analyzer".to_string(),
+                    id: "patent_claims_analyzer".into(),
                     requirements: Some(super::types::RequirementsConfig::Custom(
                         super::types::CustomRequirements {
-                            cost_class: Some("medium".to_string()),
+                            cost_class: Some(CostClass::Medium),
                             max_latency_ms: Some(15000),
                             requires_reasoning: Some(true),
                             requires_web_search: None,
@@ -386,10 +387,10 @@ impl TemplateRegistry {
                     )),
                 },
                 AgentWiring {
-                    id: "patent_landscape_analyzer".to_string(),
+                    id: "patent_landscape_analyzer".into(),
                     requirements: Some(super::types::RequirementsConfig::Custom(
                         super::types::CustomRequirements {
-                            cost_class: Some("medium".to_string()),
+                            cost_class: Some(CostClass::Medium),
                             max_latency_ms: Some(15000),
                             requires_reasoning: Some(true),
                             requires_web_search: None,
@@ -398,10 +399,10 @@ impl TemplateRegistry {
                     )),
                 },
                 AgentWiring {
-                    id: "patent_report_assembler".to_string(),
+                    id: "patent_report_assembler".into(),
                     requirements: Some(super::types::RequirementsConfig::Custom(
                         super::types::CustomRequirements {
-                            cost_class: Some("medium".to_string()),
+                            cost_class: Some(CostClass::Medium),
                             max_latency_ms: Some(15000),
                             requires_reasoning: Some(true),
                             requires_web_search: None,
@@ -410,19 +411,19 @@ impl TemplateRegistry {
                     )),
                 },
                 AgentWiring {
-                    id: "patent_alert_agent".to_string(),
+                    id: "patent_alert_agent".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
                         "fast_extraction".to_string(),
                     )),
                 },
                 AgentWiring {
-                    id: "patent_submission_agent".to_string(),
+                    id: "patent_submission_agent".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
                         "deterministic".to_string(),
                     )),
                 },
                 AgentWiring {
-                    id: "patent_approval_recorder".to_string(),
+                    id: "patent_approval_recorder".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
                         "deterministic".to_string(),
                     )),
@@ -449,22 +450,22 @@ impl TemplateRegistry {
             },
             agents: vec![
                 AgentWiring {
-                    id: "signal_ingest".to_string(),
+                    id: "signal_ingest".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
                         "fast_extraction".to_string(),
                     )),
                 },
                 AgentWiring {
-                    id: "evidence_validator".to_string(),
+                    id: "evidence_validator".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
                         "deterministic".to_string(),
                     )),
                 },
                 AgentWiring {
-                    id: "dossier_builder".to_string(),
+                    id: "dossier_builder".into(),
                     requirements: Some(super::types::RequirementsConfig::Custom(
                         super::types::CustomRequirements {
-                            cost_class: Some("medium".to_string()),
+                            cost_class: Some(CostClass::Medium),
                             max_latency_ms: Some(15000),
                             requires_reasoning: Some(true),
                             requires_web_search: None,
@@ -473,10 +474,10 @@ impl TemplateRegistry {
                     )),
                 },
                 AgentWiring {
-                    id: "path_verifier".to_string(),
+                    id: "path_verifier".into(),
                     requirements: Some(super::types::RequirementsConfig::Custom(
                         super::types::CustomRequirements {
-                            cost_class: Some("medium".to_string()),
+                            cost_class: Some(CostClass::Medium),
                             max_latency_ms: Some(15000),
                             requires_reasoning: Some(true),
                             requires_web_search: None,
@@ -485,16 +486,16 @@ impl TemplateRegistry {
                     )),
                 },
                 AgentWiring {
-                    id: "approval_recorder".to_string(),
+                    id: "approval_recorder".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
                         "deterministic".to_string(),
                     )),
                 },
                 AgentWiring {
-                    id: "linkedin_target_discovery".to_string(),
+                    id: "linkedin_target_discovery".into(),
                     requirements: Some(super::types::RequirementsConfig::Custom(
                         super::types::CustomRequirements {
-                            cost_class: Some("medium".to_string()),
+                            cost_class: Some(CostClass::Medium),
                             max_latency_ms: Some(15000),
                             requires_reasoning: Some(false),
                             requires_web_search: None,
@@ -525,10 +526,10 @@ impl TemplateRegistry {
             },
             agents: vec![
                 AgentWiring {
-                    id: "DraftingResearchAgent".to_string(),
+                    id: "DraftingResearchAgent".into(),
                     requirements: Some(super::types::RequirementsConfig::Custom(
                         super::types::CustomRequirements {
-                            cost_class: Some("medium".to_string()),
+                            cost_class: Some(CostClass::Medium),
                             max_latency_ms: None,
                             requires_reasoning: None,
                             requires_web_search: Some(true),
@@ -537,10 +538,10 @@ impl TemplateRegistry {
                     )),
                 },
                 AgentWiring {
-                    id: "DraftingComposerAgent".to_string(),
+                    id: "DraftingComposerAgent".into(),
                     requirements: Some(super::types::RequirementsConfig::Custom(
                         super::types::CustomRequirements {
-                            cost_class: Some("medium".to_string()),
+                            cost_class: Some(CostClass::Medium),
                             max_latency_ms: Some(3000),
                             requires_reasoning: Some(true),
                             requires_web_search: None,
@@ -580,43 +581,43 @@ impl TemplateRegistry {
             },
             agents: vec![
                 AgentWiring {
-                    id: "DependencyGraphAgent".to_string(),
+                    id: "DependencyGraphAgent".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
                         "deterministic".to_string(),
                     )),
                 },
                 AgentWiring {
-                    id: "TestCoverageAgent".to_string(),
+                    id: "TestCoverageAgent".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
                         "deterministic".to_string(),
                     )),
                 },
                 AgentWiring {
-                    id: "SecurityScanAgent".to_string(),
+                    id: "SecurityScanAgent".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
                         "deterministic".to_string(),
                     )),
                 },
                 AgentWiring {
-                    id: "PerformanceRegressionAgent".to_string(),
+                    id: "PerformanceRegressionAgent".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
                         "deterministic".to_string(),
                     )),
                 },
                 AgentWiring {
-                    id: "DocumentationAgent".to_string(),
+                    id: "DocumentationAgent".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
                         "deterministic".to_string(),
                     )),
                 },
                 AgentWiring {
-                    id: "RiskSummaryAgent".to_string(),
+                    id: "RiskSummaryAgent".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
                         "deterministic".to_string(),
                     )),
                 },
                 AgentWiring {
-                    id: "ReleaseReadyAgent".to_string(),
+                    id: "ReleaseReadyAgent".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
                         "deterministic".to_string(),
                     )),
@@ -643,16 +644,16 @@ impl TemplateRegistry {
             },
             agents: vec![
                 AgentWiring {
-                    id: "patent_query_builder".to_string(),
+                    id: "patent_query_builder".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
                         "fast_extraction".to_string(),
                     )),
                 },
                 AgentWiring {
-                    id: "patent_operator_planner".to_string(),
+                    id: "patent_operator_planner".into(),
                     requirements: Some(super::types::RequirementsConfig::Custom(
                         super::types::CustomRequirements {
-                            cost_class: Some("low".to_string()),
+                            cost_class: Some(CostClass::Low),
                             max_latency_ms: None,
                             requires_reasoning: Some(true),
                             requires_web_search: None,
@@ -661,10 +662,10 @@ impl TemplateRegistry {
                     )),
                 },
                 AgentWiring {
-                    id: "patent_search_executor".to_string(),
+                    id: "patent_search_executor".into(),
                     requirements: Some(super::types::RequirementsConfig::Custom(
                         super::types::CustomRequirements {
-                            cost_class: Some("medium".to_string()),
+                            cost_class: Some(CostClass::Medium),
                             max_latency_ms: Some(20000),
                             requires_reasoning: Some(false),
                             requires_web_search: None,
@@ -673,10 +674,10 @@ impl TemplateRegistry {
                     )),
                 },
                 AgentWiring {
-                    id: "patent_evidence_collector".to_string(),
+                    id: "patent_evidence_collector".into(),
                     requirements: Some(super::types::RequirementsConfig::Custom(
                         super::types::CustomRequirements {
-                            cost_class: Some("medium".to_string()),
+                            cost_class: Some(CostClass::Medium),
                             max_latency_ms: None,
                             requires_reasoning: Some(true),
                             requires_web_search: None,
@@ -685,10 +686,10 @@ impl TemplateRegistry {
                     )),
                 },
                 AgentWiring {
-                    id: "prior_art_shortlist".to_string(),
+                    id: "prior_art_shortlist".into(),
                     requirements: Some(super::types::RequirementsConfig::Custom(
                         super::types::CustomRequirements {
-                            cost_class: Some("medium".to_string()),
+                            cost_class: Some(CostClass::Medium),
                             max_latency_ms: None,
                             requires_reasoning: Some(true),
                             requires_web_search: None,

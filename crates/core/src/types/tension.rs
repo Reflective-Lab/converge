@@ -438,4 +438,130 @@ mod tests {
         let deserialized: Tension = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.id.as_str(), "t-1");
     }
+
+    // ========================================================================
+    // Negative tests — Tension state machine edge cases
+    // ========================================================================
+
+    #[test]
+    fn winner_returns_none_when_neither_chosen() {
+        let mut tension = Tension::new(
+            TensionId::new("t-1"),
+            TensionSide::new(ProposalId::new("p1"), "A"),
+            TensionSide::new(ProposalId::new("p2"), "B"),
+            ConflictType::Contradiction,
+        );
+        tension.resolve(TensionResolution::reject_both("both flawed", "reviewer"));
+        assert!(tension.is_resolved());
+        assert!(tension.winner().is_none());
+    }
+
+    #[test]
+    fn winner_returns_none_when_merged() {
+        let mut tension = Tension::new(
+            TensionId::new("t-1"),
+            TensionSide::new(ProposalId::new("p1"), "A"),
+            TensionSide::new(ProposalId::new("p2"), "B"),
+            ConflictType::ScopeOverlap,
+        );
+        tension.resolve(TensionResolution::merge("combined approach", "mediator"));
+        assert!(tension.is_resolved());
+        assert!(tension.winner().is_none());
+    }
+
+    #[test]
+    fn double_resolve_overwrites_resolution() {
+        let mut tension = Tension::new(
+            TensionId::new("t-1"),
+            TensionSide::new(ProposalId::new("p1"), "A"),
+            TensionSide::new(ProposalId::new("p2"), "B"),
+            ConflictType::PriorityMismatch,
+        );
+
+        tension.resolve(TensionResolution::choose_left("first pass", "actor"));
+        assert_eq!(tension.winner().unwrap().as_str(), "p1");
+
+        tension.resolve(TensionResolution::choose_right("reversed", "actor"));
+        assert_eq!(tension.winner().unwrap().as_str(), "p2");
+    }
+
+    #[test]
+    fn tension_side_add_evidence_accumulates() {
+        let mut side = TensionSide::new(ProposalId::new("p1"), "position");
+        assert!(side.supporting_evidence.is_empty());
+
+        side.add_evidence(FactId::new("f1"));
+        side.add_evidence(FactId::new("f2"));
+        side.add_evidence(FactId::new("f3"));
+        assert_eq!(side.supporting_evidence.len(), 3);
+    }
+
+    #[test]
+    fn tension_with_custom_conflict_type() {
+        let tension = Tension::new(
+            TensionId::new("t-custom"),
+            TensionSide::new(ProposalId::new("p1"), "A"),
+            TensionSide::new(ProposalId::new("p2"), "B"),
+            ConflictType::Custom("regulatory-clash".into()),
+        );
+        assert!(
+            matches!(tension.conflict_type, ConflictType::Custom(ref s) if s == "regulatory-clash")
+        );
+    }
+
+    #[test]
+    fn conflict_type_default_is_contradiction() {
+        assert_eq!(ConflictType::default(), ConflictType::Contradiction);
+    }
+
+    #[test]
+    fn hypothesis_untestable_flag() {
+        let hyp = Hypothesis::new("h-1", "untestable claim").untestable();
+        assert!(!hyp.testable);
+    }
+
+    #[test]
+    fn hypothesis_boundary_confidence_values() {
+        // Exactly at boundaries
+        let at_low = Hypothesis::new("h", "c").with_confidence(0.3);
+        assert!(!at_low.is_low_confidence()); // 0.3 is NOT < 0.3
+
+        let at_high = Hypothesis::new("h", "c").with_confidence(0.7);
+        assert!(at_high.is_high_confidence()); // 0.7 IS >= 0.7
+
+        // Zero and one
+        let zero = Hypothesis::new("h", "c").with_confidence(0.0);
+        assert!(zero.is_low_confidence());
+
+        let one = Hypothesis::new("h", "c").with_confidence(1.0);
+        assert!(one.is_high_confidence());
+    }
+
+    #[test]
+    fn tension_id_from_conversions() {
+        let from_str: TensionId = "t-1".into();
+        let from_string: TensionId = String::from("t-1").into();
+        assert_eq!(from_str, from_string);
+    }
+
+    #[test]
+    fn tension_serialization_with_resolution() {
+        let mut tension = Tension::new(
+            TensionId::new("t-ser"),
+            TensionSide::new(ProposalId::new("p1"), "A"),
+            TensionSide::new(ProposalId::new("p2"), "B"),
+            ConflictType::TemporalOverlap,
+        );
+        tension.resolve(TensionResolution::choose_left("reason", "actor"));
+
+        let json = serde_json::to_string(&tension).unwrap();
+        let round: Tension = serde_json::from_str(&json).unwrap();
+
+        assert!(round.is_resolved());
+        assert_eq!(round.winner().unwrap().as_str(), "p1");
+        assert_eq!(
+            round.resolution.as_ref().unwrap().chosen_side,
+            ChosenSide::Left
+        );
+    }
 }

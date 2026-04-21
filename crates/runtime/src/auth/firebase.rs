@@ -5,6 +5,7 @@
 
 use super::identity::UserIdentity;
 use super::jwt::JwtError;
+use crate::semantic::RoleId;
 use jsonwebtoken::{Algorithm, DecodingKey, TokenData, Validation, decode, decode_header};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -189,7 +190,7 @@ impl FirebaseValidator {
         }
 
         // Build user identity
-        let mut identity = UserIdentity::new(&claims.sub);
+        let mut identity = UserIdentity::new(claims.sub.as_str());
 
         if let Some(email) = claims.email {
             identity = identity.with_email(email);
@@ -198,7 +199,7 @@ impl FirebaseValidator {
         // Add sign-in provider as a role for policy decisions
         if let Some(ref firebase) = claims.firebase {
             if let Some(ref provider) = firebase.sign_in_provider {
-                identity = identity.with_roles(vec![format!("firebase:{}", provider)]);
+                identity = identity.with_roles(vec![RoleId::new(format!("firebase:{}", provider))]);
             }
         }
 

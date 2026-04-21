@@ -1,9 +1,10 @@
 use std::path::PathBuf;
 
 use converge_core::{
-    FlowAction, FlowGateContext, FlowGateInput, FlowGateOutcome, FlowGatePrincipal,
-    FlowGateResource,
+    AuthorityLevel, FlowAction, FlowGateContext, FlowGateInput, FlowGateOutcome, FlowGatePrincipal,
+    FlowGateResource, FlowPhase,
 };
+use converge_pack::{DomainId, GateId, PolicyVersionId, ResourceKind};
 use converge_policy::{FlowGateAuthorizer, PolicyEngine};
 
 fn vendor_engine() -> PolicyEngine {
@@ -20,15 +21,15 @@ fn vendor_input(
     FlowGateInput {
         principal: FlowGatePrincipal {
             id: "agent:procurement".into(),
-            authority: "supervisory".into(),
-            domains: vec!["procurement".into()],
-            policy_version: Some("vendor_v1".into()),
+            authority: AuthorityLevel::Supervisory,
+            domains: vec![DomainId::new("procurement")],
+            policy_version: Some(PolicyVersionId::new("vendor_v1")),
         },
         resource: FlowGateResource {
             id: "vendor-selection:001".into(),
-            kind: "spend".into(),
-            phase: "commitment".into(),
-            gates_passed: gates_passed.into_iter().map(str::to_string).collect(),
+            kind: ResourceKind::new("spend"),
+            phase: FlowPhase::Commitment,
+            gates_passed: gates_passed.into_iter().map(GateId::new).collect(),
         },
         action: FlowAction::Commit,
         context: FlowGateContext {

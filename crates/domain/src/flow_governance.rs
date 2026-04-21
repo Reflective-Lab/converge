@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use converge_core::{
-    Context, ContextKey, FlowAction, FlowGateAuthorizer, FlowGateContext, FlowGateInput,
-    FlowGatePrincipal, FlowGateResource,
+    AuthorityLevel, Context, ContextKey, FlowAction, FlowGateAuthorizer, FlowGateContext,
+    FlowGateInput, FlowGatePrincipal, FlowGateResource, FlowPhase,
 };
 use converge_policy::{FLOW_GOVERNANCE_POLICY, PolicyEngine};
 
@@ -43,15 +43,15 @@ pub(crate) fn flow_input(
     FlowGateInput {
         principal: FlowGatePrincipal {
             id: principal_id.into(),
-            authority: authority.into(),
+            authority: authority_level(authority),
             domains: vec![domain.into()],
             policy_version: Some("flow_governance_v1".into()),
         },
         resource: FlowGateResource {
-            id: resource_id,
+            id: resource_id.into(),
             kind: kind.into(),
-            phase: "commitment".into(),
-            gates_passed,
+            phase: FlowPhase::Commitment,
+            gates_passed: gates_passed.into_iter().map(Into::into).collect(),
         },
         action,
         context: FlowGateContext {
@@ -60,6 +60,16 @@ pub(crate) fn flow_input(
             human_approval_present: Some(human_approval_present),
             required_gates_met: Some(required_gates_met),
         },
+    }
+}
+
+fn authority_level(authority: &str) -> AuthorityLevel {
+    match authority {
+        "advisory" => AuthorityLevel::Advisory,
+        "supervisory" => AuthorityLevel::Supervisory,
+        "participatory" => AuthorityLevel::Participatory,
+        "sovereign" => AuthorityLevel::Sovereign,
+        _ => panic!("unsupported authority: {authority}"),
     }
 }
 
@@ -113,16 +123,32 @@ mod tests {
             FlowAction::Commit,
         );
         assert_eq!(input.principal.id, "agent:fin");
-        assert_eq!(input.principal.authority, "supervisory");
-        assert_eq!(input.principal.domains, vec!["finance"]);
+        assert_eq!(input.principal.authority, AuthorityLevel::Supervisory);
+        assert_eq!(
+            input
+                .principal
+                .domains
+                .iter()
+                .map(|d| d.as_str())
+                .collect::<Vec<_>>(),
+            vec!["finance"]
+        );
         assert_eq!(
             input.principal.policy_version.as_deref(),
             Some("flow_governance_v1")
         );
         assert_eq!(input.resource.id, "expense:001");
         assert_eq!(input.resource.kind, "expense");
-        assert_eq!(input.resource.phase, "commitment");
-        assert_eq!(input.resource.gates_passed, vec!["receipt"]);
+        assert_eq!(input.resource.phase, FlowPhase::Commitment);
+        assert_eq!(
+            input
+                .resource
+                .gates_passed
+                .iter()
+                .map(|g| g.as_str())
+                .collect::<Vec<_>>(),
+            vec!["receipt"]
+        );
         assert_eq!(input.context.amount, Some(5000));
         assert_eq!(input.context.human_approval_present, Some(true));
         assert_eq!(input.context.required_gates_met, Some(true));

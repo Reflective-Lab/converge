@@ -4,8 +4,7 @@
 
 //! Template type definitions for job configuration.
 //!
-// Allow deprecated items within this module (we define them here intentionally)
-#![allow(deprecated)]
+//
 //!
 //! # Contract: YAML = Wiring, Gherkin = Semantics
 //!
@@ -31,6 +30,9 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use utoipa::ToSchema;
+
+use crate::semantic::{AgentName, PackName, ProviderId};
+use converge_core::{ContextKey, CostClass, FactId};
 
 /// A domain pack configuration (wiring only).
 ///
@@ -118,7 +120,7 @@ pub struct AgentWiring {
     /// Suggestor ID (must match `@agent @id:xxx` in Gherkin spec).
     /// Supports both "id" and "name" in YAML for backward compatibility.
     #[serde(alias = "name")]
-    pub id: String,
+    pub id: AgentName,
 
     /// Provider requirements for model selection.
     #[serde(default)]
@@ -141,8 +143,13 @@ pub enum RequirementsConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct CustomRequirements {
     /// Cost class: "cheap", "medium", "expensive".
-    #[serde(default)]
-    pub cost_class: Option<String>,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_cost_class",
+        serialize_with = "serialize_optional_cost_class"
+    )]
+    #[schema(value_type = Option<String>)]
+    pub cost_class: Option<CostClass>,
 
     /// Maximum latency in milliseconds.
     #[serde(default)]
@@ -165,7 +172,8 @@ pub struct CustomRequirements {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SeedFact {
     /// Unique identifier for the seed (e.g., "market:nordic-b2b").
-    pub id: String,
+    #[schema(value_type = String)]
+    pub id: FactId,
     /// Content of the seed fact.
     pub content: String,
 }
@@ -183,7 +191,7 @@ pub struct JobOverrides {
 
     /// Per-agent requirement overrides keyed by agent name.
     #[serde(default)]
-    pub agents: HashMap<String, AgentOverrides>,
+    pub agents: HashMap<AgentName, AgentOverrides>,
 
     /// Whether to use real LLM providers (requires API keys).
     ///
@@ -210,18 +218,18 @@ pub struct AgentOverrides {
 pub struct ProviderPreferences {
     /// Preferred providers in order of preference.
     #[serde(default)]
-    pub prefer: Vec<String>,
+    pub prefer: Vec<ProviderId>,
 
     /// Providers to exclude.
     #[serde(default)]
-    pub exclude: Vec<String>,
+    pub exclude: Vec<ProviderId>,
 }
 
 /// Job request using a domain pack.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PackJobRequest {
     /// Pack to use (e.g., "growth-strategy").
-    pub pack: String,
+    pub pack: PackName,
 
     /// Overrides to apply.
     #[serde(default)]
@@ -259,23 +267,6 @@ impl From<&PackConfig> for PackSummary {
     }
 }
 
-// =============================================================================
-// Legacy types for backward compatibility (to be removed)
-// =============================================================================
-
-/// Legacy job template (deprecated - use PackConfig).
-#[deprecated(note = "Use PackConfig instead")]
-pub type JobTemplate = PackConfig;
-
-/// Legacy template summary (deprecated - use PackSummary).
-#[deprecated(note = "Use PackSummary instead")]
-pub type TemplateSummary = PackSummary;
-
-/// Legacy template job request (deprecated - use PackJobRequest).
-#[deprecated(note = "Use PackJobRequest instead")]
-pub type TemplateJobRequest = PackJobRequest;
-
-// Legacy agent definition (keeping for now during transition)
 /// Suggestor definition within a template.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AgentDefinition {
@@ -292,11 +283,13 @@ pub struct AgentDefinition {
 
     /// Context key this agent writes to.
     #[serde(default)]
-    pub output_key: Option<String>,
+    #[schema(value_type = Option<String>)]
+    pub output_key: Option<ContextKey>,
 
     /// Context keys this agent depends on.
     #[serde(default)]
-    pub depends_on: Vec<String>,
+    #[schema(value_type = Vec<String>)]
+    pub depends_on: Vec<ContextKey>,
 
     /// System prompt (for LLM agents).
     #[serde(default)]
@@ -323,47 +316,48 @@ pub enum AgentType {
     Validation,
 }
 
-/// Legacy validation config (deprecated - semantics belong in Gherkin).
-#[deprecated(note = "Validation rules should be in Gherkin specs, not YAML")]
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct ValidationConfigTemplate {
-    /// Minimum confidence threshold for accepting proposals.
-    #[serde(default = "default_min_confidence")]
-    pub min_confidence: f64,
-
-    /// Maximum content length for proposals.
-    #[serde(default = "default_max_content_length")]
-    pub max_content_length: usize,
-
-    /// Terms that cause immediate rejection.
-    #[serde(default)]
-    pub forbidden_terms: Vec<String>,
-
-    /// Whether provenance is required on proposals.
-    #[serde(default = "default_require_provenance")]
-    pub require_provenance: bool,
+fn serialize_optional_cost_class<S>(
+    value: &Option<CostClass>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    match value {
+        Some(cost) => serializer.serialize_some(cost_class_label(*cost)),
+        None => serializer.serialize_none(),
+    }
 }
 
-fn default_min_confidence() -> f64 {
-    0.7
+fn deserialize_optional_cost_class<'de, D>(deserializer: D) -> Result<Option<CostClass>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let raw = Option::<String>::deserialize(deserializer)?;
+    raw.map(|value| parse_cost_class(&value).map_err(serde::de::Error::custom))
+        .transpose()
 }
 
-fn default_max_content_length() -> usize {
-    10000
+fn parse_cost_class(value: &str) -> Result<CostClass, String> {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "free" => Ok(CostClass::Free),
+        "cheap" | "very_low" | "very-low" => Ok(CostClass::VeryLow),
+        "low" => Ok(CostClass::Low),
+        "medium" => Ok(CostClass::Medium),
+        "high" => Ok(CostClass::High),
+        "expensive" | "very_high" | "very-high" => Ok(CostClass::VeryHigh),
+        other => Err(format!("unsupported cost class '{other}'")),
+    }
 }
 
-fn default_require_provenance() -> bool {
-    true
-}
-
-impl Default for ValidationConfigTemplate {
-    fn default() -> Self {
-        Self {
-            min_confidence: default_min_confidence(),
-            max_content_length: default_max_content_length(),
-            forbidden_terms: Vec::new(),
-            require_provenance: default_require_provenance(),
-        }
+fn cost_class_label(value: CostClass) -> &'static str {
+    match value {
+        CostClass::Free => "free",
+        CostClass::VeryLow => "cheap",
+        CostClass::Low => "low",
+        CostClass::Medium => "medium",
+        CostClass::High => "high",
+        CostClass::VeryHigh => "expensive",
     }
 }
 
@@ -422,7 +416,7 @@ metadata:
         // Check custom requirements
         match &pack.agents[1].requirements {
             Some(RequirementsConfig::Custom(custom)) => {
-                assert_eq!(custom.cost_class.as_deref(), Some("medium"));
+                assert_eq!(custom.cost_class, Some(CostClass::Medium));
                 assert_eq!(custom.requires_reasoning, Some(true));
             }
             _ => panic!("Expected custom requirements"),

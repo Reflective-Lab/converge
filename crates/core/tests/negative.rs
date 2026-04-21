@@ -30,7 +30,7 @@ impl Suggestor for BadProposalAgent {
     async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
         AgentEffect::with_proposal(ProposedFact {
             key: self.key,
-            id: self.id.to_string(),
+            id: self.id.to_string().into(),
             content: self.content.to_string(),
             confidence: self.confidence,
             provenance: "test-agent".to_string(),

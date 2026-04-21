@@ -84,20 +84,68 @@ impl Constraint {
 /// Output contract for the prompt.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OutputContract {
-    /// What to emit (e.g., :proposed-fact, :fact, :analysis).
-    pub emit: String,
+    /// What to emit.
+    pub emit: OutputKind,
     /// Target context key.
     pub key: ContextKey,
-    /// Output format (e.g., :edn, :json, :xml).
-    pub format: Option<String>,
+    /// Output serialization format.
+    pub format: Option<OutputFormat>,
+}
+
+/// Output kind required by the prompt contract.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OutputKind {
+    ProposedFact,
+    Fact,
+    Analysis,
+    Evaluation,
+    Plan,
+    Classification,
+    Draft,
+    Reasoning,
+}
+
+impl OutputKind {
+    fn to_keyword(self) -> &'static str {
+        match self {
+            Self::ProposedFact => "proposed-fact",
+            Self::Fact => "fact",
+            Self::Analysis => "analysis",
+            Self::Evaluation => "evaluation",
+            Self::Plan => "plan",
+            Self::Classification => "classification",
+            Self::Draft => "draft",
+            Self::Reasoning => "reasoning",
+        }
+    }
+}
+
+/// Serialization format for emitted output.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OutputFormat {
+    Edn,
+    Json,
+    Xml,
+    Plain,
+}
+
+impl OutputFormat {
+    fn to_keyword(self) -> &'static str {
+        match self {
+            Self::Edn => "edn",
+            Self::Json => "json",
+            Self::Xml => "xml",
+            Self::Plain => "plain",
+        }
+    }
 }
 
 impl OutputContract {
     /// Creates a new output contract.
     #[must_use]
-    pub fn new(emit: impl Into<String>, key: ContextKey) -> Self {
+    pub fn new(emit: OutputKind, key: ContextKey) -> Self {
         Self {
-            emit: emit.into(),
+            emit,
             key,
             format: None,
         }
@@ -105,8 +153,8 @@ impl OutputContract {
 
     /// Sets the output format.
     #[must_use]
-    pub fn with_format(mut self, format: impl Into<String>) -> Self {
-        self.format = Some(format.into());
+    pub fn with_format(mut self, format: OutputFormat) -> Self {
+        self.format = Some(format);
         self
     }
 }
@@ -264,12 +312,12 @@ impl AgentPrompt {
         }
 
         s.push_str("}\n :out {:emit :");
-        s.push_str(&self.output_contract.emit);
+        s.push_str(self.output_contract.emit.to_keyword());
         s.push_str(" :key ");
         s.push_str(context_key_to_keyword(self.output_contract.key));
-        if let Some(ref format) = self.output_contract.format {
+        if let Some(format) = self.output_contract.format {
             s.push_str(" :format :");
-            s.push_str(format);
+            s.push_str(format.to_keyword());
         }
         s.push_str("}}");
 
@@ -350,7 +398,7 @@ mod tests {
             AgentRole::Proposer,
             "extract-competitors",
             ctx,
-            OutputContract::new("proposed-fact", ContextKey::Competitors),
+            OutputContract::new(OutputKind::ProposedFact, ContextKey::Competitors),
         )
         .with_constraint(Constraint::NoInvent)
         .with_constraint(Constraint::NoContradict);
@@ -404,7 +452,7 @@ mod tests {
             AgentRole::Proposer,
             "analyze",
             ctx,
-            OutputContract::new("proposed-fact", ContextKey::Strategies),
+            OutputContract::new(OutputKind::ProposedFact, ContextKey::Strategies),
         );
 
         let edn = prompt.to_edn();

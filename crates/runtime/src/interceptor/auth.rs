@@ -7,6 +7,7 @@
 use crate::auth::{
     JwtError, JwtValidator, JwtValidatorConfig, ServiceIdentity, UserIdentity, VerifiedIdentity,
 };
+use crate::semantic::GrpcMethod;
 use std::sync::Arc;
 use tonic::{Request, Status};
 use tracing::{debug, warn};
@@ -26,7 +27,7 @@ pub struct AuthInterceptorConfig {
     pub require_user_auth: bool,
 
     /// List of methods that don't require authentication.
-    pub unauthenticated_methods: Vec<String>,
+    pub unauthenticated_methods: Vec<GrpcMethod>,
 }
 
 impl Default for AuthInterceptorConfig {
@@ -36,7 +37,7 @@ impl Default for AuthInterceptorConfig {
             require_user_auth: true,
             unauthenticated_methods: vec![
                 // Capability negotiation doesn't require auth
-                "/converge.ConvergeService/GetCapabilities".to_string(),
+                "/converge.ConvergeService/GetCapabilities".into(),
             ],
         }
     }
@@ -60,7 +61,7 @@ impl AuthInterceptorConfig {
 
     /// Add a method that doesn't require authentication.
     #[must_use]
-    pub fn allow_unauthenticated(mut self, method: impl Into<String>) -> Self {
+    pub fn allow_unauthenticated(mut self, method: impl Into<GrpcMethod>) -> Self {
         self.unauthenticated_methods.push(method.into());
         self
     }
@@ -88,12 +89,9 @@ impl AuthInterceptor {
     ///
     /// Call this from the service layer to determine if a specific method
     /// needs authentication before processing.
-    pub fn requires_auth(&self, method: &str) -> bool {
-        !self
-            .config
-            .unauthenticated_methods
-            .iter()
-            .any(|m| m == method)
+    pub fn requires_auth(&self, method: impl Into<GrpcMethod>) -> bool {
+        let method = method.into();
+        !self.config.unauthenticated_methods.contains(&method)
     }
 
     /// Check method authentication requirement and return error if needed.
@@ -104,7 +102,11 @@ impl AuthInterceptor {
     ///     return Err(status);
     /// }
     /// ```
-    pub fn check_method<T>(&self, method: &str, request: &Request<T>) -> Result<(), Status> {
+    pub fn check_method<T>(
+        &self,
+        method: impl Into<GrpcMethod>,
+        request: &Request<T>,
+    ) -> Result<(), Status> {
         if !self.requires_auth(method) {
             return Ok(());
         }
@@ -272,7 +274,7 @@ mod tests {
         assert!(
             config
                 .unauthenticated_methods
-                .contains(&"/converge.ConvergeService/GetCapabilities".to_string())
+                .contains(&"/converge.ConvergeService/GetCapabilities".into())
         );
     }
 

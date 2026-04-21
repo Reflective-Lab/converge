@@ -113,7 +113,7 @@ impl JobExecutorBuilder {
     /// Add a single seed fact.
     pub fn with_seed(mut self, id: impl Into<String>, content: impl Into<String>) -> Self {
         self.seeds.push(SeedFact {
-            id: id.into(),
+            id: id.into().into(),
             content: content.into(),
         });
         self

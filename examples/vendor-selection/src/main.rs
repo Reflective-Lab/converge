@@ -7,10 +7,10 @@
 //! Cedar-backed procurement gating.
 
 use converge_kernel::{
-    AgentEffect, Context, ContextKey, ContextState, Engine, EngineHitlPolicy, FlowAction,
-    FlowGateAuthorizer, FlowGateContext, FlowGateInput, FlowGateOutcome, FlowGatePrincipal,
-    FlowGateResource, GateDecision, ProposedFact, RunResult, Suggestor, TimeoutAction,
-    TimeoutPolicy,
+    AgentEffect, AuthorityLevel, Context, ContextKey, ContextState, Engine, EngineHitlPolicy,
+    FlowAction, FlowGateAuthorizer, FlowGateContext, FlowGateInput, FlowGateOutcome,
+    FlowGatePrincipal, FlowGateResource, FlowPhase, GateDecision, ProposedFact, RunResult,
+    Suggestor, TimeoutAction, TimeoutPolicy,
 };
 use converge_policy::PolicyEngine;
 use std::path::PathBuf;
@@ -41,7 +41,7 @@ fn vendor_selection_input(
     FlowGateInput {
         principal: FlowGatePrincipal {
             id: "agent:procurement-supervisor".into(),
-            authority: "supervisory".into(),
+            authority: AuthorityLevel::Supervisory,
             domains: vec!["procurement".into()],
             policy_version: Some("vendor_v1".into()),
         },
@@ -52,10 +52,11 @@ fn vendor_selection_input(
                     .get("id")
                     .and_then(|value| value.as_str())
                     .unwrap_or("unknown")
-            ),
+            )
+            .into(),
             kind: "spend".into(),
-            phase: "commitment".into(),
-            gates_passed,
+            phase: FlowPhase::Commitment,
+            gates_passed: gates_passed.into_iter().map(Into::into).collect(),
         },
         action,
         context: FlowGateContext {
@@ -446,7 +447,7 @@ impl Suggestor for ConsensusAgent {
             .enumerate()
             .map(|(i, (vendor_id, score))| ProposedFact {
                 key: ContextKey::Strategies,
-                id: format!("recommendation-{}", i + 1),
+                id: format!("recommendation-{}", i + 1).into(),
                 content: serde_json::json!({
                     "vendor_id": vendor_id,
                     "rank": i + 1,

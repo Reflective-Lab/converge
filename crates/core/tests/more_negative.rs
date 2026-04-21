@@ -115,7 +115,7 @@ async fn empty_proposal_id_still_works() {
         async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
             AgentEffect::with_proposal(ProposedFact {
                 key: ContextKey::Seeds,
-                id: String::new(),
+                id: String::new().into(),
                 content: "has empty id".into(),
                 confidence: 0.8,
                 provenance: "empty-id".into(),

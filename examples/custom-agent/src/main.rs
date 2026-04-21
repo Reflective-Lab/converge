@@ -82,7 +82,7 @@ impl Suggestor for SummaryAgent {
 
         AgentEffect::with_proposal(ProposedFact {
             key: ContextKey::Hypotheses,
-            id: format!("{}-summary", self.agent_name),
+            id: format!("{}-summary", self.agent_name).into(),
             content: format!("Combined signal: {summary}"),
             confidence: 0.9,
             provenance: format!("agent:{}", self.agent_name),

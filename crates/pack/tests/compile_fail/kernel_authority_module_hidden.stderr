@@ -1,0 +1,14 @@
+error[E0432]: unresolved import `converge_pack::fact::kernel_authority`
+ --> tests/compile_fail/kernel_authority_module_hidden.rs:3:21
+  |
+3 | use converge_pack::{fact::kernel_authority, ContextKey};
+  |                     ^^^^^^^^^^^^^^^^^^^^^^ no `kernel_authority` in `fact`
+  |
+note: found an item that was configured out
+ --> src/fact.rs
+  |
+  | #[cfg(feature = "kernel-authority")]
+  |       ---------------------------- the item is gated behind the `kernel-authority` feature
+  | #[doc(hidden)]
+  | pub mod kernel_authority {
+  |         ^^^^^^^^^^^^^^^^

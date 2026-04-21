@@ -9,7 +9,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Context, Criterion, FactId, TypesIntentConstraint};
+use crate::{ApprovalPointId, Context, Criterion, FactId, PackId, TruthId, TypesIntentConstraint};
 
 /// What class of truth is being described.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -26,7 +26,7 @@ pub enum TruthKind {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TruthDefinition {
     /// Stable truth identifier.
-    pub key: String,
+    pub key: TruthId,
     /// Truth class.
     pub kind: TruthKind,
     /// Human-readable summary.
@@ -36,9 +36,9 @@ pub struct TruthDefinition {
     /// Hard and soft constraints derived from the truth.
     pub constraints: Vec<TypesIntentConstraint>,
     /// Human approval points that the runtime must respect.
-    pub approval_points: Vec<String>,
+    pub approval_points: Vec<ApprovalPointId>,
     /// Which packs should participate when this truth is active.
-    pub participating_packs: Vec<String>,
+    pub participating_packs: Vec<PackId>,
 }
 
 /// Machine-evaluable outcome for a single criterion.
@@ -51,7 +51,7 @@ pub enum CriterionResult {
         /// Why the criterion is blocked.
         reason: String,
         /// Optional approval or workflow reference the host can surface.
-        approval_ref: Option<String>,
+        approval_ref: Option<ApprovalPointId>,
     },
     /// The criterion was evaluated and is not satisfied.
     Unmet { reason: String },
@@ -80,10 +80,10 @@ pub trait TruthCatalog: Send + Sync {
     fn list_truths(&self) -> Vec<TruthDefinition>;
 
     /// Resolve a truth by key.
-    fn find_truth(&self, key: &str) -> Option<TruthDefinition> {
+    fn find_truth(&self, key: &TruthId) -> Option<TruthDefinition> {
         self.list_truths()
             .into_iter()
-            .find(|truth| truth.key == key)
+            .find(|truth| truth.key.as_str() == key.as_str())
     }
 }
 
@@ -189,11 +189,11 @@ mod tests {
         }
 
         let catalog = TestCatalog;
-        let found = catalog.find_truth("job:onboard");
+        let found = catalog.find_truth(&TruthId::new("job:onboard"));
         assert!(found.is_some());
         assert_eq!(found.unwrap().kind, TruthKind::Job);
 
-        let not_found = catalog.find_truth("nonexistent");
+        let not_found = catalog.find_truth(&TruthId::new("nonexistent"));
         assert!(not_found.is_none());
     }
 }

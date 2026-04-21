@@ -322,7 +322,7 @@ impl ConvergeService for ConvergeServiceImpl {
             .seeds
             .iter()
             .map(|s| crate::templates::SeedFact {
-                id: s.key.clone(),
+                id: s.key.clone().into(),
                 content: s
                     .value
                     .as_ref()

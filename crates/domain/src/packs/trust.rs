@@ -607,9 +607,9 @@ impl Invariant for AllActionsAuditedInvariant {
         let proposals = ctx.get(ContextKey::Proposals);
         for decision in proposals.iter() {
             if decision.id.starts_with(ACCESS_DECISION_PREFIX) {
-                let has_audit = proposals
-                    .iter()
-                    .any(|a| a.id.starts_with(AUDIT_PREFIX) && a.content.contains(&decision.id));
+                let has_audit = proposals.iter().any(|a| {
+                    a.id.starts_with(AUDIT_PREFIX) && a.content.contains(decision.id.as_str())
+                });
                 if !has_audit {
                     return InvariantResult::Violated(Violation::with_facts(
                         format!("Access decision {} has no audit entry", decision.id),
@@ -668,7 +668,8 @@ impl Invariant for ViolationsHaveRemediationInvariant {
                 && violation.content.contains("\"state\":\"open\"")
             {
                 let has_remediation = proposals.iter().any(|r| {
-                    r.id.starts_with(REMEDIATION_PREFIX) && r.content.contains(&violation.id)
+                    r.id.starts_with(REMEDIATION_PREFIX)
+                        && r.content.contains(violation.id.as_str())
                 });
                 if !has_remediation {
                     return InvariantResult::Violated(Violation::with_facts(
@@ -718,7 +719,7 @@ impl Invariant for LegalActionsAuditedInvariant {
             {
                 let has_audit = proposals.iter().any(|a| {
                     a.id.starts_with(AUDIT_PREFIX)
-                        && (a.content.contains(&contract.id)
+                        && (a.content.contains(contract.id.as_str())
                             || a.content.contains("contract_executed")
                             || a.content.contains("legal_action"))
                 });
@@ -739,7 +740,7 @@ impl Invariant for LegalActionsAuditedInvariant {
             {
                 let has_audit = proposals.iter().any(|a| {
                     a.id.starts_with(AUDIT_PREFIX)
-                        && (a.content.contains(&grant.id)
+                        && (a.content.contains(grant.id.as_str())
                             || a.content.contains("equity_granted")
                             || a.content.contains("legal_action"))
                 });
@@ -760,7 +761,7 @@ impl Invariant for LegalActionsAuditedInvariant {
             {
                 let has_audit = proposals.iter().any(|a| {
                     a.id.starts_with(AUDIT_PREFIX)
-                        && (a.content.contains(&ip.id)
+                        && (a.content.contains(ip.id.as_str())
                             || a.content.contains("ip_assigned")
                             || a.content.contains("legal_action"))
                 });

@@ -15,23 +15,23 @@ fn to_decide_request(input: &FlowGateInput) -> DecideRequest {
     DecideRequest {
         principal: PrincipalIn {
             id: input.principal.id.clone(),
-            authority: input.principal.authority.clone(),
+            authority: input.principal.authority,
             domains: input.principal.domains.clone(),
             policy_version: input.principal.policy_version.clone(),
         },
         resource: ResourceIn {
             id: input.resource.id.clone(),
             resource_type: Some(input.resource.kind.clone()),
-            phase: Some(input.resource.phase.clone()),
+            phase: Some(input.resource.phase),
             gates_passed: Some(input.resource.gates_passed.clone()),
         },
-        action: input.action.as_str().to_string(),
+        action: input.action,
         context: Some(ContextIn {
             commitment_type: input
                 .context
                 .commitment_type
                 .clone()
-                .or_else(|| Some(input.resource.kind.clone())),
+                .or_else(|| Some(input.resource.kind.clone().into())),
             amount: input.context.amount,
             human_approval_present: input.context.human_approval_present,
             required_gates_met: input.context.required_gates_met,
@@ -79,14 +79,14 @@ mod tests {
         let input = FlowGateInput {
             principal: converge_core::FlowGatePrincipal {
                 id: "agent:finance".into(),
-                authority: "supervisory".into(),
+                authority: converge_core::AuthorityLevel::Supervisory,
                 domains: vec!["finance".into()],
                 policy_version: Some("expense_v1".into()),
             },
             resource: converge_core::FlowGateResource {
                 id: "expense:001".into(),
                 kind: "expense".into(),
-                phase: "commitment".into(),
+                phase: converge_core::FlowPhase::Commitment,
                 gates_passed: vec!["receipt".into()],
             },
             action: FlowAction::Validate,
@@ -99,12 +99,9 @@ mod tests {
         };
 
         let request = to_decide_request(&input);
-        assert_eq!(request.action, "validate");
+        assert_eq!(request.action, FlowAction::Validate);
         assert_eq!(request.principal.domains, vec!["finance"]);
-        assert_eq!(
-            request.resource.gates_passed,
-            Some(vec!["receipt".to_string()])
-        );
+        assert_eq!(request.resource.gates_passed, Some(vec!["receipt".into()]));
         assert_eq!(
             request
                 .context
@@ -124,14 +121,14 @@ mod tests {
         let input = FlowGateInput {
             principal: converge_core::FlowGatePrincipal {
                 id: "agent:finance".into(),
-                authority: "supervisory".into(),
+                authority: converge_core::AuthorityLevel::Supervisory,
                 domains: vec!["finance".into()],
                 policy_version: Some("expense_v1".into()),
             },
             resource: converge_core::FlowGateResource {
                 id: "expense:001".into(),
                 kind: "expense".into(),
-                phase: "commitment".into(),
+                phase: converge_core::FlowPhase::Commitment,
                 gates_passed: vec!["receipt".into()],
             },
             action: FlowAction::Validate,

@@ -361,7 +361,7 @@ impl Suggestor for LoanDecisionAgent {
 
         let proposal = ProposedFact {
             key: ContextKey::Proposals,
-            id: "loan-decision".to_string(),
+            id: "loan-decision".into(),
             content: serde_json::json!({
                 "decision": decision,
                 "score": avg_score,

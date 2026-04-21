@@ -271,7 +271,7 @@ async fn decide(
             outcome,
             reason,
             input.principal.id.clone(),
-            input.action.clone(),
+            input.action,
             input.resource.id.clone(),
         )
     } else {

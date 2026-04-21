@@ -35,11 +35,13 @@ Key surface:
 - `AgentEffect`
 - `ProposedFact`
 - `Fact` (read-only outside kernel-authority code)
+- semantic contract values such as `FactId`, `ProposalId`, `GateId`, `Timestamp`, and `ContentHash`
 - `Invariant`
 
 Status:
 - canonical authoring contract
 - authoritative fact creation is feature-gated
+- semantic identifiers, hashes, and timestamps are typed contract values, not string conventions
 
 ### `converge-provider-api`
 

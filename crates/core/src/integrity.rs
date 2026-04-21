@@ -364,7 +364,7 @@ impl TrackedContext {
         for key in self.context.all_keys() {
             for fact in self.context.get(key) {
                 let hash = ContentHash::compute_fact(fact);
-                self.fact_hashes.push((key, fact.id.clone(), hash));
+                self.fact_hashes.push((key, fact.id.to_string(), hash));
             }
         }
         self.merkle_root = None; // Invalidate cached root
@@ -377,7 +377,7 @@ impl TrackedContext {
     /// Returns an error if the fact conflicts with an existing fact.
     pub fn add_fact(&mut self, fact: Fact) -> Result<bool, crate::error::ConvergeError> {
         let key = fact.key();
-        let id = fact.id.clone();
+        let id = fact.id.to_string();
         let hash = ContentHash::compute_fact(&fact);
 
         let changed = self.context.add_fact(fact)?;

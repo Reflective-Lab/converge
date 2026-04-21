@@ -69,7 +69,7 @@ impl Eval for MeetingScheduleFeasibilityEval {
         }
 
         let mut valid_count = 0;
-        let fact_ids: Vec<String> = strategies.iter().map(|s| s.id.clone()).collect();
+        let fact_ids: Vec<_> = strategies.iter().map(|s| s.id.clone()).collect();
 
         for strategy in strategies {
             // Simplified: check if content mentions valid time slots
@@ -159,7 +159,7 @@ impl Eval for InvoiceAccuracyEval {
         }
 
         let ratio = valid_count as f64 / invoices.len() as f64;
-        let fact_ids: Vec<String> = invoices.iter().map(|i| i.id.clone()).collect();
+        let fact_ids: Vec<_> = invoices.iter().map(|i| i.id.clone()).collect();
 
         if ratio >= 0.95 {
             EvalResult::with_facts(

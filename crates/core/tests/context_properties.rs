@@ -33,7 +33,7 @@ impl Suggestor for SingleProposalSuggestor {
     async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
         AgentEffect::with_proposal(ProposedFact::new(
             self.key,
-            &self.id,
+            self.id.as_str(),
             &self.content,
             self.name(),
         ))

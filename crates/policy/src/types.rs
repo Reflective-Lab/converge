@@ -7,6 +7,9 @@
 
 use serde::{Deserialize, Serialize};
 
+use converge_core::{AuthorityLevel, FlowAction, FlowPhase};
+use converge_pack::{DomainId, GateId, PolicyVersionId, PrincipalId, ResourceId, ResourceKind};
+
 /// Suggestor persona — the principal in Converge policy decisions.
 ///
 /// Maps to converge-personas definitions. Authority levels determine
@@ -14,13 +17,13 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrincipalIn {
     /// Suggestor identifier (e.g., `agent:strategic_analyst`)
-    pub id: String,
+    pub id: PrincipalId,
     /// Authority level: advisory, supervisory, participatory, sovereign
-    pub authority: String,
+    pub authority: AuthorityLevel,
     /// Domains this agent operates in
-    pub domains: Vec<String>,
+    pub domains: Vec<DomainId>,
     /// Policy version binding (e.g., `enterprise_v2.3`)
-    pub policy_version: Option<String>,
+    pub policy_version: Option<PolicyVersionId>,
 }
 
 /// Flow or commitment — the resource being acted upon.
@@ -30,14 +33,14 @@ pub struct PrincipalIn {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceIn {
     /// Flow/commitment identifier (e.g., `flow:quote-2025-0042`)
-    pub id: String,
+    pub id: ResourceId,
     /// Commitment type: quote, spend, contract, invoice
     #[serde(rename = "type")]
-    pub resource_type: Option<String>,
+    pub resource_type: Option<ResourceKind>,
     /// Current phase: intent, framing, exploration, tension, convergence, commitment
-    pub phase: Option<String>,
+    pub phase: Option<FlowPhase>,
     /// Gates that have been passed
-    pub gates_passed: Option<Vec<String>>,
+    pub gates_passed: Option<Vec<GateId>>,
 }
 
 /// Decision context — facts about the action being attempted.
@@ -62,7 +65,7 @@ pub struct DecideRequest {
     pub principal: PrincipalIn,
     pub resource: ResourceIn,
     /// Action: propose, validate, promote, commit, `advance_phase`
-    pub action: String,
+    pub action: FlowAction,
     pub context: Option<ContextIn>,
     /// Optional delegation token for fast-path elevated authority
     pub delegation_b64: Option<String>,

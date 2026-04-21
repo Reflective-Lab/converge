@@ -7,14 +7,16 @@
 //! It intentionally excludes the execution engine and runtime adapters.
 
 pub use converge_core::{
-    Actor, ActorKind, ApprovalId, ArtifactId, CaptureContext, ChosenSide, ConflictType,
-    ConstraintKind, Criterion, EvidenceRef, FactContent, FactContentKind, FactId, Frame,
+    Actor, ActorKind, ApprovalId, ApprovalPointId, ArtifactId, BackendId, CaptureContext, ChainId,
+    ChosenSide, ConflictType, ConstraintKind, ConstraintName, ConstraintValue, Criterion,
+    CriterionId, EventId, EvidenceRef, FactContent, FactContentKind, FactId, Frame,
     FrameConstraint, FrameId, GateId, Hypothesis, LocalTrace, Observation, ObservationError,
-    ObservationId, ObservationKind, ObservationProvenance, PromotionError, PromotionRecord,
-    Proposal, ProposalId, RiskPosture, StopReason, Tension, TensionId, TensionResolution,
-    TensionSide, Timestamp, TruthCatalog, TruthDefinition, TruthKind, TypeError, TypesBudgets,
-    TypesConstraintSeverity, TypesContextKey, TypesContextSnapshot, TypesFact,
-    TypesIntentConstraint, TypesIntentId, TypesIntentKind, TypesObjective, TypesProposedContent,
-    TypesRootIntent, TypesTraceLink, TypesValidationError, Validated, ValidationSummary,
+    ObservationId, ObservationKind, ObservationProvenance, PackId, PolicyId, PromotionError,
+    PromotionRecord, Proposal, ProposalId, RiskPosture, StopReason, TenantId, Tension, TensionId,
+    TensionResolution, TensionSide, Timestamp, TraceLinkId, TruthCatalog, TruthDefinition, TruthId,
+    TruthKind, TypeError, TypesBudgets, TypesConstraintSeverity, TypesContextKey,
+    TypesContextSnapshot, TypesFact, TypesIntentConstraint, TypesIntentId, TypesIntentKind,
+    TypesObjective, TypesProposedContent, TypesRootIntent, TypesTraceLink, TypesValidationError,
+    Validated, ValidationSummary,
 };
 pub use converge_pack::{ContextKey, ProposedFact, ValidationError};

@@ -73,7 +73,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::context::{ContextKey, Fact};
+use crate::context::{ContextKey, Fact, FactId};
 
 /// The outcome of an eval execution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -121,7 +121,7 @@ pub struct EvalResult {
     /// Human-readable explanation of the result.
     pub rationale: String,
     /// IDs of facts that were evaluated (for traceability).
-    pub fact_ids: Vec<String>,
+    pub fact_ids: Vec<FactId>,
     /// Optional: metadata about the eval execution.
     pub metadata: Option<String>,
 }
@@ -152,7 +152,7 @@ impl EvalResult {
         outcome: EvalOutcome,
         score: f64,
         rationale: impl Into<String>,
-        fact_ids: Vec<String>,
+        fact_ids: Vec<FactId>,
     ) -> Self {
         Self {
             eval_name: eval_name.into(),

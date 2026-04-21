@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use converge_core::{AuthorityLevel, FlowAction, FlowPhase};
+use converge_pack::{DomainId, GateId, PrincipalId, ResourceId, ResourceKind};
 use converge_policy::{ContextIn, DecideRequest, PolicyEngine, PrincipalIn, ResourceIn};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -87,18 +89,18 @@ fn expense_request(
 ) -> DecideRequest {
     DecideRequest {
         principal: PrincipalIn {
-            id: format!("agent:{authority}"),
-            authority: authority.into(),
-            domains: domains.into_iter().map(str::to_string).collect(),
+            id: PrincipalId::new(format!("agent:{authority}")),
+            authority: authority_level(authority),
+            domains: domains.into_iter().map(DomainId::new).collect(),
             policy_version: Some("expense_v1".into()),
         },
         resource: ResourceIn {
-            id: format!("expense:{action}-{amount}"),
-            resource_type: Some("expense".into()),
-            phase: Some("commitment".into()),
-            gates_passed: Some(gates_passed.into_iter().map(str::to_string).collect()),
+            id: ResourceId::new(format!("expense:{action}-{amount}")),
+            resource_type: Some(ResourceKind::new("expense")),
+            phase: Some(FlowPhase::Commitment),
+            gates_passed: Some(gates_passed.into_iter().map(GateId::new).collect()),
         },
-        action: action.into(),
+        action: flow_action(action),
         context: Some(ContextIn {
             commitment_type: Some("expense".into()),
             amount: Some(amount),
@@ -106,5 +108,26 @@ fn expense_request(
             required_gates_met: Some(true),
         }),
         delegation_b64: None,
+    }
+}
+
+fn authority_level(authority: &str) -> AuthorityLevel {
+    match authority {
+        "advisory" => AuthorityLevel::Advisory,
+        "supervisory" => AuthorityLevel::Supervisory,
+        "participatory" => AuthorityLevel::Participatory,
+        "sovereign" => AuthorityLevel::Sovereign,
+        _ => panic!("unsupported example authority: {authority}"),
+    }
+}
+
+fn flow_action(action: &str) -> FlowAction {
+    match action {
+        "propose" => FlowAction::Propose,
+        "validate" => FlowAction::Validate,
+        "promote" => FlowAction::Promote,
+        "commit" => FlowAction::Commit,
+        "advance_phase" => FlowAction::AdvancePhase,
+        _ => panic!("unsupported example action: {action}"),
     }
 }

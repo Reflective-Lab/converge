@@ -484,4 +484,202 @@ mod tests {
         let type_err: TypeError = serde_err.unwrap_err().into();
         assert!(type_err.to_string().contains("expected"));
     }
+
+    // ========================================================================
+    // TypeError — all variants
+    // ========================================================================
+
+    #[test]
+    fn type_error_promotion_invariant() {
+        let err = TypeError::promotion_invariant("must have evidence");
+        assert_eq!(
+            err.to_string(),
+            "promotion invariant violated: must have evidence"
+        );
+    }
+
+    #[test]
+    fn type_error_validation_failed() {
+        let err = TypeError::validation_failed("confidence below threshold");
+        assert_eq!(
+            err.to_string(),
+            "validation failed: confidence below threshold"
+        );
+    }
+
+    #[test]
+    fn type_error_is_std_error() {
+        let err = TypeError::missing_field("id");
+        let _: &dyn std::error::Error = &err;
+    }
+
+    // ========================================================================
+    // PromotionError — all variants
+    // ========================================================================
+
+    #[test]
+    fn promotion_error_validation_failed() {
+        let err = PromotionError::validation_failed("schema mismatch");
+        assert_eq!(err.to_string(), "validation failed: schema mismatch");
+    }
+
+    #[test]
+    fn promotion_error_missing_evidence() {
+        let err = PromotionError::missing_evidence("no supporting observations");
+        assert_eq!(
+            err.to_string(),
+            "missing evidence: no supporting observations"
+        );
+    }
+
+    #[test]
+    fn promotion_error_human_approval_required() {
+        let err = PromotionError::HumanApprovalRequired;
+        assert_eq!(err.to_string(), "human approval required");
+    }
+
+    #[test]
+    fn promotion_error_policy_version_mismatch() {
+        let err = PromotionError::PolicyVersionMismatch {
+            expected: "v2".into(),
+            actual: "v1".into(),
+        };
+        assert_eq!(
+            err.to_string(),
+            "policy version mismatch: expected v2, got v1"
+        );
+    }
+
+    #[test]
+    fn promotion_error_report_mismatch() {
+        let err = PromotionError::report_mismatch("prop-1", "prop-2");
+        assert_eq!(
+            err.to_string(),
+            "report mismatch: proposal prop-1 vs report for prop-2"
+        );
+    }
+
+    #[test]
+    fn promotion_error_is_std_error() {
+        let err = PromotionError::HumanApprovalRequired;
+        let _: &dyn std::error::Error = &err;
+    }
+
+    // ========================================================================
+    // ObservationError — all variants
+    // ========================================================================
+
+    #[test]
+    fn observation_error_content_hash_mismatch() {
+        let err = ObservationError::ContentHashMismatch;
+        assert_eq!(err.to_string(), "content hash mismatch");
+    }
+
+    #[test]
+    fn observation_error_missing_context() {
+        let err = ObservationError::missing_context("session_id");
+        assert_eq!(err.to_string(), "capture context missing: session_id");
+    }
+
+    #[test]
+    fn observation_error_provider_not_available() {
+        let err = ObservationError::provider_not_available("anthropic");
+        assert_eq!(err.to_string(), "provider not available: anthropic");
+    }
+
+    #[test]
+    fn observation_error_is_std_error() {
+        let err = ObservationError::ContentHashMismatch;
+        let _: &dyn std::error::Error = &err;
+    }
+
+    // ========================================================================
+    // TypesValidationError — all variants
+    // ========================================================================
+
+    #[test]
+    fn validation_error_constraint_violated() {
+        let err = TypesValidationError::constraint_violated("budget exceeded");
+        assert_eq!(err.to_string(), "constraint violated: budget exceeded");
+    }
+
+    #[test]
+    fn validation_error_schema_mismatch() {
+        let err = TypesValidationError::schema_mismatch("json", "xml");
+        assert_eq!(
+            err.to_string(),
+            "schema mismatch: expected json vs actual xml"
+        );
+    }
+
+    #[test]
+    fn validation_error_invalid_format() {
+        let err = TypesValidationError::invalid_format("expected ISO-8601");
+        assert_eq!(err.to_string(), "invalid format: expected ISO-8601");
+    }
+
+    #[test]
+    fn validation_error_missing_field() {
+        let err = TypesValidationError::missing_field("name");
+        assert_eq!(err.to_string(), "missing required field: name");
+    }
+
+    #[test]
+    fn validation_error_all_variants_serialize() {
+        let variants: Vec<TypesValidationError> = vec![
+            TypesValidationError::invalid_confidence(2.0),
+            TypesValidationError::EmptyContent,
+            TypesValidationError::missing_field("x"),
+            TypesValidationError::constraint_violated("c"),
+            TypesValidationError::schema_mismatch("a", "b"),
+            TypesValidationError::invalid_format("f"),
+        ];
+        for v in &variants {
+            let json = serde_json::to_string(v).unwrap();
+            let round: TypesValidationError = serde_json::from_str(&json).unwrap();
+            assert_eq!(*v, round);
+        }
+    }
+
+    #[test]
+    fn validation_error_equality() {
+        let a = TypesValidationError::EmptyContent;
+        let b = TypesValidationError::EmptyContent;
+        assert_eq!(a, b);
+
+        let c = TypesValidationError::missing_field("x");
+        let d = TypesValidationError::missing_field("y");
+        assert_ne!(c, d);
+    }
+
+    // ========================================================================
+    // CorrectionError — all variants
+    // ========================================================================
+
+    #[test]
+    fn correction_error_scope_mismatch() {
+        let err = CorrectionError::scope_mismatch("global");
+        assert_eq!(
+            err.to_string(),
+            "scope mismatch: correction scope global doesn't match fact scope"
+        );
+    }
+
+    #[test]
+    fn correction_error_not_authorized() {
+        let err = CorrectionError::not_authorized("fact-99");
+        assert_eq!(err.to_string(), "not authorized to correct fact: fact-99");
+    }
+
+    #[test]
+    fn correction_error_invalid_chain() {
+        let err = CorrectionError::invalid_chain("cycle detected");
+        assert_eq!(err.to_string(), "invalid correction chain: cycle detected");
+    }
+
+    #[test]
+    fn correction_error_is_std_error() {
+        let err = CorrectionError::fact_not_found("f-1");
+        let _: &dyn std::error::Error = &err;
+    }
 }

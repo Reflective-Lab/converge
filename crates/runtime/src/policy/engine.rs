@@ -2,6 +2,7 @@
 
 use super::types::{Effect, Policy, PolicyError};
 use crate::auth::VerifiedIdentity;
+use crate::semantic::{GrpcMethod, RoleId, ServiceId, UserId};
 use std::sync::Arc;
 use tracing::debug;
 
@@ -37,8 +38,13 @@ impl PolicyEngine {
     /// Evaluate a request against the policy.
     ///
     /// Returns `Ok(())` if allowed, `Err(PolicyError::Denied)` if denied.
-    pub fn evaluate(&self, method: &str, identity: &VerifiedIdentity) -> Result<(), PolicyError> {
-        let user_id = identity.user.as_ref().map(|u| u.user_id.as_str());
+    pub fn evaluate(
+        &self,
+        method: impl Into<GrpcMethod>,
+        identity: &VerifiedIdentity,
+    ) -> Result<(), PolicyError> {
+        let method = method.into();
+        let user_id = identity.user.as_ref().map(|u| &u.user_id);
         let roles = identity
             .user
             .as_ref()
@@ -52,11 +58,12 @@ impl PolicyEngine {
     /// Evaluate with raw parameters (for testing).
     pub fn evaluate_raw(
         &self,
-        method: &str,
-        user_id: Option<&str>,
-        roles: &[String],
-        service_id: &str,
+        method: impl Into<GrpcMethod>,
+        user_id: Option<&UserId>,
+        roles: &[RoleId],
+        service_id: &ServiceId,
     ) -> Result<(), PolicyError> {
+        let method = method.into();
         debug!(
             method = %method,
             user_id = ?user_id,
@@ -67,7 +74,7 @@ impl PolicyEngine {
 
         // Evaluate rules in priority order
         for rule in self.policy.sorted_rules() {
-            if rule.matches(method, user_id, roles, service_id) {
+            if rule.matches(&method, user_id, roles, service_id) {
                 debug!(
                     rule = %rule.name,
                     effect = %rule.effect,
@@ -92,14 +99,15 @@ impl PolicyEngine {
         match self.policy.default_effect {
             Effect::Allow => Ok(()),
             Effect::Deny => Err(PolicyError::NoMatch {
-                method: method.to_string(),
-                principal: user_id.unwrap_or(service_id).to_string(),
+                method,
+                principal: user_id
+                    .map_or_else(|| service_id.to_string(), std::string::ToString::to_string),
             }),
         }
     }
 
     /// Check if a method is allowed without returning detailed error.
-    pub fn is_allowed(&self, method: &str, identity: &VerifiedIdentity) -> bool {
+    pub fn is_allowed(&self, method: impl Into<GrpcMethod>, identity: &VerifiedIdentity) -> bool {
         self.evaluate(method, identity).is_ok()
     }
 
@@ -120,13 +128,14 @@ mod tests {
     use super::*;
     use crate::auth::{ServiceIdentity, UserIdentity};
     use crate::policy::types::{Principal, Rule};
+    use crate::semantic::Selector;
 
     fn make_identity(service: &str, user: Option<(&str, Vec<&str>)>) -> VerifiedIdentity {
         let service = ServiceIdentity::new(service);
         match user {
             Some((uid, roles)) => {
                 let user = UserIdentity::new(uid)
-                    .with_roles(roles.into_iter().map(String::from).collect());
+                    .with_roles(roles.into_iter().map(RoleId::from).collect());
                 VerifiedIdentity::with_user(service, user)
             }
             None => VerifiedIdentity::service_only(service),
@@ -155,10 +164,10 @@ mod tests {
                 name: "admin-access".to_string(),
                 effect: Effect::Allow,
                 principals: Principal {
-                    roles: vec!["admin".to_string()],
+                    roles: Selector::exact(vec!["admin".into()]),
                     ..Default::default()
                 },
-                methods: vec!["*".to_string()],
+                methods: Selector::any(),
                 condition: None,
                 priority: 0,
             }],
@@ -184,10 +193,10 @@ mod tests {
                 name: "gateway-access".to_string(),
                 effect: Effect::Allow,
                 principals: Principal {
-                    services: vec!["api-gateway".to_string()],
+                    services: Selector::exact(vec!["api-gateway".into()]),
                     ..Default::default()
                 },
-                methods: vec!["*".to_string()],
+                methods: Selector::any(),
                 condition: None,
                 priority: 0,
             }],
@@ -211,13 +220,13 @@ mod tests {
                 name: "read-access".to_string(),
                 effect: Effect::Allow,
                 principals: Principal {
-                    roles: vec!["user".to_string()],
+                    roles: Selector::exact(vec!["user".into()]),
                     ..Default::default()
                 },
-                methods: vec![
-                    "/converge.Service/GetJob".to_string(),
-                    "/converge.Service/GetCapabilities".to_string(),
-                ],
+                methods: Selector::exact(vec![
+                    "/converge.Service/GetJob".into(),
+                    "/converge.Service/GetCapabilities".into(),
+                ]),
                 condition: None,
                 priority: 0,
             }],
@@ -252,10 +261,10 @@ mod tests {
                     name: "deny-all".to_string(),
                     effect: Effect::Deny,
                     principals: Principal {
-                        roles: vec!["*".to_string()],
+                        roles: Selector::any(),
                         ..Default::default()
                     },
-                    methods: vec!["*".to_string()],
+                    methods: Selector::any(),
                     condition: None,
                     priority: 1, // Lower priority
                 },
@@ -263,10 +272,10 @@ mod tests {
                     name: "allow-admin".to_string(),
                     effect: Effect::Allow,
                     principals: Principal {
-                        roles: vec!["admin".to_string()],
+                        roles: Selector::exact(vec!["admin".into()]),
                         ..Default::default()
                     },
-                    methods: vec!["*".to_string()],
+                    methods: Selector::any(),
                     condition: None,
                     priority: 100, // Higher priority - evaluated first
                 },
@@ -293,10 +302,10 @@ mod tests {
                 name: "deny-dangerous".to_string(),
                 effect: Effect::Deny,
                 principals: Principal {
-                    roles: vec!["*".to_string()],
+                    roles: Selector::any(),
                     ..Default::default()
                 },
-                methods: vec!["/admin/DeleteAll".to_string()],
+                methods: Selector::exact(vec!["/admin/DeleteAll".into()]),
                 condition: None,
                 priority: 100,
             }],
@@ -358,10 +367,10 @@ mod tests {
                 name: "explicit-deny".to_string(),
                 effect: Effect::Deny,
                 principals: Principal {
-                    services: vec!["*".to_string()],
+                    services: Selector::any(),
                     ..Default::default()
                 },
-                methods: vec!["/blocked".to_string()],
+                methods: Selector::exact(vec!["/blocked".into()]),
                 condition: None,
                 priority: 0,
             }],

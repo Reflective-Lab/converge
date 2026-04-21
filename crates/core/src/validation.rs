@@ -69,7 +69,7 @@ impl ValidationAgent {
     pub fn validate_proposal(&self, proposal: &ProposedFact) -> ValidationResult {
         if proposal.confidence < self.config.min_confidence {
             return ValidationResult::Rejected {
-                proposal_id: proposal.id.clone(),
+                proposal_id: proposal.id.to_string(),
                 reason: format!(
                     "confidence {} below threshold {}",
                     proposal.confidence, self.config.min_confidence
@@ -79,7 +79,7 @@ impl ValidationAgent {
 
         if proposal.content.len() > self.config.max_content_length {
             return ValidationResult::Rejected {
-                proposal_id: proposal.id.clone(),
+                proposal_id: proposal.id.to_string(),
                 reason: format!(
                     "content length {} exceeds max {}",
                     proposal.content.len(),
@@ -90,14 +90,14 @@ impl ValidationAgent {
 
         if proposal.content.trim().is_empty() {
             return ValidationResult::Rejected {
-                proposal_id: proposal.id.clone(),
+                proposal_id: proposal.id.to_string(),
                 reason: "content is empty".into(),
             };
         }
 
         if self.config.require_provenance && proposal.provenance.trim().is_empty() {
             return ValidationResult::Rejected {
-                proposal_id: proposal.id.clone(),
+                proposal_id: proposal.id.to_string(),
                 reason: "provenance is required but empty".into(),
             };
         }
@@ -106,7 +106,7 @@ impl ValidationAgent {
         for term in &self.config.forbidden_terms {
             if content_lower.contains(&term.to_lowercase()) {
                 return ValidationResult::Rejected {
-                    proposal_id: proposal.id.clone(),
+                    proposal_id: proposal.id.to_string(),
                     reason: format!("content contains forbidden term '{term}'"),
                 };
             }

@@ -18,6 +18,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::invariant::InvariantClass;
+use crate::{ApprovalPointId, CriterionId, GateId, ProposalId};
 
 /// Why execution stopped. Exhaustive enumeration for audit trails.
 ///
@@ -44,7 +45,7 @@ pub enum StopReason {
     /// All success conditions met, no need to continue.
     CriteriaMet {
         /// Which criteria were satisfied
-        criteria: Vec<String>,
+        criteria: Vec<CriterionId>,
     },
 
     /// User requested stop via cancellation.
@@ -57,9 +58,9 @@ pub enum StopReason {
     /// before the truth can be considered complete.
     HumanInterventionRequired {
         /// Which required criteria are blocked.
-        criteria: Vec<String>,
+        criteria: Vec<CriterionId>,
         /// Optional approval/workflow references surfaced by the evaluator.
-        approval_refs: Vec<String>,
+        approval_refs: Vec<ApprovalPointId>,
     },
 
     // ========================================================================
@@ -119,7 +120,7 @@ pub enum StopReason {
     /// Proposal failed validation and could not be promoted.
     PromotionRejected {
         /// ID of the rejected proposal
-        proposal_id: String,
+        proposal_id: ProposalId,
         /// Why it was rejected
         reason: String,
     },
@@ -154,9 +155,9 @@ pub enum StopReason {
     /// `Engine::resume()` with the decision.
     HitlGatePending {
         /// Unique ID for this gate (used to resume)
-        gate_id: String,
+        gate_id: GateId,
         /// ID of the proposal awaiting approval
-        proposal_id: String,
+        proposal_id: ProposalId,
         /// Human-readable summary of the proposal
         summary: String,
         /// Which agent made the proposal
@@ -177,7 +178,7 @@ impl StopReason {
     }
 
     /// Create a CriteriaMet stop reason.
-    pub fn criteria_met(criteria: Vec<String>) -> Self {
+    pub fn criteria_met(criteria: Vec<CriterionId>) -> Self {
         Self::CriteriaMet { criteria }
     }
 
@@ -187,7 +188,10 @@ impl StopReason {
     }
 
     /// Create a HumanInterventionRequired stop reason.
-    pub fn human_intervention_required(criteria: Vec<String>, approval_refs: Vec<String>) -> Self {
+    pub fn human_intervention_required(
+        criteria: Vec<CriterionId>,
+        approval_refs: Vec<ApprovalPointId>,
+    ) -> Self {
         Self::HumanInterventionRequired {
             criteria,
             approval_refs,
@@ -237,7 +241,10 @@ impl StopReason {
     }
 
     /// Create a PromotionRejected stop reason.
-    pub fn promotion_rejected(proposal_id: impl Into<String>, reason: impl Into<String>) -> Self {
+    pub fn promotion_rejected(
+        proposal_id: impl Into<ProposalId>,
+        reason: impl Into<String>,
+    ) -> Self {
         Self::PromotionRejected {
             proposal_id: proposal_id.into(),
             reason: reason.into(),
@@ -262,8 +269,8 @@ impl StopReason {
 
     /// Create a HitlGatePending stop reason.
     pub fn hitl_gate_pending(
-        gate_id: impl Into<String>,
-        proposal_id: impl Into<String>,
+        gate_id: impl Into<GateId>,
+        proposal_id: impl Into<ProposalId>,
         summary: impl Into<String>,
         agent_id: impl Into<String>,
         cycle: u32,
@@ -329,7 +336,15 @@ impl std::fmt::Display for StopReason {
         match self {
             Self::Converged => write!(f, "Converged"),
             Self::CriteriaMet { criteria } => {
-                write!(f, "Criteria met: {}", criteria.join(", "))
+                write!(
+                    f,
+                    "Criteria met: {}",
+                    criteria
+                        .iter()
+                        .map(ToString::to_string)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
             }
             Self::UserCancelled => write!(f, "User cancelled"),
             Self::HumanInterventionRequired {
@@ -340,14 +355,26 @@ impl std::fmt::Display for StopReason {
                     write!(
                         f,
                         "Human intervention required for: {}",
-                        criteria.join(", ")
+                        criteria
+                            .iter()
+                            .map(ToString::to_string)
+                            .collect::<Vec<_>>()
+                            .join(", ")
                     )
                 } else {
                     write!(
                         f,
                         "Human intervention required for: {} (refs: {})",
-                        criteria.join(", "),
-                        approval_refs.join(", ")
+                        criteria
+                            .iter()
+                            .map(ToString::to_string)
+                            .collect::<Vec<_>>()
+                            .join(", "),
+                        approval_refs
+                            .iter()
+                            .map(ToString::to_string)
+                            .collect::<Vec<_>>()
+                            .join(", ")
                     )
                 }
             }

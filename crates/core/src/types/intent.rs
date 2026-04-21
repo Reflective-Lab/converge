@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
 use super::frame::{ConstraintSeverity, Criterion, IntentId};
-use super::id::Timestamp;
+use super::id::{ConstraintName, ConstraintValue, PackId, Timestamp};
 
 // ============================================================================
 // TypesIntentKind - What problem class this intent addresses
@@ -109,9 +109,9 @@ impl Default for RiskPosture {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TypesIntentConstraint {
     /// Constraint key.
-    pub key: String,
+    pub key: ConstraintName,
     /// Constraint value.
-    pub value: String,
+    pub value: ConstraintValue,
     /// How violations are handled.
     pub severity: ConstraintSeverity,
 }
@@ -119,8 +119,8 @@ pub struct TypesIntentConstraint {
 impl TypesIntentConstraint {
     /// Create a new constraint.
     pub fn new(
-        key: impl Into<String>,
-        value: impl Into<String>,
+        key: impl Into<ConstraintName>,
+        value: impl Into<ConstraintValue>,
         severity: ConstraintSeverity,
     ) -> Self {
         Self {
@@ -131,12 +131,12 @@ impl TypesIntentConstraint {
     }
 
     /// Create a hard constraint.
-    pub fn hard(key: impl Into<String>, value: impl Into<String>) -> Self {
+    pub fn hard(key: impl Into<ConstraintName>, value: impl Into<ConstraintValue>) -> Self {
         Self::new(key, value, ConstraintSeverity::Hard)
     }
 
     /// Create a soft constraint.
-    pub fn soft(key: impl Into<String>, value: impl Into<String>) -> Self {
+    pub fn soft(key: impl Into<ConstraintName>, value: impl Into<ConstraintValue>) -> Self {
         Self::new(key, value, ConstraintSeverity::Soft)
     }
 }
@@ -252,7 +252,7 @@ pub struct TypesRootIntent {
     pub constraints: Vec<TypesIntentConstraint>,
     /// Which packs should participate in this run.
     #[builder(default)]
-    pub active_packs: Vec<String>,
+    pub active_packs: Vec<PackId>,
     /// Success criteria (per CONTEXT.md: RootIntent contains success_criteria).
     #[builder(default)]
     pub success_criteria: Vec<Criterion>,
@@ -283,7 +283,7 @@ impl TypesRootIntent {
     }
 
     /// Check whether a pack is active for this intent.
-    pub fn activates_pack(&self, pack_id: &str) -> bool {
+    pub fn activates_pack(&self, pack_id: &PackId) -> bool {
         self.active_packs.iter().any(|active| active == pack_id)
     }
 }
@@ -340,7 +340,7 @@ mod tests {
             .request("Find growth opportunities")
             .objective(Some(TypesObjective::IncreaseDemand))
             .risk_posture(RiskPosture::Conservative)
-            .active_packs(vec!["growth-pack".to_string()])
+            .active_packs(vec!["growth-pack".into()])
             .success_criteria(vec![Criterion::required("growth", "10% growth")])
             .build();
 
@@ -351,7 +351,7 @@ mod tests {
             Some(TypesObjective::IncreaseDemand)
         ));
         assert_eq!(intent.risk_posture, RiskPosture::Conservative);
-        assert!(intent.activates_pack("growth-pack"));
+        assert!(intent.activates_pack(&PackId::new("growth-pack")));
         assert!(intent.has_required_criteria());
     }
 

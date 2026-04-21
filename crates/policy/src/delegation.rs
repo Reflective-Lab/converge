@@ -10,18 +10,20 @@ use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
 use serde::{Deserialize, Serialize};
 
 use crate::types::DecideRequest;
+use converge_core::{AuthorityLevel, FlowAction};
+use converge_pack::{ActorId, PrincipalId};
 
 /// Scoped, time-limited authority delegation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Delegation {
     /// Suggestor persona being granted authority
-    pub sub: String,
+    pub sub: PrincipalId,
     /// Who delegated (supervisor persona or human identifier)
-    pub issuer: String,
+    pub issuer: ActorId,
     /// The authority level being granted
-    pub delegated_authority: String,
+    pub delegated_authority: AuthorityLevel,
     /// Allowed actions (commit, promote, etc.)
-    pub actions: Vec<String>,
+    pub actions: Vec<FlowAction>,
     /// Resource scope pattern (e.g., `flow:quote-*`)
     pub resource_pattern: String,
     /// Optional spending cap
@@ -39,10 +41,10 @@ pub struct Delegation {
 /// Request to issue a delegation token.
 #[derive(Debug, Deserialize)]
 pub struct IssueDelegationReq {
-    pub sub: String,
-    pub issuer: String,
-    pub delegated_authority: String,
-    pub actions: Vec<String>,
+    pub sub: PrincipalId,
+    pub issuer: ActorId,
+    pub delegated_authority: AuthorityLevel,
+    pub actions: Vec<FlowAction>,
     pub resource_pattern: String,
     pub max_amount: Option<i64>,
     pub nbf_epoch: i64,
@@ -74,10 +76,10 @@ pub fn issue(
     signing_key: &SigningKey,
     req: IssueDelegationReq,
 ) -> Result<IssueDelegationResp, String> {
-    if req.sub.trim().is_empty() {
+    if req.sub.as_str().trim().is_empty() {
         return Err("delegation subject cannot be empty".to_string());
     }
-    if req.issuer.trim().is_empty() {
+    if req.issuer.as_str().trim().is_empty() {
         return Err("delegation issuer cannot be empty".to_string());
     }
     if req.actions.is_empty() {
@@ -196,13 +198,15 @@ pub fn verify(b64: &str, vkey: &VerifyingKey, req: &DecideRequest) -> Result<boo
 #[cfg(test)]
 mod tests {
     use super::*;
+    use converge_core::FlowPhase;
+    use converge_pack::ResourceKind;
 
     fn valid_req() -> IssueDelegationReq {
         IssueDelegationReq {
             sub: "agent:finance".into(),
             issuer: "human:cfo".into(),
-            delegated_authority: "supervisory".into(),
-            actions: vec!["commit".into()],
+            delegated_authority: AuthorityLevel::Supervisory,
+            actions: vec![FlowAction::Commit],
             resource_pattern: "flow:quote-*".into(),
             max_amount: Some(50_000),
             nbf_epoch: 1_000_000,
@@ -299,8 +303,8 @@ mod tests {
         let req = IssueDelegationReq {
             sub: "agent:finance".into(),
             issuer: "human:cfo".into(),
-            delegated_authority: "supervisory".into(),
-            actions: vec!["commit".into()],
+            delegated_authority: AuthorityLevel::Supervisory,
+            actions: vec![FlowAction::Commit],
             resource_pattern: "flow:quote-*".into(),
             max_amount: Some(50_000),
             nbf_epoch: now - 100,
@@ -314,17 +318,17 @@ mod tests {
         let decide_req = DecideRequest {
             principal: crate::types::PrincipalIn {
                 id: "agent:finance".into(),
-                authority: "supervisory".into(),
+                authority: AuthorityLevel::Supervisory,
                 domains: vec!["finance".into()],
                 policy_version: None,
             },
             resource: crate::types::ResourceIn {
                 id: "flow:quote-2025-001".into(),
-                resource_type: Some("quote".into()),
-                phase: Some("commitment".into()),
+                resource_type: Some(ResourceKind::new("quote")),
+                phase: Some(FlowPhase::Commitment),
                 gates_passed: None,
             },
-            action: "commit".into(),
+            action: FlowAction::Commit,
             context: Some(crate::types::ContextIn {
                 commitment_type: Some("quote".into()),
                 amount: Some(10_000),
@@ -349,8 +353,8 @@ mod tests {
         let req = IssueDelegationReq {
             sub: "agent:finance".into(),
             issuer: "human:cfo".into(),
-            delegated_authority: "supervisory".into(),
-            actions: vec!["commit".into()],
+            delegated_authority: AuthorityLevel::Supervisory,
+            actions: vec![FlowAction::Commit],
             resource_pattern: "flow:*".into(),
             max_amount: None,
             nbf_epoch: now - 100,
@@ -364,7 +368,7 @@ mod tests {
         let decide_req = DecideRequest {
             principal: crate::types::PrincipalIn {
                 id: "agent:other".into(),
-                authority: "advisory".into(),
+                authority: AuthorityLevel::Advisory,
                 domains: vec![],
                 policy_version: None,
             },
@@ -374,7 +378,7 @@ mod tests {
                 phase: None,
                 gates_passed: None,
             },
-            action: "commit".into(),
+            action: FlowAction::Commit,
             context: None,
             delegation_b64: None,
         };
@@ -394,8 +398,8 @@ mod tests {
         let req = IssueDelegationReq {
             sub: "agent:finance".into(),
             issuer: "human:cfo".into(),
-            delegated_authority: "supervisory".into(),
-            actions: vec!["commit".into()],
+            delegated_authority: AuthorityLevel::Supervisory,
+            actions: vec![FlowAction::Commit],
             resource_pattern: "flow:*".into(),
             max_amount: Some(1_000),
             nbf_epoch: now - 100,
@@ -409,7 +413,7 @@ mod tests {
         let decide_req = DecideRequest {
             principal: crate::types::PrincipalIn {
                 id: "agent:finance".into(),
-                authority: "supervisory".into(),
+                authority: AuthorityLevel::Supervisory,
                 domains: vec![],
                 policy_version: None,
             },
@@ -419,7 +423,7 @@ mod tests {
                 phase: None,
                 gates_passed: None,
             },
-            action: "commit".into(),
+            action: FlowAction::Commit,
             context: Some(crate::types::ContextIn {
                 commitment_type: None,
                 amount: Some(5_000),

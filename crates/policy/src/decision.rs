@@ -5,9 +5,12 @@
 
 use serde::{Deserialize, Serialize};
 
+use converge_core::FlowAction;
+use converge_pack::{PrincipalId, ResourceId};
+
 /// Outcome of a policy evaluation, aligned with converge-core's `GateDecision`.
 ///
-/// This is intentionally compatible with `converge_optimization::gate::GateDecision`
+/// This is intentionally compatible with `converge_pack::gate::GateDecision`
 /// so that policy decisions can flow directly into the promotion gate pipeline.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -42,11 +45,11 @@ pub struct PolicyDecision {
     /// Human-readable rationale (from Cedar diagnostics or delegation verification)
     pub reason: Option<String>,
     /// The principal that was evaluated
-    pub principal_id: String,
+    pub principal_id: PrincipalId,
     /// The action that was attempted
-    pub action: String,
+    pub action: FlowAction,
     /// The resource that was targeted
-    pub resource_id: String,
+    pub resource_id: ResourceId,
 }
 
 /// How the decision was reached
@@ -64,17 +67,17 @@ impl PolicyDecision {
     pub fn policy(
         outcome: PolicyOutcome,
         reason: Option<String>,
-        principal_id: String,
-        action: String,
-        resource_id: String,
+        principal_id: impl Into<PrincipalId>,
+        action: FlowAction,
+        resource_id: impl Into<ResourceId>,
     ) -> Self {
         Self {
             outcome,
             mode: DecisionMode::Policy,
             reason,
-            principal_id,
+            principal_id: principal_id.into(),
             action,
-            resource_id,
+            resource_id: resource_id.into(),
         }
     }
 
@@ -82,17 +85,17 @@ impl PolicyDecision {
     pub fn delegation(
         outcome: PolicyOutcome,
         reason: Option<String>,
-        principal_id: String,
-        action: String,
-        resource_id: String,
+        principal_id: impl Into<PrincipalId>,
+        action: FlowAction,
+        resource_id: impl Into<ResourceId>,
     ) -> Self {
         Self {
             outcome,
             mode: DecisionMode::Delegation,
             reason,
-            principal_id,
+            principal_id: principal_id.into(),
             action,
-            resource_id,
+            resource_id: resource_id.into(),
         }
     }
 }
@@ -120,15 +123,15 @@ mod tests {
         let d = PolicyDecision::policy(
             PolicyOutcome::Promote,
             Some("reason".into()),
-            "agent:x".into(),
-            "propose".into(),
-            "flow:1".into(),
+            "agent:x",
+            FlowAction::Propose,
+            "flow:1",
         );
         assert_eq!(d.mode, DecisionMode::Policy);
         assert_eq!(d.outcome, PolicyOutcome::Promote);
         assert_eq!(d.reason.as_deref(), Some("reason"));
         assert_eq!(d.principal_id, "agent:x");
-        assert_eq!(d.action, "propose");
+        assert_eq!(d.action, FlowAction::Propose);
         assert_eq!(d.resource_id, "flow:1");
     }
 
@@ -137,9 +140,9 @@ mod tests {
         let d = PolicyDecision::delegation(
             PolicyOutcome::Escalate,
             None,
-            "agent:y".into(),
-            "commit".into(),
-            "flow:2".into(),
+            "agent:y",
+            FlowAction::Commit,
+            "flow:2",
         );
         assert_eq!(d.mode, DecisionMode::Delegation);
         assert_eq!(d.outcome, PolicyOutcome::Escalate);
