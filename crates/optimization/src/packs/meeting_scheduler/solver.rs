@@ -1,11 +1,11 @@
 //! Solver for Meeting Scheduler pack
 
 use super::types::*;
-use crate::Result;
-use crate::gate::{
+use converge_pack::PackSolver;
+use converge_pack::gate::GateResult as Result;
+use converge_pack::gate::{
     Diagnostic, DiagnosticKind, ProblemSpec, ReplayEnvelope, SolverReport, StopReason,
 };
-use crate::packs::PackSolver;
 
 /// Greedy scoring solver for meeting scheduling
 ///
@@ -238,7 +238,7 @@ impl PackSolver for GreedySolver {
         let input: MeetingSchedulerInput = spec.inputs_as()?;
         let (output, report) = self.solve_meeting(&input, spec)?;
         let json = serde_json::to_value(&output)
-            .map_err(|e| crate::Error::invalid_input(e.to_string()))?;
+            .map_err(|e| converge_pack::GateError::invalid_input(e.to_string()))?;
         Ok((json, report))
     }
 
@@ -264,7 +264,7 @@ struct ScoredSlot {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gate::{ObjectiveSpec, SolveBudgets};
+    use converge_pack::gate::{ObjectiveSpec, SolveBudgets};
 
     fn create_test_input() -> MeetingSchedulerInput {
         MeetingSchedulerInput {

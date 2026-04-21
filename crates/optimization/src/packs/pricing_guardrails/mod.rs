@@ -30,9 +30,9 @@ pub use invariants::*;
 pub use solver::*;
 pub use types::*;
 
-use crate::Result;
-use crate::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 use crate::packs::{InvariantDef, InvariantResult, Pack, PackSolveResult, default_gate_evaluation};
+use converge_pack::gate::GateResult as Result;
+use converge_pack::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 
 /// Pricing Guardrails Pack
 pub struct PricingGuardrailsPack;
@@ -47,8 +47,10 @@ impl Pack for PricingGuardrailsPack {
     }
 
     fn validate_inputs(&self, inputs: &serde_json::Value) -> Result<()> {
-        let input: PricingGuardrailsInput = serde_json::from_value(inputs.clone())
-            .map_err(|e| crate::Error::invalid_input(format!("Invalid input: {}", e)))?;
+        let input: PricingGuardrailsInput =
+            serde_json::from_value(inputs.clone()).map_err(|e| {
+                converge_pack::GateError::invalid_input(format!("Invalid input: {}", e))
+            })?;
         input.validate()
     }
 
@@ -120,7 +122,7 @@ fn calculate_confidence(output: &PricingGuardrailsOutput) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gate::ObjectiveSpec;
+    use converge_pack::gate::ObjectiveSpec;
 
     fn create_test_input() -> PricingGuardrailsInput {
         PricingGuardrailsInput {

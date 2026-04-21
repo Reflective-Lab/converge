@@ -1,6 +1,6 @@
 //! Types for Vendor Shortlist pack
 
-use crate::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 /// Input for vendor shortlist optimization
@@ -16,12 +16,14 @@ impl VendorShortlistInput {
     /// Validate the input
     pub fn validate(&self) -> Result<()> {
         if self.vendors.is_empty() {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "At least one vendor is required",
             ));
         }
         if self.requirements.max_vendors == 0 {
-            return Err(crate::Error::invalid_input("max_vendors must be positive"));
+            return Err(converge_pack::GateError::invalid_input(
+                "max_vendors must be positive",
+            ));
         }
         Ok(())
     }

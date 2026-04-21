@@ -1,6 +1,6 @@
 //! Types for Traveling Salesman pack
 
-use crate::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -17,11 +17,13 @@ pub struct TspInput {
 impl TspInput {
     pub fn validate(&self) -> Result<()> {
         if self.cities.len() < 2 {
-            return Err(crate::Error::invalid_input("At least two cities required"));
+            return Err(converge_pack::GateError::invalid_input(
+                "At least two cities required",
+            ));
         }
         for (i, city) in self.cities.iter().enumerate() {
             if !city.x.is_finite() || !city.y.is_finite() {
-                return Err(crate::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "City {} has non-finite coordinates",
                     i
                 )));

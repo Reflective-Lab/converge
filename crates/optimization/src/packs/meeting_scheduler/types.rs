@@ -1,7 +1,7 @@
 //! Types for Meeting Scheduler pack
 
-use crate::Result;
-use crate::packs::PackSchema;
+use converge_pack::PackSchema;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 /// Input for meeting scheduler
@@ -19,10 +19,12 @@ impl MeetingSchedulerInput {
     /// Validate the input
     pub fn validate(&self) -> Result<()> {
         if self.slots.is_empty() {
-            return Err(crate::Error::invalid_input("no slots provided"));
+            return Err(converge_pack::GateError::invalid_input("no slots provided"));
         }
         if self.attendees.is_empty() {
-            return Err(crate::Error::invalid_input("no attendees provided"));
+            return Err(converge_pack::GateError::invalid_input(
+                "no attendees provided",
+            ));
         }
 
         // Validate each slot
@@ -87,13 +89,17 @@ impl TimeSlot {
     /// Validate the slot
     pub fn validate(&self) -> Result<()> {
         if self.id.is_empty() {
-            return Err(crate::Error::invalid_input("slot id is required"));
+            return Err(converge_pack::GateError::invalid_input(
+                "slot id is required",
+            ));
         }
         if self.start >= self.end {
-            return Err(crate::Error::invalid_input("slot start must be before end"));
+            return Err(converge_pack::GateError::invalid_input(
+                "slot start must be before end",
+            ));
         }
         if self.capacity == 0 {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "slot capacity must be positive",
             ));
         }
@@ -125,7 +131,9 @@ impl Attendee {
     /// Validate the attendee
     pub fn validate(&self) -> Result<()> {
         if self.id.is_empty() {
-            return Err(crate::Error::invalid_input("attendee id is required"));
+            return Err(converge_pack::GateError::invalid_input(
+                "attendee id is required",
+            ));
         }
         Ok(())
     }
@@ -169,7 +177,7 @@ impl MeetingRequirements {
     /// Validate requirements
     pub fn validate(&self) -> Result<()> {
         if self.duration_minutes <= 0 {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "duration_minutes must be positive",
             ));
         }

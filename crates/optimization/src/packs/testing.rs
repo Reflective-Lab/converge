@@ -1,8 +1,7 @@
 //! Test harness for pack scenarios
 
-use super::Pack;
-use crate::Result;
-use crate::gate::{GateDecision, ProblemSpec};
+use converge_pack::Pack;
+use converge_pack::gate::{GateDecision, GateResult, ProblemSpec};
 
 /// Test scenario for a pack
 #[derive(Debug, Clone)]
@@ -331,8 +330,8 @@ impl ScenarioSummary {
 }
 
 /// Helper to create a minimal problem spec for testing
-pub fn test_problem_spec(_pack_name: &str, inputs: serde_json::Value) -> Result<ProblemSpec> {
-    use crate::gate::ObjectiveSpec;
+pub fn test_problem_spec(_pack_name: &str, inputs: serde_json::Value) -> GateResult<ProblemSpec> {
+    use converge_pack::gate::ObjectiveSpec;
 
     ProblemSpec::builder(format!("test-{}", uuid_v4()), "test-tenant")
         .objective(ObjectiveSpec::maximize("score"))

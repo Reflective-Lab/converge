@@ -1,6 +1,6 @@
 //! Types for Anomaly Triage pack
 
-use crate::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 /// Input for anomaly triage optimization
@@ -18,12 +18,12 @@ impl AnomalyTriageInput {
     /// Validate the input
     pub fn validate(&self) -> Result<()> {
         if self.thresholds.critical <= self.thresholds.high {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "Critical threshold must be greater than high threshold",
             ));
         }
         if self.thresholds.high <= self.thresholds.medium {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "High threshold must be greater than medium threshold",
             ));
         }

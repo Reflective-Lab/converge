@@ -1,7 +1,7 @@
 //! Types for Inventory Rebalancing pack
 
-use crate::Result;
-use crate::packs::PackSchema;
+use converge_pack::PackSchema;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -24,10 +24,14 @@ impl InventoryRebalancingInput {
     /// Validate the input
     pub fn validate(&self) -> Result<()> {
         if self.locations.is_empty() {
-            return Err(crate::Error::invalid_input("no locations provided"));
+            return Err(converge_pack::GateError::invalid_input(
+                "no locations provided",
+            ));
         }
         if self.products.is_empty() {
-            return Err(crate::Error::invalid_input("no products provided"));
+            return Err(converge_pack::GateError::invalid_input(
+                "no products provided",
+            ));
         }
 
         // Validate each location
@@ -107,10 +111,12 @@ impl Location {
     /// Validate the location
     pub fn validate(&self) -> Result<()> {
         if self.id.is_empty() {
-            return Err(crate::Error::invalid_input("location id is required"));
+            return Err(converge_pack::GateError::invalid_input(
+                "location id is required",
+            ));
         }
         if self.capacity <= 0 {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "location capacity must be positive",
             ));
         }
@@ -147,7 +153,9 @@ impl Product {
     /// Validate the product
     pub fn validate(&self) -> Result<()> {
         if self.id.is_empty() {
-            return Err(crate::Error::invalid_input("product id is required"));
+            return Err(converge_pack::GateError::invalid_input(
+                "product id is required",
+            ));
         }
         Ok(())
     }
@@ -174,12 +182,12 @@ impl InventoryLevel {
     /// Validate the inventory level
     pub fn validate(&self) -> Result<()> {
         if self.min_quantity > self.max_quantity {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "min_quantity cannot exceed max_quantity",
             ));
         }
         if self.target_quantity < self.min_quantity || self.target_quantity > self.max_quantity {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "target_quantity must be between min and max",
             ));
         }
@@ -240,7 +248,7 @@ impl RebalancingConstraints {
     /// Validate constraints
     pub fn validate(&self) -> Result<()> {
         if self.max_total_cost < 0.0 {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "max_total_cost cannot be negative",
             ));
         }

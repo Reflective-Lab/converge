@@ -1,8 +1,8 @@
 //! Solver for Vehicle Routing pack
 
 use super::types::*;
-use crate::Result;
-use crate::gate::{ProblemSpec, ReplayEnvelope, SolverReport};
+use converge_pack::gate::GateResult as Result;
+use converge_pack::gate::{ProblemSpec, ReplayEnvelope, SolverReport};
 
 /// Nearest-neighbor heuristic with capacity constraints
 pub struct NearestNeighborVrpSolver;

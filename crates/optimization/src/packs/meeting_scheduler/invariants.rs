@@ -1,8 +1,8 @@
 //! Invariants for Meeting Scheduler pack
 
 use super::types::MeetingSchedulerOutput;
-use crate::gate::Violation;
 use crate::packs::{InvariantDef, InvariantResult};
+use converge_pack::gate::Violation;
 
 /// Invariant definitions for meeting scheduler
 pub const INVARIANTS: &[InvariantDef] = &[InvariantDef {

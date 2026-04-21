@@ -1,8 +1,8 @@
 //! Invariants for Shipping Choice pack
 
 use super::types::ShippingChoiceOutput;
-use crate::gate::Violation;
 use crate::packs::{InvariantDef, InvariantResult};
+use converge_pack::gate::Violation;
 
 /// Get invariant definitions
 pub fn get_invariants() -> Vec<InvariantDef> {

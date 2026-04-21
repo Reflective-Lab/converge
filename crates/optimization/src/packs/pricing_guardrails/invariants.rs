@@ -1,8 +1,8 @@
 //! Invariants for Pricing Guardrails pack
 
 use super::types::PricingGuardrailsOutput;
-use crate::gate::Violation;
 use crate::packs::{InvariantDef, InvariantResult};
+use converge_pack::gate::Violation;
 
 /// Get invariant definitions
 pub fn get_invariants() -> Vec<InvariantDef> {

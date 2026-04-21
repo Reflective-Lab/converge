@@ -1,6 +1,6 @@
 //! Types for Shipping Choice pack
 
-use crate::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 /// Input for shipping choice optimization
@@ -18,15 +18,19 @@ impl ShippingChoiceInput {
     /// Validate the input
     pub fn validate(&self) -> Result<()> {
         if self.carriers.is_empty() {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "At least one carrier is required",
             ));
         }
         if self.sla_days <= 0 {
-            return Err(crate::Error::invalid_input("SLA days must be positive"));
+            return Err(converge_pack::GateError::invalid_input(
+                "SLA days must be positive",
+            ));
         }
         if self.order.weight_kg < 0.0 {
-            return Err(crate::Error::invalid_input("Weight cannot be negative"));
+            return Err(converge_pack::GateError::invalid_input(
+                "Weight cannot be negative",
+            ));
         }
         Ok(())
     }

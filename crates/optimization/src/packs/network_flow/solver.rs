@@ -4,9 +4,9 @@
 //! with Bellman-Ford) for the actual computation.
 
 use super::types::*;
-use crate::Result;
-use crate::gate::{ProblemSpec, ReplayEnvelope, SolverReport, StopReason};
 use crate::graph::flow::{FlowNetwork, MinCostFlowProblem, min_cost_flow};
+use converge_pack::gate::GateResult as Result;
+use converge_pack::gate::{ProblemSpec, ReplayEnvelope, SolverReport, StopReason};
 
 /// Min-cost flow solver delegating to `crate::graph::flow`
 pub struct MinCostFlowSolver;
@@ -28,7 +28,8 @@ impl MinCostFlowSolver {
         }
 
         let demand = (input.demand * scale as f64).round() as i64;
-        let problem = MinCostFlowProblem::source_sink(network, input.source, input.sink, demand)?;
+        let problem = MinCostFlowProblem::source_sink(network, input.source, input.sink, demand)
+            .map_err(|e| converge_pack::GateError::invalid_input(e.to_string()))?;
 
         match min_cost_flow(&problem) {
             Ok(result) => {

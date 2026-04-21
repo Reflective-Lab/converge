@@ -1,6 +1,6 @@
 //! Types for Staff Rostering pack
 
-use crate::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,16 +28,18 @@ pub struct StaffRosteringInput {
 impl StaffRosteringInput {
     pub fn validate(&self) -> Result<()> {
         if self.staff.is_empty() {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "At least one staff member required",
             ));
         }
         if self.shifts.is_empty() {
-            return Err(crate::Error::invalid_input("At least one shift required"));
+            return Err(converge_pack::GateError::invalid_input(
+                "At least one shift required",
+            ));
         }
         for staff in &self.staff {
             if staff.max_hours == 0 {
-                return Err(crate::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Staff '{}' has zero max hours",
                     staff.id
                 )));
@@ -45,7 +47,7 @@ impl StaffRosteringInput {
         }
         for shift in &self.shifts {
             if shift.hours == 0 {
-                return Err(crate::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Shift '{}' has zero hours",
                     shift.id
                 )));

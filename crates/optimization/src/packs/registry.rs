@@ -1,6 +1,6 @@
 //! Pack registry for discovering and accessing packs
 
-use super::Pack;
+use converge_pack::Pack;
 use std::collections::HashMap;
 use std::sync::Arc;
 

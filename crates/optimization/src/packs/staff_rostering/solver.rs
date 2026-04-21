@@ -3,8 +3,8 @@
 //! Greedy skill-matching with load balancing.
 
 use super::types::*;
-use crate::Result;
-use crate::gate::{ProblemSpec, ReplayEnvelope, SolverReport};
+use converge_pack::gate::GateResult as Result;
+use converge_pack::gate::{ProblemSpec, ReplayEnvelope, SolverReport};
 use std::collections::HashMap;
 
 pub struct GreedyRosteringSolver;

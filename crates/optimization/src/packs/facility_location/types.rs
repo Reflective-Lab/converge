@@ -1,6 +1,6 @@
 //! Types for Facility Location pack
 
-use crate::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 /// A candidate facility
@@ -33,19 +33,19 @@ pub struct FacilityLocationInput {
 impl FacilityLocationInput {
     pub fn validate(&self) -> Result<()> {
         if self.facilities.is_empty() {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "At least one facility required",
             ));
         }
         if self.customers.is_empty() {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "At least one customer required",
             ));
         }
         let num_facilities = self.facilities.len();
         for (i, customer) in self.customers.iter().enumerate() {
             if customer.transport_costs.len() != num_facilities {
-                return Err(crate::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Customer {} transport_costs length ({}) must match number of facilities ({})",
                     i,
                     customer.transport_costs.len(),

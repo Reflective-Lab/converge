@@ -1,8 +1,8 @@
 //! Invariants for Lead Routing pack
 
 use super::types::{LeadRoutingInput, LeadRoutingOutput};
-use crate::gate::Violation;
 use crate::packs::{InvariantDef, InvariantResult};
+use converge_pack::gate::Violation;
 
 /// Get invariant definitions
 pub fn get_invariants() -> Vec<InvariantDef> {

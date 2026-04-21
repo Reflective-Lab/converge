@@ -1,6 +1,6 @@
 //! Types for Lead Routing pack
 
-use crate::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
@@ -19,10 +19,12 @@ impl LeadRoutingInput {
     /// Validate the input
     pub fn validate(&self) -> Result<()> {
         if self.leads.is_empty() {
-            return Err(crate::Error::invalid_input("At least one lead is required"));
+            return Err(converge_pack::GateError::invalid_input(
+                "At least one lead is required",
+            ));
         }
         if self.reps.is_empty() {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "At least one sales rep is required",
             ));
         }
@@ -31,7 +33,7 @@ impl LeadRoutingInput {
         let mut seen_leads = HashSet::new();
         for lead in &self.leads {
             if !seen_leads.insert(&lead.id) {
-                return Err(crate::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Duplicate lead ID: {}",
                     lead.id
                 )));
@@ -42,13 +44,13 @@ impl LeadRoutingInput {
         let mut seen_reps = HashSet::new();
         for rep in &self.reps {
             if !seen_reps.insert(&rep.id) {
-                return Err(crate::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Duplicate rep ID: {}",
                     rep.id
                 )));
             }
             if rep.capacity < rep.current_load {
-                return Err(crate::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Rep {} has current_load ({}) exceeding capacity ({})",
                     rep.id, rep.current_load, rep.capacity
                 )));

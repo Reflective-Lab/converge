@@ -1,6 +1,6 @@
 //! Types for Graph Partitioning pack
 
-use crate::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -20,25 +20,29 @@ pub struct GraphPartitioningInput {
 impl GraphPartitioningInput {
     pub fn validate(&self) -> Result<()> {
         if self.num_nodes == 0 {
-            return Err(crate::Error::invalid_input("At least one node required"));
+            return Err(converge_pack::GateError::invalid_input(
+                "At least one node required",
+            ));
         }
         if self.num_partitions == 0 {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "At least one partition required",
             ));
         }
         if self.num_partitions > self.num_nodes {
-            return Err(crate::Error::invalid_input("More partitions than nodes"));
+            return Err(converge_pack::GateError::invalid_input(
+                "More partitions than nodes",
+            ));
         }
         for (i, edge) in self.edges.iter().enumerate() {
             if edge.from >= self.num_nodes || edge.to >= self.num_nodes {
-                return Err(crate::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Edge {} references node outside range [0, {})",
                     i, self.num_nodes
                 )));
             }
             if !edge.weight.is_finite() || edge.weight < 0.0 {
-                return Err(crate::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Edge {} has invalid weight {}",
                     i, edge.weight
                 )));

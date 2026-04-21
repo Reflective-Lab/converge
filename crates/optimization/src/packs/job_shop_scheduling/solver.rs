@@ -3,8 +3,8 @@
 //! Priority dispatch: shortest processing time first, earliest available machine.
 
 use super::types::*;
-use crate::Result;
-use crate::gate::{ProblemSpec, ReplayEnvelope, SolverReport};
+use converge_pack::gate::GateResult as Result;
+use converge_pack::gate::{ProblemSpec, ReplayEnvelope, SolverReport};
 
 pub struct PriorityDispatchSolver;
 

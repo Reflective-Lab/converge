@@ -1,6 +1,6 @@
 //! Types for Bin Packing pack
 
-use crate::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 /// Input for bin packing optimization
@@ -15,20 +15,24 @@ pub struct BinPackingInput {
 impl BinPackingInput {
     pub fn validate(&self) -> Result<()> {
         if self.bin_capacity <= 0.0 {
-            return Err(crate::Error::invalid_input("Bin capacity must be positive"));
+            return Err(converge_pack::GateError::invalid_input(
+                "Bin capacity must be positive",
+            ));
         }
         if self.items.is_empty() {
-            return Err(crate::Error::invalid_input("At least one item required"));
+            return Err(converge_pack::GateError::invalid_input(
+                "At least one item required",
+            ));
         }
         for (i, &size) in self.items.iter().enumerate() {
             if size <= 0.0 {
-                return Err(crate::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Item {} has non-positive size",
                     i
                 )));
             }
             if size > self.bin_capacity {
-                return Err(crate::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Item {} (size {:.2}) exceeds bin capacity ({:.2})",
                     i, size, self.bin_capacity
                 )));

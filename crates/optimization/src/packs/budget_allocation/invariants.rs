@@ -1,8 +1,8 @@
 //! Invariants for Budget Allocation pack
 
 use super::types::BudgetAllocationOutput;
-use crate::gate::Violation;
 use crate::packs::{InvariantDef, InvariantResult};
+use converge_pack::gate::Violation;
 
 /// Get invariant definitions
 pub fn get_invariants() -> Vec<InvariantDef> {

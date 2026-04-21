@@ -1,6 +1,6 @@
 //! Types for Pricing Guardrails pack
 
-use crate::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 /// Input for pricing guardrails optimization
@@ -18,27 +18,27 @@ impl PricingGuardrailsInput {
     /// Validate the input
     pub fn validate(&self) -> Result<()> {
         if self.products.is_empty() {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "At least one product is required",
             ));
         }
 
         for product in &self.products {
             if product.unit_cost < 0.0 {
-                return Err(crate::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Product {} has negative unit cost",
                     product.product_id
                 )));
             }
             if let Some(ref bounds) = product.price_bounds {
                 if bounds.min_price < 0.0 {
-                    return Err(crate::Error::invalid_input(format!(
+                    return Err(converge_pack::GateError::invalid_input(format!(
                         "Product {} has negative min price",
                         product.product_id
                     )));
                 }
                 if bounds.min_price > bounds.max_price {
-                    return Err(crate::Error::invalid_input(format!(
+                    return Err(converge_pack::GateError::invalid_input(format!(
                         "Product {} has min price > max price",
                         product.product_id
                     )));
@@ -47,12 +47,12 @@ impl PricingGuardrailsInput {
         }
 
         if self.margin_requirements.min_margin_pct < 0.0 {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "Minimum margin cannot be negative",
             ));
         }
         if self.margin_requirements.min_margin_pct > 100.0 {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "Minimum margin cannot exceed 100%",
             ));
         }

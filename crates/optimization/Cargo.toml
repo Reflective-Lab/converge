@@ -44,6 +44,7 @@ ortools-sys = { workspace = true, optional = true, features = ["link"] }
 varisat = { workspace = true, optional = true }
 
 [dev-dependencies]
+converge-kernel.workspace = true
 criterion = { version = "0.5", features = ["html_reports"] }
 proptest.workspace = true
 rand.workspace = true

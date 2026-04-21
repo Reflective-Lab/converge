@@ -1,6 +1,6 @@
 //! Types for Inventory Replenishment pack
 
-use crate::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 /// Input for inventory replenishment optimization
@@ -16,29 +16,31 @@ impl InventoryReplenishmentInput {
     /// Validate the input
     pub fn validate(&self) -> Result<()> {
         if self.products.is_empty() {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "At least one product is required",
             ));
         }
         if self.constraints.budget <= 0.0 {
-            return Err(crate::Error::invalid_input("Budget must be positive"));
+            return Err(converge_pack::GateError::invalid_input(
+                "Budget must be positive",
+            ));
         }
         if self.constraints.target_service_level <= 0.0
             || self.constraints.target_service_level > 1.0
         {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "Target service level must be between 0 and 1",
             ));
         }
         for product in &self.products {
             if product.current_inventory < 0 {
-                return Err(crate::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Product {} has negative inventory",
                     product.id
                 )));
             }
             if product.lead_time_days < 0 {
-                return Err(crate::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Product {} has negative lead time",
                     product.id
                 )));

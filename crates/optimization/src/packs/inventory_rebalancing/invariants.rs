@@ -1,8 +1,8 @@
 //! Invariants for Inventory Rebalancing pack
 
 use super::types::InventoryRebalancingOutput;
-use crate::gate::Violation;
 use crate::packs::{InvariantDef, InvariantResult};
+use converge_pack::gate::Violation;
 
 /// Invariant definitions for inventory rebalancing
 pub const INVARIANTS: &[InvariantDef] = &[InvariantDef {

@@ -1,6 +1,6 @@
 //! Types for Backlog Prioritization pack
 
-use crate::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 /// Input for backlog prioritization optimization
@@ -16,14 +16,18 @@ impl BacklogPrioritizationInput {
     /// Validate the input
     pub fn validate(&self) -> Result<()> {
         if self.items.is_empty() {
-            return Err(crate::Error::invalid_input("At least one item is required"));
+            return Err(converge_pack::GateError::invalid_input(
+                "At least one item is required",
+            ));
         }
         if self.capacity_points <= 0 {
-            return Err(crate::Error::invalid_input("Capacity must be positive"));
+            return Err(converge_pack::GateError::invalid_input(
+                "Capacity must be positive",
+            ));
         }
         for item in &self.items {
             if item.effort_points <= 0 {
-                return Err(crate::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Item {} has invalid effort_points: {}",
                     item.id, item.effort_points
                 )));

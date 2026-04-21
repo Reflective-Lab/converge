@@ -14,8 +14,7 @@
 //! ## Example
 //!
 //! ```rust,ignore
-//! use converge_optimization::packs::{PackRegistry, Pack};
-//! use converge_optimization::gate::ProblemSpec;
+//! use converge_pack::{Pack, gate::ProblemSpec};
 //!
 //! let registry = PackRegistry::with_builtins();
 //! let pack = registry.get("meeting-scheduler").unwrap();
@@ -24,7 +23,6 @@
 
 pub mod registry;
 pub mod testing;
-pub mod traits;
 
 // Fully implemented packs
 pub mod inventory_rebalancing;
@@ -51,6 +49,9 @@ pub mod traveling_salesman;
 pub mod vehicle_routing;
 pub mod vendor_shortlist;
 
+pub use converge_pack::{
+    InvariantDef, InvariantResult, Pack, PackSchema, PackSolveResult, PackSolver,
+    default_gate_evaluation,
+};
 pub use registry::*;
 pub use testing::{ExpectedOutcome, ScenarioResult, TestScenario};
-pub use traits::*;

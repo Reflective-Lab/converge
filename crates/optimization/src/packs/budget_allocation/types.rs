@@ -1,6 +1,6 @@
 //! Types for Budget Allocation pack
 
-use crate::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 /// Input for budget allocation optimization
@@ -18,10 +18,12 @@ impl BudgetAllocationInput {
     /// Validate the input
     pub fn validate(&self) -> Result<()> {
         if self.total_budget <= 0.0 {
-            return Err(crate::Error::invalid_input("Total budget must be positive"));
+            return Err(converge_pack::GateError::invalid_input(
+                "Total budget must be positive",
+            ));
         }
         if self.categories.is_empty() {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "At least one category is required",
             ));
         }
@@ -29,7 +31,7 @@ impl BudgetAllocationInput {
         // Check minimum allocations don't exceed budget
         let total_min: f64 = self.categories.iter().map(|c| c.min_allocation).sum();
         if total_min > self.total_budget {
-            return Err(crate::Error::invalid_input(format!(
+            return Err(converge_pack::GateError::invalid_input(format!(
                 "Minimum allocations ({:.2}) exceed total budget ({:.2})",
                 total_min, self.total_budget
             )));

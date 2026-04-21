@@ -1,6 +1,6 @@
 //! Types for Constraint Programming pack
 
-use crate::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,13 +41,13 @@ pub struct ConstraintProgrammingInput {
 impl ConstraintProgrammingInput {
     pub fn validate(&self) -> Result<()> {
         if self.variables.is_empty() {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "At least one variable required",
             ));
         }
         for var in &self.variables {
             if var.min > var.max {
-                return Err(crate::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Variable '{}' has min ({}) > max ({})",
                     var.name, var.min, var.max
                 )));
@@ -55,7 +55,7 @@ impl ConstraintProgrammingInput {
         }
         if let Some(obj) = &self.objective {
             if !self.variables.iter().any(|v| v.name == obj.variable) {
-                return Err(crate::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Objective variable '{}' not found",
                     obj.variable
                 )));

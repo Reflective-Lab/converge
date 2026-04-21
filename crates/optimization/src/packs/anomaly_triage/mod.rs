@@ -28,9 +28,9 @@ pub use invariants::*;
 pub use solver::*;
 pub use types::*;
 
-use crate::Result;
-use crate::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 use crate::packs::{InvariantDef, InvariantResult, Pack, PackSolveResult, default_gate_evaluation};
+use converge_pack::gate::GateResult as Result;
+use converge_pack::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 
 /// Anomaly Triage Pack
 pub struct AnomalyTriagePack;
@@ -45,8 +45,9 @@ impl Pack for AnomalyTriagePack {
     }
 
     fn validate_inputs(&self, inputs: &serde_json::Value) -> Result<()> {
-        let input: AnomalyTriageInput = serde_json::from_value(inputs.clone())
-            .map_err(|e| crate::Error::invalid_input(format!("Invalid input: {}", e)))?;
+        let input: AnomalyTriageInput = serde_json::from_value(inputs.clone()).map_err(|e| {
+            converge_pack::GateError::invalid_input(format!("Invalid input: {}", e))
+        })?;
         input.validate()
     }
 
@@ -122,7 +123,7 @@ fn calculate_confidence(output: &AnomalyTriageOutput) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gate::ObjectiveSpec;
+    use converge_pack::gate::ObjectiveSpec;
 
     fn create_test_input() -> AnomalyTriageInput {
         AnomalyTriageInput {

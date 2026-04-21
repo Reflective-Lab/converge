@@ -77,3 +77,11 @@ impl Error {
         Self::Timeout { seconds }
     }
 }
+
+impl From<converge_pack::GateError> for Error {
+    fn from(e: converge_pack::GateError) -> Self {
+        match e {
+            converge_pack::GateError::InvalidInput(msg) => Self::InvalidInput(msg),
+        }
+    }
+}

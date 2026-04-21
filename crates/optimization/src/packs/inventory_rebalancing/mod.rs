@@ -29,9 +29,9 @@ pub use invariants::*;
 pub use solver::*;
 pub use types::*;
 
-use crate::Result;
-use crate::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 use crate::packs::{InvariantDef, InvariantResult, Pack, PackSolveResult, default_gate_evaluation};
+use converge_pack::gate::GateResult as Result;
+use converge_pack::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 
 /// Inventory Rebalancing Pack
 pub struct InventoryRebalancingPack;
@@ -46,8 +46,10 @@ impl Pack for InventoryRebalancingPack {
     }
 
     fn validate_inputs(&self, inputs: &serde_json::Value) -> Result<()> {
-        let input: InventoryRebalancingInput = serde_json::from_value(inputs.clone())
-            .map_err(|e| crate::Error::invalid_input(format!("Invalid input: {}", e)))?;
+        let input: InventoryRebalancingInput =
+            serde_json::from_value(inputs.clone()).map_err(|e| {
+                converge_pack::GateError::invalid_input(format!("Invalid input: {}", e))
+            })?;
         input.validate()
     }
 
@@ -139,7 +141,7 @@ fn calculate_confidence(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gate::{ObjectiveSpec, SolveBudgets};
+    use converge_pack::gate::{ObjectiveSpec, SolveBudgets};
 
     fn create_test_input() -> InventoryRebalancingInput {
         InventoryRebalancingInput {

@@ -4,9 +4,9 @@
 //! for optimal O(n³) assignment.
 
 use super::types::*;
-use crate::Result;
 use crate::assignment::{self, AssignmentProblem};
-use crate::gate::{ProblemSpec, ReplayEnvelope, SolverReport};
+use converge_pack::gate::GateResult as Result;
+use converge_pack::gate::{ProblemSpec, ReplayEnvelope, SolverReport};
 
 /// Optimal assignment solver (Hungarian algorithm wrapper)
 pub struct HungarianAssignmentSolver;
@@ -33,7 +33,8 @@ impl HungarianAssignmentSolver {
             .collect();
 
         let problem = AssignmentProblem::from_costs(int_costs);
-        let solution = assignment::solve(&problem)?;
+        let solution = assignment::solve(&problem)
+            .map_err(|e| converge_pack::GateError::invalid_input(e.to_string()))?;
 
         // Convert back: assignments[agent] = task → Vec<(agent, task)>
         let assignments: Vec<(usize, usize)> = solution

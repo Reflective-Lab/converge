@@ -3,8 +3,8 @@
 //! Simple backtracking with constraint propagation.
 
 use super::types::*;
-use crate::Result;
-use crate::gate::{ProblemSpec, ReplayEnvelope, SolverReport};
+use converge_pack::gate::GateResult as Result;
+use converge_pack::gate::{ProblemSpec, ReplayEnvelope, SolverReport};
 
 pub struct BacktrackingSolver;
 
@@ -128,10 +128,7 @@ impl BacktrackingSolver {
             ConstraintType::LessThan => {
                 let left = constraint.args.get("left").and_then(|v| v.as_str());
                 let right = constraint.args.get("right").and_then(|v| v.as_str());
-                match (
-                    left.and_then(|l| var_index(l)),
-                    right.and_then(|r| var_index(r)),
-                ) {
+                match (left.and_then(&var_index), right.and_then(&var_index)) {
                     (Some(li), Some(ri)) if li < assigned_count && ri < assigned_count => {
                         vals[li] < vals[ri]
                     }
@@ -141,10 +138,7 @@ impl BacktrackingSolver {
             ConstraintType::NotEqual => {
                 let left = constraint.args.get("left").and_then(|v| v.as_str());
                 let right = constraint.args.get("right").and_then(|v| v.as_str());
-                match (
-                    left.and_then(|l| var_index(l)),
-                    right.and_then(|r| var_index(r)),
-                ) {
+                match (left.and_then(&var_index), right.and_then(&var_index)) {
                     (Some(li), Some(ri)) if li < assigned_count && ri < assigned_count => {
                         vals[li] != vals[ri]
                     }
@@ -158,7 +152,7 @@ impl BacktrackingSolver {
                     .and_then(|v| v.as_array())
                     .map(|arr| {
                         arr.iter()
-                            .filter_map(|v| v.as_str().and_then(|s| var_index(s)))
+                            .filter_map(|v| v.as_str().and_then(&var_index))
                             .collect()
                     })
                     .unwrap_or_default();

@@ -1,6 +1,6 @@
 //! Types for Network Flow pack
 
-use crate::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 /// A directed edge in the network
@@ -30,35 +30,43 @@ pub struct NetworkFlowInput {
 impl NetworkFlowInput {
     pub fn validate(&self) -> Result<()> {
         if self.nodes == 0 {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "Network must have at least one node",
             ));
         }
         if self.edges.is_empty() {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "Network must have at least one edge",
             ));
         }
         if self.source >= self.nodes {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "Source node index out of bounds",
             ));
         }
         if self.sink >= self.nodes {
-            return Err(crate::Error::invalid_input("Sink node index out of bounds"));
+            return Err(converge_pack::GateError::invalid_input(
+                "Sink node index out of bounds",
+            ));
         }
         if self.source == self.sink {
-            return Err(crate::Error::invalid_input("Source and sink must differ"));
+            return Err(converge_pack::GateError::invalid_input(
+                "Source and sink must differ",
+            ));
         }
         if self.demand <= 0.0 {
-            return Err(crate::Error::invalid_input("Demand must be positive"));
+            return Err(converge_pack::GateError::invalid_input(
+                "Demand must be positive",
+            ));
         }
         for edge in &self.edges {
             if edge.from >= self.nodes || edge.to >= self.nodes {
-                return Err(crate::Error::invalid_input("Edge references invalid node"));
+                return Err(converge_pack::GateError::invalid_input(
+                    "Edge references invalid node",
+                ));
             }
             if edge.capacity < 0.0 {
-                return Err(crate::Error::invalid_input(
+                return Err(converge_pack::GateError::invalid_input(
                     "Edge capacity must be non-negative",
                 ));
             }

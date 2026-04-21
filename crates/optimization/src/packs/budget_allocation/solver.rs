@@ -1,9 +1,9 @@
 //! Solver for Budget Allocation pack
 
 use super::types::*;
-use crate::Result;
-use crate::gate::{ProblemSpec, ReplayEnvelope, SolverReport, StopReason};
-use crate::packs::PackSolver;
+use converge_pack::PackSolver;
+use converge_pack::gate::GateResult as Result;
+use converge_pack::gate::{ProblemSpec, ReplayEnvelope, SolverReport, StopReason};
 
 /// Efficiency-based solver for budget allocation
 ///
@@ -159,7 +159,7 @@ impl PackSolver for EfficiencySolver {
         let input: BudgetAllocationInput = spec.inputs_as()?;
         let (output, report) = self.solve_allocation(&input, spec)?;
         let json = serde_json::to_value(&output)
-            .map_err(|e| crate::Error::invalid_input(e.to_string()))?;
+            .map_err(|e| converge_pack::GateError::invalid_input(e.to_string()))?;
         Ok((json, report))
     }
 
@@ -171,7 +171,7 @@ impl PackSolver for EfficiencySolver {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gate::ObjectiveSpec;
+    use converge_pack::gate::ObjectiveSpec;
 
     fn create_test_input() -> BudgetAllocationInput {
         BudgetAllocationInput {

@@ -1,6 +1,6 @@
 //! Types for Task Assignment pack
 
-use crate::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 /// Input for task assignment optimization
@@ -13,12 +13,14 @@ pub struct AssignmentInput {
 impl AssignmentInput {
     pub fn validate(&self) -> Result<()> {
         if self.cost_matrix.is_empty() {
-            return Err(crate::Error::invalid_input("Cost matrix must not be empty"));
+            return Err(converge_pack::GateError::invalid_input(
+                "Cost matrix must not be empty",
+            ));
         }
         let n = self.cost_matrix.len();
         for (i, row) in self.cost_matrix.iter().enumerate() {
             if row.len() != n {
-                return Err(crate::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Cost matrix row {} has {} columns, expected {}",
                     i,
                     row.len(),

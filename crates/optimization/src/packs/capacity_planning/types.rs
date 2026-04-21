@@ -1,6 +1,6 @@
 //! Types for Capacity Planning pack
 
-use crate::Result;
+use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 /// Input for capacity planning optimization
@@ -20,23 +20,25 @@ impl CapacityPlanningInput {
     /// Validate the input
     pub fn validate(&self) -> Result<()> {
         if self.demand_forecasts.is_empty() {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "At least one demand forecast is required",
             ));
         }
         if self.resource_types.is_empty() {
-            return Err(crate::Error::invalid_input(
+            return Err(converge_pack::GateError::invalid_input(
                 "At least one resource type is required",
             ));
         }
         if self.teams.is_empty() {
-            return Err(crate::Error::invalid_input("At least one team is required"));
+            return Err(converge_pack::GateError::invalid_input(
+                "At least one team is required",
+            ));
         }
 
         // Validate demand quantities are non-negative
         for forecast in &self.demand_forecasts {
             if forecast.demand_units < 0.0 {
-                return Err(crate::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Demand units cannot be negative for period {}",
                     forecast.period_id
                 )));
@@ -46,7 +48,7 @@ impl CapacityPlanningInput {
         // Validate team capacities are non-negative
         for team in &self.teams {
             if team.available_capacity < 0.0 {
-                return Err(crate::Error::invalid_input(format!(
+                return Err(converge_pack::GateError::invalid_input(format!(
                     "Available capacity cannot be negative for team {}",
                     team.id
                 )));

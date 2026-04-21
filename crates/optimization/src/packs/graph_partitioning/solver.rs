@@ -3,8 +3,8 @@
 //! Greedy partitioning by node degree, then swap-based improvement (simplified Kernighan-Lin).
 
 use super::types::*;
-use crate::Result;
-use crate::gate::{ProblemSpec, ReplayEnvelope, SolverReport};
+use converge_pack::gate::GateResult as Result;
+use converge_pack::gate::{ProblemSpec, ReplayEnvelope, SolverReport};
 
 pub struct GreedyKernighanLinSolver;
 
@@ -30,7 +30,7 @@ impl GreedyKernighanLinSolver {
 
         let mut partition = vec![0usize; n];
         let mut part_sizes = vec![0usize; k];
-        let target_size = (n + k - 1) / k;
+        let target_size = n.div_ceil(k);
 
         for &(node, _) in &degrees {
             // Assign to smallest partition that has room
@@ -63,9 +63,7 @@ impl GreedyKernighanLinSolver {
 
             match best_swap {
                 Some((a, b)) if best_gain > 1e-10 => {
-                    let tmp = partition[a];
-                    partition[a] = partition[b];
-                    partition[b] = tmp;
+                    partition.swap(a, b);
                 }
                 _ => break,
             }

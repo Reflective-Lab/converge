@@ -19,7 +19,7 @@
 //!
 //! ```rust,ignore
 //! use converge_optimization::provider::GateProvider;
-//! use converge_optimization::gate::ProblemSpec;
+//! use converge_pack::gate::ProblemSpec;
 //!
 //! let provider = GateProvider::new();
 //! let result = provider.solve("meeting-scheduler", &spec)?;
@@ -29,11 +29,12 @@
 use crate::{
     SolverParams,
     assignment::{self, AssignmentProblem},
-    gate::{ProblemSpec, PromotionGate, ProposedPlan, SolverReport},
     graph::dijkstra,
     knapsack::{self, KnapsackProblem},
-    packs::{InvariantResult, PackRegistry},
+    packs::PackRegistry,
 };
+use converge_pack::InvariantResult;
+use converge_pack::gate::{ProblemSpec, PromotionGate, ProposedPlan, SolverReport};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -394,10 +395,10 @@ impl GateSolveResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gate::ObjectiveSpec;
     use crate::packs::meeting_scheduler::{
         Attendee, MeetingRequirements, MeetingSchedulerInput, SlotPreference, TimeSlot,
     };
+    use converge_pack::gate::ObjectiveSpec;
 
     #[test]
     fn test_assignment_provider() {
