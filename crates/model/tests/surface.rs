@@ -18,11 +18,11 @@ fn can_create_proposed_fact_from_model_crate() {
         "observation-1",
     );
     assert_eq!(fact.id, "fact-1");
-    assert_eq!(fact.confidence, 1.0);
+    assert_eq!(fact.confidence(), 1.0);
 
     let with_conf =
         ProposedFact::new(ContextKey::Strategies, "f-2", "content", "obs-2").with_confidence(0.8);
-    assert!((with_conf.confidence - 0.8).abs() < f64::EPSILON);
+    assert!((with_conf.confidence() - 0.8).abs() < f64::EPSILON);
 
     let err = ValidationError {
         reason: "test".to_string(),

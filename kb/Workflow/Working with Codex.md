@@ -19,9 +19,19 @@ Do not bulk-read the whole knowledgebase.
 ```bash
 just focus     # Session opener — repo health + recent activity
 just sync      # Team sync — PRs, issues, recent commits
+just git-hygiene
 ```
 
 Use those when you want deterministic output from the repo itself.
+
+## Git Discipline
+
+- Keep the root checkout on clean `main`
+- Do non-trivial work on a topic branch
+- Prefer a dedicated worktree for parallel work
+- Treat the latest annotated tag, not `HEAD`, as the latest release
+
+See [[Workflow/Git Strategy]].
 
 ## Repo-Local Codex Files
 

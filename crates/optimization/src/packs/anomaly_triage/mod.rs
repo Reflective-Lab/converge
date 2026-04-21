@@ -29,6 +29,7 @@ pub use solver::*;
 pub use types::*;
 
 use crate::packs::{InvariantDef, InvariantResult, Pack, PackSolveResult, default_gate_evaluation};
+use converge_pack::CONFIDENCE_STEP_MAJOR;
 use converge_pack::gate::GateResult as Result;
 use converge_pack::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 
@@ -104,7 +105,7 @@ fn calculate_confidence(output: &AnomalyTriageOutput) -> f64 {
         .iter()
         .all(|t| !t.recommended_actions.is_empty());
     if all_have_recommendations {
-        confidence += 0.2;
+        confidence += CONFIDENCE_STEP_MAJOR;
     }
 
     // Higher confidence if critical items are escalated
@@ -114,7 +115,7 @@ fn calculate_confidence(output: &AnomalyTriageOutput) -> f64 {
         .filter(|t| t.severity == "critical")
         .all(|t| t.escalate);
     if critical_escalated {
-        confidence += 0.2;
+        confidence += CONFIDENCE_STEP_MAJOR;
     }
 
     confidence.min(1.0)

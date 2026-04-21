@@ -30,6 +30,7 @@ pub use solver::*;
 pub use types::*;
 
 use crate::packs::{InvariantDef, InvariantResult, Pack, PackSolveResult, default_gate_evaluation};
+use converge_pack::CONFIDENCE_STEP_MINOR;
 use converge_pack::gate::GateResult as Result;
 use converge_pack::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 
@@ -122,7 +123,7 @@ fn calculate_confidence(
     if input.constraints.max_total_cost > 0.0 {
         let budget_usage = output.total_cost / input.constraints.max_total_cost;
         if budget_usage < 0.8 {
-            confidence += 0.1;
+            confidence += CONFIDENCE_STEP_MINOR;
         }
     }
 
@@ -131,7 +132,7 @@ fn calculate_confidence(
         let transfer_usage =
             output.transfers.len() as f64 / input.constraints.max_total_transfers as f64;
         if transfer_usage < 0.8 {
-            confidence += 0.1;
+            confidence += CONFIDENCE_STEP_MINOR;
         }
     }
 

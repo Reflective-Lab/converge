@@ -4,38 +4,160 @@ source: mixed
 ---
 # Type Protocol
 
-The rules for core types. These are not conventions — they are the contract. Breaking them breaks downstream consumers.
+The rules for Converge types. This is not style. This is contract design.
 
-## Rules
+## Decision Rule
 
-- `ProposedFact` carries `confidence: f64` and `provenance: String` — always
-- `AgentEffect` is a struct `{ proposals }` — suggestors do not emit authoritative facts
-- `Suggestor::accepts` and `Suggestor::execute` take `&dyn Context`, not `&Context`
-- `Suggestor::dependencies` returns `&[ContextKey]`, not `Vec<&str>`
-- `Fact` is read-only for external code and is created only by kernel-authority helpers
-- `CriterionResult` is four-way: `Met { evidence }`, `Blocked { reason, approval_ref }`, `Unmet { reason }`, `Indeterminate`
-- `CriterionEvaluator::evaluate` takes one `&Criterion` at a time, not a list
-- `TypesRootIntent` uses the builder pattern: `TypesRootIntent::builder().id(...).kind(...).build()`
-- Context keys are plural: `ContextKey::Seeds`, `ContextKey::Evaluations`, `ContextKey::Diagnostic` — not `Seed`, `Evaluation`
+When a value carries semantics, apply this order:
 
-## Type Ownership
+1. Make the invalid state unrepresentable with the type system.
+2. If the value crosses an untyped boundary, validate it during construction or deserialization.
+3. Only then add negative or property tests for what the type system cannot prevent.
 
-- `converge-pack` owns the canonical authoring types
-- `converge-provider-api` owns backend identity and routing contracts
-- `converge-model` owns curated governed semantic types
-- `converge-kernel` is the supported in-process embedding surface
-- Downstream crates import from the six public crates, not from `converge-core`
+This means:
 
-## ID Newtypes
+- strings with owned vocabulary become enums
+- open identifiers become newtypes
+- bounded numeric domains become validated types or private validated fields
+- known config schemas use strict deserialization, not permissive parse-then-validate cleanup
 
-All IDs are newtypes, not raw strings: `FactId`, `ProposalId`, `ObservationId`, `FrameId`, `TensionId`, `GateId`.
+## What Must Be Typed
 
-## Provenance
+- Semantic IDs are newtypes, not raw strings.
+  Examples: `FactId`, `ProposalId`, `ObservationId`, `GateId`, `PackName`, `AgentName`.
+- Closed vocabularies are enums, not string conventions.
+  Examples: `RequirementPreset`, `Selector::Any`, typed stop reasons, owned flow/action enums.
+- Bounded numbers are validated values.
+  Examples: confidence, quality thresholds, scores, severity bands.
+- Runtime schema identifiers and versions are typed.
+  Examples: `PackName`, `PackVersion`, `VersionRequirement`, `ProviderId`.
 
-Two provenance types:
-- `LocalTrace` — replay-eligible, deterministic, reproducible
-- `RemoteRef` — audit-only, not replayable (e.g., external API call)
+## What Has Been Strengthened
 
-This distinction is explicit ([[Philosophy/Nine Axioms#6. Transparent Determinism|Axiom 6]]).
+### Kernel and Promotion Boundary
 
-See also: [[Concepts/Proposals and Promotion]], [[Architecture/Purity Rules]]
+- `Fact` remains authoritative and cannot be constructed by consumers without `kernel-authority`.
+- `ProposedFact` is the intended consumer path.
+- Compile-fail tests prove the boundary from the consumer side.
+
+### Public Semantic Surface
+
+- Semantic IDs, hashes, timestamps, gate IDs, trace IDs, pack IDs, and policy IDs now cross the public contract as typed values instead of raw strings.
+- Context naming is explicit: `converge_kernel::Context` is the trait, `ContextState` is the embedder-owned state.
+
+### Runtime Perimeter
+
+- Runtime auth and policy matching now separate identity from matcher semantics.
+- Wildcard behavior uses `Selector<T>` instead of magic `"*"` strings in lists.
+- Runtime wiring identifiers use typed values like `PackName`, `AgentName`, and `ProviderId`.
+
+### Runtime Pack Wiring
+
+- Pack YAML is now strict operational wiring.
+- Pack names, versions, compatibility requirements, requirement presets, provider preferences, and quality thresholds are typed at deserialization time.
+- Known wiring structs use `serde(deny_unknown_fields)`.
+- Duplicate agent IDs are rejected during parse, not by later cleanup.
+- Semantic-rule keys like `validation` and `invariants` are rejected at parse time.
+
+### Proposal and Confidence Surface
+
+- Proposal confidence fields are no longer casual public slots to mutate directly.
+- Confidence values are accessed through methods and normalized through constructors.
+- `with_confidence` and `adjust_confidence` make confidence updates explicit and clamp at the constructor boundary until a shared unit-interval type is propagated everywhere.
+
+## Confidence API Change
+
+The current confidence API hardening applies to these public semantic types:
+
+- `ProposedFact`
+- `ProposedContent`
+- `Hypothesis`
+- `ProposedPlan`
+
+For these types:
+
+- direct field access no longer compiles
+- confidence is set through constructors and builder methods
+- confidence is read through `confidence()`
+- the type, not the engine, owns the `[0.0, 1.0]` invariant
+
+Migration:
+
+```rust
+// Before
+let proposal = ProposedFact { confidence: 0.8, ..todo!() };
+let score = proposal.confidence;
+
+// After
+let proposal = ProposedFact::new(...).with_confidence(0.8);
+let score = proposal.confidence();
+```
+
+Preferred multi-criteria pattern:
+
+```rust
+use converge_pack::{CONFIDENCE_STEP_MAJOR, CONFIDENCE_STEP_MINOR};
+
+let proposal = ProposedFact::new(...)
+    .with_confidence(0.5)
+    .adjust_confidence(CONFIDENCE_STEP_MAJOR)
+    .adjust_confidence(CONFIDENCE_STEP_MINOR);
+```
+
+This is the important architectural point: the engine should not be compensating for a weak proposal type. Where Converge owns the range, the type should own the range.
+
+## Test Policy
+
+Types do not replace every test. Keep tests where they prove something types cannot.
+
+Keep:
+
+- compile-fail tests for public boundary enforcement
+- property tests for wire formats, serialization, determinism, and algorithmic invariants
+- feature-gated tests for feature-gated code paths
+
+Replace with stronger types when the test is mostly proving:
+
+- a string should have been an enum or newtype
+- a config validator is cleaning up after permissive deserialization
+- an invalid numeric range should have been rejected at construction time
+- internal misuse is possible only because fields are too public
+
+## Test Layout Rule
+
+Rust test files live in one of two places:
+
+- `tests/` for integration suites
+- `src/` for module-owned unit/property tests, and they must be explicitly module-linked
+
+Do not leave live-looking Rust tests in ad hoc directories. They will rot and silently stop running.
+
+`just test-layout` exists to catch the directory mistake. Feature-gated suites still need explicit run commands.
+
+## Current Non-Default Coverage
+
+The notable remaining property suite that is real but not default is:
+
+- `crates/runtime/tests/wasm_property_tests.rs`
+
+It only runs with `converge-runtime/wasm-runtime`.
+
+Use:
+
+```bash
+just test-runtime-wasm
+```
+
+## Remaining Cleanup
+
+The type direction is clear, but not complete. Remaining range-heavy or clamp-heavy surfaces include:
+
+- kernel-boundary proposal confidence fields in `converge-core`
+- formation confidence fields in `converge-core`
+- evaluation scores in `converge-core`
+- gate severity helpers in `converge-pack`
+- provider-side quality thresholds and similar `0..1` values
+
+The rule stays the same: if the domain owns the range, the type should own the range.
+
+See also: [[Concepts/Proposals and Promotion]], [[Architecture/Purity Rules]], [[Architecture/System Overview]]

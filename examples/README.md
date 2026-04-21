@@ -48,3 +48,14 @@ That pairing shows the stable contract clearly:
 - `Context` / `ContextState`
 
 Everything else is composition on top.
+
+## Three Things To Know Before You Build
+
+**Converge reasons; something else acts.**
+The convergence loop produces a `ConvergeResult` — a stable context of promoted facts. Executing side effects (sending emails, calling APIs, provisioning infrastructure) happens *after* the run, driven by the result. Suggestors are pure reasoners. Do not call external systems inside `execute()`.
+
+**`ContextKey` is a semantic protocol, not your domain model.**
+The nine keys (`Seeds`, `Signals`, `Evaluations`, `Strategies`, `Constraints`, `Hypotheses`, `Proposals`, `Competitors`, `Diagnostic`) are semantic roles in a convergence run — like HTTP methods. Your domain concepts map *to* these roles via content and id conventions, not by adding new keys. A supply chain suggestor that evaluates suppliers puts its output in `Evaluations`; a clinical trial suggestor that scores protocols does the same. They compose because they share the same protocol.
+
+**Use structured ids for sub-key namespacing.**
+Multiple suggestors can write to the same key in one run. Distinguish their outputs by id convention: `"price:vendor-a"`, `"risk:vendor-a"`, `"compliance:vendor-a"`. The examples show this pattern throughout. The compiler won't enforce the convention, but consistent ids make reads predictable and auditable.

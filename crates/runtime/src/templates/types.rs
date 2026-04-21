@@ -31,7 +31,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use utoipa::ToSchema;
 
-use crate::semantic::{AgentName, PackName, ProviderId};
+use crate::semantic::{
+    AgentName, PackName, PackVersion, ProviderId, QualityThreshold, RequirementPreset,
+    VersionRequirement,
+};
 use converge_core::{ContextKey, CostClass, FactId};
 
 /// A domain pack configuration (wiring only).
@@ -39,12 +42,15 @@ use converge_core::{ContextKey, CostClass, FactId};
 /// This represents the YAML pack file. Semantic definitions
 /// (invariants, validation rules) come from the referenced Gherkin spec.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct PackConfig {
     /// Pack name (e.g., "growth-strategy").
-    pub name: String,
+    #[schema(value_type = String)]
+    pub name: PackName,
 
     /// Pack version (semver).
-    pub version: String,
+    #[schema(value_type = String)]
+    pub version: PackVersion,
 
     /// Human-readable description.
     pub description: String,
@@ -62,7 +68,7 @@ pub struct PackConfig {
     pub budget: BudgetConfig,
 
     /// Suggestor → provider wiring.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_unique_agents")]
     pub agents: Vec<AgentWiring>,
 
     /// Pack metadata.
@@ -72,18 +78,22 @@ pub struct PackConfig {
 
 /// Compatibility requirements for the pack.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct CompatibilityRequirements {
     /// Minimum core version required (e.g., ">=0.6.0").
     #[serde(default)]
-    pub core: Option<String>,
+    #[schema(value_type = Option<String>)]
+    pub core: Option<VersionRequirement>,
 
     /// Minimum runtime API version required.
     #[serde(default)]
-    pub runtime_api: Option<String>,
+    #[schema(value_type = Option<String>)]
+    pub runtime_api: Option<VersionRequirement>,
 }
 
 /// Budget configuration for the convergence engine.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct BudgetConfig {
     /// Maximum number of convergence cycles.
     #[serde(default = "default_max_cycles")]
@@ -116,6 +126,7 @@ impl Default for BudgetConfig {
 /// Maps an agent ID (from Gherkin `@agent @id:xxx`) to provider requirements.
 /// Does NOT contain prompts or semantic behavior (those come from compiled Gherkin).
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct AgentWiring {
     /// Suggestor ID (must match `@agent @id:xxx` in Gherkin spec).
     /// Supports both "id" and "name" in YAML for backward compatibility.
@@ -134,13 +145,14 @@ pub struct AgentWiring {
 #[serde(untagged)]
 pub enum RequirementsConfig {
     /// Named preset (e.g., "fast_extraction", "analysis", "synthesis").
-    Preset(String),
+    Preset(RequirementPreset),
     /// Custom requirements specification.
     Custom(CustomRequirements),
 }
 
 /// Custom model selection requirements.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct CustomRequirements {
     /// Cost class: "cheap", "medium", "expensive".
     #[serde(
@@ -165,11 +177,13 @@ pub struct CustomRequirements {
 
     /// Minimum quality score (0.0 - 1.0).
     #[serde(default)]
-    pub min_quality: Option<f64>,
+    #[schema(value_type = Option<f64>)]
+    pub min_quality: Option<QualityThreshold>,
 }
 
 /// Seed fact definition for job requests.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct SeedFact {
     /// Unique identifier for the seed (e.g., "market:nordic-b2b").
     #[schema(value_type = String)]
@@ -180,6 +194,7 @@ pub struct SeedFact {
 
 /// Job overrides that can be applied to a pack.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct JobOverrides {
     /// Override budget configuration.
     #[serde(default)]
@@ -207,6 +222,7 @@ pub struct JobOverrides {
 
 /// Overrides for a specific agent's provider requirements.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct AgentOverrides {
     /// Override requirements.
     #[serde(default)]
@@ -215,6 +231,7 @@ pub struct AgentOverrides {
 
 /// Provider preferences for job execution.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct ProviderPreferences {
     /// Preferred providers in order of preference.
     #[serde(default)]
@@ -227,6 +244,7 @@ pub struct ProviderPreferences {
 
 /// Job request using a domain pack.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct PackJobRequest {
     /// Pack to use (e.g., "growth-strategy").
     pub pack: PackName,
@@ -244,11 +262,13 @@ pub struct PackJobRequest {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PackSummary {
     /// Pack name.
-    pub name: String,
+    #[schema(value_type = String)]
+    pub name: PackName,
     /// Pack description.
     pub description: String,
     /// Pack version.
-    pub version: String,
+    #[schema(value_type = String)]
+    pub version: PackVersion,
     /// Number of agents.
     pub agent_count: usize,
     /// Gherkin spec reference.
@@ -269,9 +289,11 @@ impl From<&PackConfig> for PackSummary {
 
 /// Suggestor definition within a template.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct AgentDefinition {
     /// Suggestor name (unique within template).
-    pub name: String,
+    #[schema(value_type = String)]
+    pub name: AgentName,
 
     /// Suggestor type: "seed", "llm", or "validation".
     #[serde(rename = "type")]
@@ -316,6 +338,23 @@ pub enum AgentType {
     Validation,
 }
 
+fn deserialize_unique_agents<'de, D>(deserializer: D) -> Result<Vec<AgentWiring>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let agents = Vec::<AgentWiring>::deserialize(deserializer)?;
+    let mut seen = std::collections::HashSet::new();
+    for agent in &agents {
+        if !seen.insert(agent.id.clone()) {
+            return Err(serde::de::Error::custom(format!(
+                "duplicate agent id '{}'",
+                agent.id
+            )));
+        }
+    }
+    Ok(agents)
+}
+
 fn serialize_optional_cost_class<S>(
     value: &Option<CostClass>,
     serializer: S,
@@ -338,7 +377,7 @@ where
         .transpose()
 }
 
-fn parse_cost_class(value: &str) -> Result<CostClass, String> {
+pub(super) fn parse_cost_class(value: &str) -> Result<CostClass, String> {
     match value.trim().to_ascii_lowercase().as_str() {
         "free" => Ok(CostClass::Free),
         "cheap" | "very_low" | "very-low" => Ok(CostClass::VeryLow),
@@ -401,7 +440,7 @@ metadata:
         assert_eq!(pack.name, "test-pack");
         assert_eq!(pack.version, "1.0.0");
         assert_eq!(pack.spec, Some("specs/test.feature".to_string()));
-        assert_eq!(pack.requires.core, Some(">=0.6.0".to_string()));
+        assert_eq!(pack.requires.core, Some(VersionRequirement::new(">=0.6.0")));
         assert_eq!(pack.budget.max_cycles, 100);
         assert_eq!(pack.agents.len(), 2);
         assert_eq!(pack.agents[0].id, "test_agent");
@@ -409,7 +448,9 @@ metadata:
 
         // Check preset requirements
         match &pack.agents[0].requirements {
-            Some(RequirementsConfig::Preset(preset)) => assert_eq!(preset, "fast_extraction"),
+            Some(RequirementsConfig::Preset(preset)) => {
+                assert_eq!(*preset, RequirementPreset::FastExtraction);
+            }
             _ => panic!("Expected preset requirements"),
         }
 
@@ -447,12 +488,11 @@ metadata:
         let request: PackJobRequest = serde_json::from_str(json).expect("should parse");
         assert_eq!(request.pack, "growth-strategy");
         assert_eq!(request.overrides.seeds.len(), 1);
-        assert_eq!(request.providers.prefer, vec!["anthropic"]);
+        assert_eq!(request.providers.prefer, vec![ProviderId::new("anthropic")]);
     }
 
     #[test]
-    fn test_wiring_only_no_semantic_keys() {
-        // This YAML should fail to parse if it contains semantic keys
+    fn test_wiring_only_rejects_semantic_keys() {
         let yaml_with_semantics = r#"
 name: bad-pack
 version: "1.0.0"
@@ -465,11 +505,25 @@ invariants:
   - SomeInvariant
 "#;
 
-        // PackConfig should NOT have these fields
-        let pack: PackConfig =
-            serde_yaml::from_str(yaml_with_semantics).expect("parses but ignores unknown");
+        let error = serde_yaml::from_str::<PackConfig>(yaml_with_semantics).unwrap_err();
+        assert!(error.to_string().contains("unknown field"));
+    }
 
-        // These fields are ignored (not part of PackConfig)
-        assert!(pack.spec.is_none());
+    #[test]
+    fn test_invalid_pack_version_rejected() {
+        let yaml = r#"
+name: test-pack
+version: "v1"
+description: Invalid version
+"#;
+
+        let error = serde_yaml::from_str::<PackConfig>(yaml).unwrap_err();
+        assert!(error.to_string().contains("invalid pack version"));
+    }
+
+    #[test]
+    fn test_invalid_min_quality_rejected() {
+        let error = serde_yaml::from_str::<CustomRequirements>("min_quality: 1.5").unwrap_err();
+        assert!(error.to_string().contains("quality threshold"));
     }
 }

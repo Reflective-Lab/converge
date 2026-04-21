@@ -123,13 +123,12 @@ impl Suggestor for FeatureAgent {
         let content = serde_json::to_string(&features).unwrap_or_default();
 
         // 3. Propose the features
-        let proposal = ProposedFact {
-            key: ContextKey::Proposals,
-            id: "features-001".into(),
+        let proposal = ProposedFact::new(
+            ContextKey::Proposals,
+            "features-001",
             content,
-            confidence: 1.0, // Deterministic computation
-            provenance: "polars-engine".into(),
-        };
+            "polars-engine",
+        );
 
         // Note: In a real agent, we might emit a Fact directly if trusted, or a ProposedFact.
         // converge_core usually requires TryFrom implementation or specific flow.

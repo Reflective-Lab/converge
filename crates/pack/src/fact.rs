@@ -415,14 +415,16 @@ pub struct ProposedFact {
     pub id: ProposalId,
     /// The proposed content.
     pub content: String,
-    /// Confidence hint from the source (0.0 - 1.0).
-    pub confidence: f64,
+    /// Confidence hint from the source. Always in [0.0, 1.0].
+    confidence: f64,
     /// Provenance information (e.g., model ID, prompt hash).
     pub provenance: String,
 }
 
 impl ProposedFact {
     /// Create a new draft proposal with explicit provenance.
+    ///
+    /// Confidence defaults to 1.0. Override with [`with_confidence`][Self::with_confidence].
     #[must_use]
     pub fn new(
         key: ContextKey,
@@ -439,13 +441,67 @@ impl ProposedFact {
         }
     }
 
-    /// Override the proposal confidence.
+    /// Returns the confidence value, always in [0.0, 1.0].
+    #[must_use]
+    pub fn confidence(&self) -> f64 {
+        self.confidence
+    }
+
+    /// Set an explicit confidence baseline for this proposal.
+    ///
+    /// Use this to establish a starting point, then accumulate criteria with
+    /// [`adjust_confidence`][Self::adjust_confidence]. The value is clamped to
+    /// [0.0, 1.0]; non-finite values (NaN, infinity) are treated as 0.0.
+    ///
+    /// For computed confidence (e.g. from a solver), pass the result directly.
     #[must_use]
     pub fn with_confidence(mut self, confidence: f64) -> Self {
-        self.confidence = confidence;
+        self.confidence = if confidence.is_finite() {
+            confidence.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+        self
+    }
+
+    /// Adjust confidence by a named step, clamped to [0.0, 1.0].
+    ///
+    /// This is the recommended way to express confidence in suggestors and pack
+    /// solvers. Use the `CONFIDENCE_STEP_*` constants as the vocabulary:
+    ///
+    /// ```rust,ignore
+    /// use converge_pack::{CONFIDENCE_STEP_MAJOR, CONFIDENCE_STEP_MINOR, CONFIDENCE_STEP_TINY};
+    ///
+    /// let proposal = ProposedFact::new(key, id, content, prov)
+    ///     .with_confidence(0.5)                        // baseline
+    ///     .adjust_confidence(CONFIDENCE_STEP_MAJOR)    // primary criterion met
+    ///     .adjust_confidence(CONFIDENCE_STEP_MINOR)    // supporting criterion met
+    ///     .adjust_confidence(CONFIDENCE_STEP_TINY);    // tiebreaker bonus
+    /// ```
+    ///
+    /// Prefer this over accumulating a local `f64` and calling `with_confidence`
+    /// at the end — the clamping is automatic and the intent is explicit at each step.
+    #[must_use]
+    pub fn adjust_confidence(mut self, delta: f64) -> Self {
+        self.confidence = (self.confidence + delta).clamp(0.0, 1.0);
         self
     }
 }
+
+/// Tiny confidence step — use for marginal or tiebreaker criteria (0.05).
+pub const CONFIDENCE_STEP_TINY: f64 = 0.05;
+
+/// Minor confidence step — use for supporting criteria (0.1).
+pub const CONFIDENCE_STEP_MINOR: f64 = 0.1;
+
+/// Medium confidence step — use for moderately significant criteria (0.15).
+pub const CONFIDENCE_STEP_MEDIUM: f64 = 0.15;
+
+/// Major confidence step — use for significant criteria (0.2).
+pub const CONFIDENCE_STEP_MAJOR: f64 = 0.2;
+
+/// Primary confidence step — use for decisive or high-weight criteria (0.25).
+pub const CONFIDENCE_STEP_PRIMARY: f64 = 0.25;
 
 /// Error when a `ProposedFact` fails validation.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -531,14 +587,63 @@ mod tests {
         assert_eq!(pf.key, ContextKey::Hypotheses);
         assert_eq!(pf.id, "p1");
         assert_eq!(pf.content, "my content");
-        assert_eq!(pf.confidence, 1.0);
+        assert_eq!(pf.confidence(), 1.0);
         assert_eq!(pf.provenance, "gpt-4");
     }
 
     #[test]
     fn proposed_fact_with_confidence() {
         let pf = ProposedFact::new(ContextKey::Signals, "p2", "c", "prov").with_confidence(0.42);
-        assert!((pf.confidence - 0.42).abs() < f64::EPSILON);
+        assert!((pf.confidence() - 0.42).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn adjust_confidence_accumulates() {
+        let pf = ProposedFact::new(ContextKey::Seeds, "p", "c", "x")
+            .with_confidence(0.5)
+            .adjust_confidence(CONFIDENCE_STEP_MINOR)
+            .adjust_confidence(CONFIDENCE_STEP_MAJOR);
+        assert!((pf.confidence() - 0.8).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn adjust_confidence_clamps_at_one() {
+        let pf = ProposedFact::new(ContextKey::Seeds, "p", "c", "x")
+            .with_confidence(0.9)
+            .adjust_confidence(CONFIDENCE_STEP_MAJOR);
+        assert_eq!(pf.confidence(), 1.0);
+    }
+
+    #[test]
+    fn adjust_confidence_clamps_at_zero() {
+        let pf = ProposedFact::new(ContextKey::Seeds, "p", "c", "x")
+            .with_confidence(0.1)
+            .adjust_confidence(-0.5);
+        assert_eq!(pf.confidence(), 0.0);
+    }
+
+    #[test]
+    fn with_confidence_clamps_high() {
+        let pf = ProposedFact::new(ContextKey::Seeds, "p", "c", "x").with_confidence(1.5);
+        assert_eq!(pf.confidence(), 1.0);
+    }
+
+    #[test]
+    fn with_confidence_clamps_negative() {
+        let pf = ProposedFact::new(ContextKey::Seeds, "p", "c", "x").with_confidence(-0.1);
+        assert_eq!(pf.confidence(), 0.0);
+    }
+
+    #[test]
+    fn with_confidence_normalizes_nan() {
+        let pf = ProposedFact::new(ContextKey::Seeds, "p", "c", "x").with_confidence(f64::NAN);
+        assert_eq!(pf.confidence(), 0.0);
+    }
+
+    #[test]
+    fn with_confidence_normalizes_infinity() {
+        let pf = ProposedFact::new(ContextKey::Seeds, "p", "c", "x").with_confidence(f64::INFINITY);
+        assert_eq!(pf.confidence(), 0.0);
     }
 
     #[test]
@@ -640,7 +745,7 @@ mod tests {
                 prop_assert_eq!(&pf.id, &id);
                 prop_assert_eq!(&pf.content, &content);
                 prop_assert_eq!(&pf.provenance, &prov);
-                prop_assert!((pf.confidence - 1.0).abs() < f64::EPSILON);
+                prop_assert!((pf.confidence() - 1.0).abs() < f64::EPSILON);
             }
         }
     }

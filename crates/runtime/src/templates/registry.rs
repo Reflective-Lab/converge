@@ -17,6 +17,9 @@ use tracing::{info, warn};
 
 use super::types::{AgentWiring, PackConfig, PackSummary};
 use super::validator::validate_pack_yaml_str;
+use crate::semantic::{
+    PackName, PackVersion, QualityThreshold, RequirementPreset, VersionRequirement,
+};
 use converge_core::CostClass;
 
 // Type aliases for backward compatibility
@@ -42,7 +45,7 @@ pub enum TemplateError {
 /// Template registry for managing job templates.
 #[derive(Debug, Clone)]
 pub struct TemplateRegistry {
-    templates: HashMap<String, Arc<JobTemplate>>,
+    templates: HashMap<PackName, Arc<JobTemplate>>,
 }
 
 impl TemplateRegistry {
@@ -120,9 +123,7 @@ impl TemplateRegistry {
     /// Load a single template from a file.
     pub fn load_template_file(path: impl AsRef<Path>) -> Result<JobTemplate, TemplateError> {
         let content = std::fs::read_to_string(path)?;
-        let template: JobTemplate = serde_yaml::from_str(&content)?;
-        Self::validate_template(&template)?;
-        Ok(template)
+        Self::parse_yaml(&content)
     }
 
     /// Parse a template from YAML string.
@@ -142,18 +143,12 @@ impl TemplateRegistry {
 
     /// Validate a pack config for correctness.
     fn validate_template(pack: &PackConfig) -> Result<(), TemplateError> {
-        if pack.name.is_empty() {
-            return Err(TemplateError::ValidationError(
-                "Pack name cannot be empty".to_string(),
-            ));
-        }
-
         // Validate agent IDs are unique
         let mut agent_ids = std::collections::HashSet::new();
         for agent in &pack.agents {
             if !agent_ids.insert(&agent.id) {
                 return Err(TemplateError::ValidationError(format!(
-                    "Duplicate agent id: {}",
+                    "duplicate agent id '{}'",
                     agent.id
                 )));
             }
@@ -211,13 +206,13 @@ impl TemplateRegistry {
     /// NOT in this wiring config. Suggestor IDs match @agent @id:xxx tags.
     fn growth_strategy_template() -> Option<PackConfig> {
         Some(PackConfig {
-            name: "growth-strategy".to_string(),
-            version: "1.0.0".to_string(),
+            name: PackName::new("growth-strategy"),
+            version: PackVersion::new("1.0.0"),
             description: "Multi-agent growth strategy analysis".to_string(),
             spec: Some("specs/growth-strategy.feature".to_string()),
             requires: super::types::CompatibilityRequirements {
-                core: Some(">=0.6.0".to_string()),
-                runtime_api: Some(">=0.1.0".to_string()),
+                core: Some(VersionRequirement::new(">=0.6.0")),
+                runtime_api: Some(VersionRequirement::new(">=0.1.0")),
             },
             budget: super::types::BudgetConfig {
                 max_cycles: 50,
@@ -227,7 +222,7 @@ impl TemplateRegistry {
                 AgentWiring {
                     id: "market_signal".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
-                        "fast_extraction".to_string(),
+                        RequirementPreset::FastExtraction,
                     )),
                 },
                 AgentWiring {
@@ -288,13 +283,13 @@ impl TemplateRegistry {
         );
 
         Some(PackConfig {
-            name: "ask-converge".to_string(),
-            version: "0.1.0".to_string(),
+            name: PackName::new("ask-converge"),
+            version: PackVersion::new("0.1.0"),
             description: "Grounded ask-converge Q&A with recall-only sources".to_string(),
             spec: Some("specs/ask-converge.feature".to_string()),
             requires: super::types::CompatibilityRequirements {
-                core: Some(">=0.6.0".to_string()),
-                runtime_api: Some(">=0.1.0".to_string()),
+                core: Some(VersionRequirement::new(">=0.6.0")),
+                runtime_api: Some(VersionRequirement::new(">=0.1.0")),
             },
             budget: super::types::BudgetConfig {
                 max_cycles: 6,
@@ -308,7 +303,7 @@ impl TemplateRegistry {
                         max_latency_ms: Some(20000),
                         requires_reasoning: Some(true),
                         requires_web_search: None,
-                        min_quality: Some(0.6),
+                        min_quality: Some(QualityThreshold::new(0.6)),
                     },
                 )),
             }],
@@ -319,13 +314,13 @@ impl TemplateRegistry {
     /// Create the embedded patent-research pack config.
     fn patent_research_template() -> Option<PackConfig> {
         Some(PackConfig {
-            name: "patent-research".to_string(),
-            version: "1.0.0".to_string(),
+            name: PackName::new("patent-research"),
+            version: PackVersion::new("1.0.0"),
             description: "Governed patent research with evidence and approvals".to_string(),
             spec: Some("specs/patent-research.feature".to_string()),
             requires: super::types::CompatibilityRequirements {
-                core: Some(">=0.6.0".to_string()),
-                runtime_api: Some(">=0.1.0".to_string()),
+                core: Some(VersionRequirement::new(">=0.6.0")),
+                runtime_api: Some(VersionRequirement::new(">=0.1.0")),
             },
             budget: super::types::BudgetConfig {
                 max_cycles: 20,
@@ -335,7 +330,7 @@ impl TemplateRegistry {
                 AgentWiring {
                     id: "patent_query_builder".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
-                        "fast_extraction".to_string(),
+                        RequirementPreset::FastExtraction,
                     )),
                 },
                 AgentWiring {
@@ -413,19 +408,19 @@ impl TemplateRegistry {
                 AgentWiring {
                     id: "patent_alert_agent".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
-                        "fast_extraction".to_string(),
+                        RequirementPreset::FastExtraction,
                     )),
                 },
                 AgentWiring {
                     id: "patent_submission_agent".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
-                        "deterministic".to_string(),
+                        RequirementPreset::Deterministic,
                     )),
                 },
                 AgentWiring {
                     id: "patent_approval_recorder".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
-                        "deterministic".to_string(),
+                        RequirementPreset::Deterministic,
                     )),
                 },
             ],
@@ -436,13 +431,13 @@ impl TemplateRegistry {
     /// Create the embedded linkedin-research pack config.
     fn linkedin_research_template() -> Option<PackConfig> {
         Some(PackConfig {
-            name: "linkedin-research".to_string(),
-            version: "1.0.0".to_string(),
+            name: PackName::new("linkedin-research"),
+            version: PackVersion::new("1.0.0"),
             description: "Governed LinkedIn research with evidence and approvals".to_string(),
             spec: Some("specs/linkedin-research.feature".to_string()),
             requires: super::types::CompatibilityRequirements {
-                core: Some(">=0.6.0".to_string()),
-                runtime_api: Some(">=0.1.0".to_string()),
+                core: Some(VersionRequirement::new(">=0.6.0")),
+                runtime_api: Some(VersionRequirement::new(">=0.1.0")),
             },
             budget: super::types::BudgetConfig {
                 max_cycles: 30,
@@ -452,13 +447,13 @@ impl TemplateRegistry {
                 AgentWiring {
                     id: "signal_ingest".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
-                        "fast_extraction".to_string(),
+                        RequirementPreset::FastExtraction,
                     )),
                 },
                 AgentWiring {
                     id: "evidence_validator".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
-                        "deterministic".to_string(),
+                        RequirementPreset::Deterministic,
                     )),
                 },
                 AgentWiring {
@@ -488,7 +483,7 @@ impl TemplateRegistry {
                 AgentWiring {
                     id: "approval_recorder".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
-                        "deterministic".to_string(),
+                        RequirementPreset::Deterministic,
                     )),
                 },
                 AgentWiring {
@@ -511,14 +506,14 @@ impl TemplateRegistry {
     /// Create the embedded drafting-short pack config.
     fn drafting_short_template() -> Option<PackConfig> {
         Some(PackConfig {
-            name: "drafting-short".to_string(),
-            version: "1.0.0".to_string(),
+            name: PackName::new("drafting-short"),
+            version: PackVersion::new("1.0.0"),
             description: "Short drafting flow with Perplexity research and Anthropic drafting."
                 .to_string(),
             spec: Some("specs/drafting-short.feature".to_string()),
             requires: super::types::CompatibilityRequirements {
-                core: Some(">=0.6.0".to_string()),
-                runtime_api: Some(">=0.1.0".to_string()),
+                core: Some(VersionRequirement::new(">=0.6.0")),
+                runtime_api: Some(VersionRequirement::new(">=0.1.0")),
             },
             budget: super::types::BudgetConfig {
                 max_cycles: 10,
@@ -533,7 +528,7 @@ impl TemplateRegistry {
                             max_latency_ms: None,
                             requires_reasoning: None,
                             requires_web_search: Some(true),
-                            min_quality: Some(0.75),
+                            min_quality: Some(QualityThreshold::new(0.75)),
                         },
                     )),
                 },
@@ -545,7 +540,7 @@ impl TemplateRegistry {
                             max_latency_ms: Some(3000),
                             requires_reasoning: Some(true),
                             requires_web_search: None,
-                            min_quality: Some(0.85),
+                            min_quality: Some(QualityThreshold::new(0.85)),
                         },
                     )),
                 },
@@ -567,13 +562,13 @@ impl TemplateRegistry {
         );
 
         Some(PackConfig {
-            name: "release-readiness".to_string(),
-            version: "1.0.0".to_string(),
+            name: PackName::new("release-readiness"),
+            version: PackVersion::new("1.0.0"),
             description: "Engineering dependency and release quality gates.".to_string(),
             spec: Some("specs/release-readiness.feature".to_string()),
             requires: super::types::CompatibilityRequirements {
-                core: Some(">=0.6.0".to_string()),
-                runtime_api: Some(">=0.1.0".to_string()),
+                core: Some(VersionRequirement::new(">=0.6.0")),
+                runtime_api: Some(VersionRequirement::new(">=0.1.0")),
             },
             budget: super::types::BudgetConfig {
                 max_cycles: 12,
@@ -583,43 +578,43 @@ impl TemplateRegistry {
                 AgentWiring {
                     id: "DependencyGraphAgent".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
-                        "deterministic".to_string(),
+                        RequirementPreset::Deterministic,
                     )),
                 },
                 AgentWiring {
                     id: "TestCoverageAgent".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
-                        "deterministic".to_string(),
+                        RequirementPreset::Deterministic,
                     )),
                 },
                 AgentWiring {
                     id: "SecurityScanAgent".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
-                        "deterministic".to_string(),
+                        RequirementPreset::Deterministic,
                     )),
                 },
                 AgentWiring {
                     id: "PerformanceRegressionAgent".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
-                        "deterministic".to_string(),
+                        RequirementPreset::Deterministic,
                     )),
                 },
                 AgentWiring {
                     id: "DocumentationAgent".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
-                        "deterministic".to_string(),
+                        RequirementPreset::Deterministic,
                     )),
                 },
                 AgentWiring {
                     id: "RiskSummaryAgent".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
-                        "deterministic".to_string(),
+                        RequirementPreset::Deterministic,
                     )),
                 },
                 AgentWiring {
                     id: "ReleaseReadyAgent".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
-                        "deterministic".to_string(),
+                        RequirementPreset::Deterministic,
                     )),
                 },
             ],
@@ -630,13 +625,13 @@ impl TemplateRegistry {
     /// Create the embedded novelty-search pack config.
     fn novelty_search_template() -> Option<PackConfig> {
         Some(PackConfig {
-            name: "novelty-search".to_string(),
-            version: "1.0.0".to_string(),
+            name: PackName::new("novelty-search"),
+            version: PackVersion::new("1.0.0"),
             description: "Short novelty search flow for patent prior art.".to_string(),
             spec: Some("specs/novelty-search.feature".to_string()),
             requires: super::types::CompatibilityRequirements {
-                core: Some(">=0.6.0".to_string()),
-                runtime_api: Some(">=0.1.0".to_string()),
+                core: Some(VersionRequirement::new(">=0.6.0")),
+                runtime_api: Some(VersionRequirement::new(">=0.1.0")),
             },
             budget: super::types::BudgetConfig {
                 max_cycles: 15,
@@ -646,7 +641,7 @@ impl TemplateRegistry {
                 AgentWiring {
                     id: "patent_query_builder".into(),
                     requirements: Some(super::types::RequirementsConfig::Preset(
-                        "fast_extraction".to_string(),
+                        RequirementPreset::FastExtraction,
                     )),
                 },
                 AgentWiring {
@@ -766,7 +761,7 @@ agents:
             result
                 .unwrap_err()
                 .to_string()
-                .contains("Duplicate agent id")
+                .contains("duplicate agent id")
         );
     }
 

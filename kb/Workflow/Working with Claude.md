@@ -13,6 +13,7 @@ This project has two layers of automation: **Claude Code skills** (slash command
 | Build the project | `just build` | Deterministic shell command |
 | Run tests | `just test` | Deterministic shell command |
 | Run clippy | `just lint` | Deterministic shell command |
+| Inspect branches/worktrees/releases | `just git-hygiene` | Deterministic repo-state report |
 | Orient myself at session start | `/focus` | Reads kb, checks build, shows team activity |
 | See team activity | `/sync` | PRs waiting, unclaimed issues, recent commits |
 | Pick next task | `/next` | Reads milestone, picks highest-priority task |
@@ -29,6 +30,15 @@ This project has two layers of automation: **Claude Code skills** (slash command
 
 **Rule of thumb:** if it's a single deterministic command, use `just`. If it requires reading, thinking, or multi-step orchestration, use a skill.
 
+## Git Discipline
+
+- Keep the root checkout on clean `main`
+- Use a short-lived topic branch for non-trivial work
+- Prefer a dedicated worktree for parallel streams
+- Treat annotated tags as releases; do not infer "latest release" from `main`
+
+See [[Workflow/Git Strategy]].
+
 ## The Knowledgebase and Claude
 
 Claude reads `kb/` pages when it needs context. The `/focus` skill starts by reading `kb/Home.md`. The `/ticket` skill reads relevant kb pages to write better issues.
@@ -39,4 +49,4 @@ When Claude learns something during a session that should be preserved:
 
 The kb is for humans AND agents.
 
-See also: [[Workflow/Daily Journey]], [[Workflow/Working with Codex]], [[Workflow/Working with Gemini]]
+See also: [[Workflow/Git Strategy]], [[Workflow/Daily Journey]], [[Workflow/Working with Codex]], [[Workflow/Working with Gemini]]

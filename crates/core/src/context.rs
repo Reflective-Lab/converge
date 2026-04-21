@@ -125,7 +125,7 @@ impl ContextState {
 
         if let Some(existing) = proposals.iter().find(|p| p.id == proposal.id) {
             if existing.content == proposal.content
-                && existing.confidence == proposal.confidence
+                && existing.confidence() == proposal.confidence()
                 && existing.provenance == proposal.provenance
             {
                 return Ok(false);

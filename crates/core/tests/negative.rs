@@ -8,16 +8,15 @@ use converge_core::{
 
 // ── Invalid proposals: rejected by promotion gate ──
 
-struct BadProposalAgent {
+struct BadContentAgent {
     name: &'static str,
     key: ContextKey,
     id: &'static str,
     content: &'static str,
-    confidence: f64,
 }
 
 #[async_trait::async_trait]
-impl Suggestor for BadProposalAgent {
+impl Suggestor for BadContentAgent {
     fn name(&self) -> &str {
         self.name
     }
@@ -28,85 +27,23 @@ impl Suggestor for BadProposalAgent {
         true
     }
     async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
-        AgentEffect::with_proposal(ProposedFact {
-            key: self.key,
-            id: self.id.to_string().into(),
-            content: self.content.to_string(),
-            confidence: self.confidence,
-            provenance: "test-agent".to_string(),
-        })
+        AgentEffect::with_proposal(ProposedFact::new(
+            self.key,
+            self.id,
+            self.content,
+            "test-agent",
+        ))
     }
-}
-
-#[tokio::test]
-async fn nan_confidence_rejected() {
-    let mut engine = Engine::new();
-    engine.register_suggestor(BadProposalAgent {
-        name: "nan-agent",
-        key: ContextKey::Seeds,
-        id: "bad-1",
-        content: "valid content",
-        confidence: f64::NAN,
-    });
-
-    let result = engine
-        .run(ContextState::new())
-        .await
-        .expect("should converge (proposal rejected, no facts)");
-
-    assert!(result.converged);
-    assert!(!result.context.has(ContextKey::Seeds));
-}
-
-#[tokio::test]
-async fn infinite_confidence_rejected() {
-    let mut engine = Engine::new();
-    engine.register_suggestor(BadProposalAgent {
-        name: "inf-agent",
-        key: ContextKey::Seeds,
-        id: "bad-2",
-        content: "valid content",
-        confidence: f64::INFINITY,
-    });
-
-    let result = engine
-        .run(ContextState::new())
-        .await
-        .expect("should converge (proposal rejected)");
-
-    assert!(result.converged);
-    assert!(!result.context.has(ContextKey::Seeds));
-}
-
-#[tokio::test]
-async fn negative_confidence_rejected() {
-    let mut engine = Engine::new();
-    engine.register_suggestor(BadProposalAgent {
-        name: "neg-agent",
-        key: ContextKey::Seeds,
-        id: "bad-3",
-        content: "valid content",
-        confidence: -0.1,
-    });
-
-    let result = engine
-        .run(ContextState::new())
-        .await
-        .expect("should converge (proposal rejected)");
-
-    assert!(result.converged);
-    assert!(!result.context.has(ContextKey::Seeds));
 }
 
 #[tokio::test]
 async fn empty_content_rejected() {
     let mut engine = Engine::new();
-    engine.register_suggestor(BadProposalAgent {
+    engine.register_suggestor(BadContentAgent {
         name: "empty-agent",
         key: ContextKey::Seeds,
-        id: "bad-4",
+        id: "bad-1",
         content: "",
-        confidence: 0.9,
     });
 
     let result = engine
@@ -121,12 +58,11 @@ async fn empty_content_rejected() {
 #[tokio::test]
 async fn whitespace_only_content_rejected() {
     let mut engine = Engine::new();
-    engine.register_suggestor(BadProposalAgent {
+    engine.register_suggestor(BadContentAgent {
         name: "ws-agent",
         key: ContextKey::Seeds,
-        id: "bad-5",
+        id: "bad-2",
         content: "   \t\n  ",
-        confidence: 0.9,
     });
 
     let result = engine

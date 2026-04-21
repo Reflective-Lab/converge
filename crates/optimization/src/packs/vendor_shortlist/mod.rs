@@ -31,6 +31,7 @@ pub use types::*;
 use crate::packs::{InvariantDef, InvariantResult, Pack, PackSolveResult, default_gate_evaluation};
 use converge_pack::gate::GateResult as Result;
 use converge_pack::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
+use converge_pack::{CONFIDENCE_STEP_MAJOR, CONFIDENCE_STEP_MINOR};
 
 /// Vendor Shortlist Pack
 pub struct VendorShortlistPack;
@@ -100,19 +101,19 @@ fn calculate_confidence(output: &VendorShortlistOutput, input: &VendorShortlistI
 
     // Higher confidence if we found multiple vendors
     if output.shortlist.len() >= 2 {
-        confidence += 0.2;
+        confidence += CONFIDENCE_STEP_MAJOR;
     }
 
     // Higher confidence if shortlist is at capacity
     if output.shortlist.len() == input.requirements.max_vendors {
-        confidence += 0.1;
+        confidence += CONFIDENCE_STEP_MINOR;
     }
 
     // Higher confidence if average score is good
     if output.stats.average_score >= 80.0 {
-        confidence += 0.2;
+        confidence += CONFIDENCE_STEP_MAJOR;
     } else if output.stats.average_score >= 70.0 {
-        confidence += 0.1;
+        confidence += CONFIDENCE_STEP_MINOR;
     }
 
     confidence.min(1.0)

@@ -52,6 +52,9 @@ just doc            # cargo doc --no-deps --workspace
 just focus          # Session opener — repo health + recent activity
 just sync           # Team sync — PRs, issues, recent commits
 just status         # Build health, test results
+just git-hygiene    # Worktrees, branch state, latest release tag, cleanup candidates
+just test-layout    # Guard non-standard Rust test file placement
+just test-runtime-wasm # Run the feature-gated WASM property suite
 ```
 
 ## Rules
@@ -60,13 +63,26 @@ These are not suggestions.
 
 - No `unsafe` code. Ever.
 - Use typed enums, not strings with semantics.
+- Closed numeric domains use validated types or private validated fields, not naked `f32`/`f64` with meaning.
+- Known config schemas deserialize into typed values and use `serde(deny_unknown_fields)` unless open extension points are deliberate.
+- Before adding a negative or property test for internal misuse, first ask whether the type system can make the misuse impossible. Keep those tests for public boundaries, wire formats, feature gates, and algorithmic invariants.
+- Rust test files live under `src/` or `tests/`; source-tree test modules must be explicitly linked, not left as dead files.
 - Agents emit proposals, not direct facts — Converge promotes them.
 - Every mutation needs an Actor.
 - `just lint` clean before considering work done.
+- The root checkout stays on clean `main`; use a topic branch and preferably a dedicated worktree for any non-trivial change.
+- `main` is the integration branch, not a scratch branch. One branch/worktree = one concern.
+- Releases are defined by annotated tags, not by the current tip of `main`.
+- Delete merged or abandoned remote branches; do not use remote refs as archival storage.
+- Routine Dependabot cargo and GitHub Actions bumps are usually safe to auto-merge after green CI; majors or code-touching updates still need review.
 - No feature flags. No backwards-compat shims. Change the code.
 - No unnecessary abstractions. Three similar lines beat a premature helper.
 - All deps use `workspace = true` — never inline versions in crate Cargo.tomls.
 - Edition 2024, rust-version 1.94.
+
+Type-strengthening contract: `kb/Architecture/Type Protocol.md`.
+
+Git operating model: `kb/Workflow/Git Strategy.md`.
 
 ## Architecture
 
@@ -88,6 +104,7 @@ The codebase has known gaps between axioms and implementation. These are tracked
 ## Workflows
 
 Run `just focus` at session start. See `kb/Workflow/Daily Journey.md` for the full cheat sheet.
+Branch, worktree, and release discipline live in `kb/Workflow/Git Strategy.md`.
 
 | Workflow | Purpose |
 |---|---|

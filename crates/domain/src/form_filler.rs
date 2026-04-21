@@ -391,18 +391,20 @@ impl Suggestor for ProposalEmitterAgent {
         let proposals: Vec<ProposedFact> = normalized
             .into_iter()
             .filter(|field| !field.normalized_value.trim().is_empty())
-            .map(|field| ProposedFact {
-                key: ContextKey::Proposals,
-                id: format!("{}{}", PROPOSAL_PREFIX, field.field_id).into(),
-                content: serde_json::json!({
-                    "field_id": field.field_id,
-                    "value": field.normalized_value,
-                    "provenance": "form_filler:deterministic",
-                    "risk": "unknown",
-                })
-                .to_string(),
-                confidence: 0.8,
-                provenance: "form_filler:deterministic".to_string(),
+            .map(|field| {
+                ProposedFact::new(
+                    ContextKey::Proposals,
+                    format!("{}{}", PROPOSAL_PREFIX, field.field_id),
+                    serde_json::json!({
+                        "field_id": field.field_id,
+                        "value": field.normalized_value,
+                        "provenance": "form_filler:deterministic",
+                        "risk": "unknown",
+                    })
+                    .to_string(),
+                    "form_filler:deterministic",
+                )
+                .with_confidence(0.8)
             })
             .collect();
 

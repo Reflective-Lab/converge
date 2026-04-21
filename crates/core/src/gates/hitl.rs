@@ -88,7 +88,7 @@ impl HitlPolicy {
 
         // Confidence-based gating
         if let Some(threshold) = self.confidence_threshold {
-            if let Some(confidence) = proposal.content().confidence {
+            if let Some(confidence) = proposal.content().confidence() {
                 if confidence < threshold {
                     return true;
                 }

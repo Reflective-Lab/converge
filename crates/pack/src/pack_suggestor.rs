@@ -70,7 +70,7 @@ impl<P: Pack> Suggestor for PackSuggestor<P> {
         match self.pack.solve(&spec) {
             Ok(result) => {
                 let content = serde_json::to_string(&result.plan).unwrap_or_default();
-                let confidence = result.plan.confidence;
+                let confidence = result.plan.confidence();
                 let proposal = ProposedFact::new(
                     self.output_key,
                     format!("{}-solution", self.pack.name()),

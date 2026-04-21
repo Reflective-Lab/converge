@@ -87,6 +87,7 @@ Key properties:
 - deterministic ordering follows registration order
 - semantic IDs, hashes, and timestamps cross the public contract as typed values
 - wildcard matching at the runtime perimeter uses explicit selector types, not magic `"*"` strings
+- runtime pack YAML is strict operational wiring: typed names and versions, explicit preset vocabulary, and no semantic-rule spillover
 - budgets and typed stop reasons make termination explicit
 
 ## Built-In Packs vs Other Suggestors

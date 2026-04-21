@@ -73,8 +73,8 @@ pub struct ProposedContent {
     pub content: String,
     /// Structured content (if applicable)
     pub structured: Option<serde_json::Value>,
-    /// Confidence score (0.0 - 1.0) if available
-    pub confidence: Option<f32>,
+    /// Confidence score. Always in [0.0, 1.0] if present.
+    confidence: Option<f32>,
 }
 
 impl ProposedContent {
@@ -88,15 +88,39 @@ impl ProposedContent {
         }
     }
 
+    /// Returns the confidence score if set, always in [0.0, 1.0].
+    #[must_use]
+    pub fn confidence(&self) -> Option<f32> {
+        self.confidence
+    }
+
     /// Add structured content.
     pub fn with_structured(mut self, structured: serde_json::Value) -> Self {
         self.structured = Some(structured);
         self
     }
 
-    /// Add confidence score.
+    /// Set a confidence baseline.
+    ///
+    /// The value is clamped to [0.0, 1.0]. Non-finite values are treated as 0.0.
+    /// Use [`adjust_confidence`][Self::adjust_confidence] to accumulate criteria on top.
+    #[must_use]
     pub fn with_confidence(mut self, confidence: f32) -> Self {
-        self.confidence = Some(confidence);
+        self.confidence = Some(if confidence.is_finite() {
+            confidence.clamp(0.0, 1.0)
+        } else {
+            0.0
+        });
+        self
+    }
+
+    /// Adjust confidence by a delta, clamped to [0.0, 1.0].
+    ///
+    /// If no confidence has been set, the delta is applied from 0.0.
+    #[must_use]
+    pub fn adjust_confidence(mut self, delta: f32) -> Self {
+        let current = self.confidence.unwrap_or(0.0);
+        self.confidence = Some((current + delta).clamp(0.0, 1.0));
         self
     }
 }
@@ -297,7 +321,7 @@ mod tests {
 
         assert_eq!(content.kind, ProposedContentKind::Evaluation);
         assert!(content.structured.is_some());
-        assert_eq!(content.confidence, Some(0.85));
+        assert_eq!(content.confidence(), Some(0.85));
     }
 
     #[test]

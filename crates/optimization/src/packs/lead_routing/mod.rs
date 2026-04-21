@@ -43,6 +43,9 @@ pub use types::*;
 use crate::packs::{InvariantDef, InvariantResult, Pack, PackSolveResult, default_gate_evaluation};
 use converge_pack::gate::GateResult as Result;
 use converge_pack::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
+use converge_pack::{
+    CONFIDENCE_STEP_MEDIUM, CONFIDENCE_STEP_MINOR, CONFIDENCE_STEP_PRIMARY, CONFIDENCE_STEP_TINY,
+};
 
 /// Lead Routing Pack
 pub struct LeadRoutingPack;
@@ -156,7 +159,7 @@ fn calculate_confidence(output: &LeadRoutingOutput, _input: &LeadRoutingInput) -
 
     // Higher confidence if all leads assigned
     if output.unassigned.is_empty() {
-        confidence += 0.25;
+        confidence += CONFIDENCE_STEP_PRIMARY;
     } else {
         // Partial credit based on assignment rate
         let assignment_rate = output.stats.assigned_leads as f64 / output.stats.total_leads as f64;
@@ -165,9 +168,9 @@ fn calculate_confidence(output: &LeadRoutingOutput, _input: &LeadRoutingInput) -
 
     // Higher confidence if fit score is good
     if output.stats.average_fit_score >= 70.0 {
-        confidence += 0.15;
+        confidence += CONFIDENCE_STEP_MEDIUM;
     } else if output.stats.average_fit_score >= 50.0 {
-        confidence += 0.1;
+        confidence += CONFIDENCE_STEP_MINOR;
     }
 
     // Higher confidence if load is balanced (check utilization variance)
@@ -183,10 +186,10 @@ fn calculate_confidence(output: &LeadRoutingOutput, _input: &LeadRoutingInput) -
         let std_dev = variance.sqrt();
 
         if std_dev <= 15.0 {
-            confidence += 0.1;
+            confidence += CONFIDENCE_STEP_MINOR;
         }
     } else {
-        confidence += 0.05;
+        confidence += CONFIDENCE_STEP_TINY;
     }
 
     confidence.min(1.0)

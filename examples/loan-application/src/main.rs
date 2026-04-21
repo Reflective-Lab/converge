@@ -359,18 +359,18 @@ impl Suggestor for LoanDecisionAgent {
             ("rejected", 0.90)
         };
 
-        let proposal = ProposedFact {
-            key: ContextKey::Proposals,
-            id: "loan-decision".into(),
-            content: serde_json::json!({
+        let proposal = ProposedFact::new(
+            ContextKey::Proposals,
+            "loan-decision",
+            serde_json::json!({
                 "decision": decision,
                 "score": avg_score,
                 "confidence": confidence
             })
             .to_string(),
-            confidence,
-            provenance: "loan-decision-agent".to_string(),
-        };
+            "loan-decision-agent",
+        )
+        .with_confidence(confidence);
 
         AgentEffect::with_proposal(proposal)
     }

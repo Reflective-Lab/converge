@@ -445,18 +445,20 @@ impl Suggestor for ConsensusAgent {
         let proposals: Vec<ProposedFact> = weighted_scores
             .iter()
             .enumerate()
-            .map(|(i, (vendor_id, score))| ProposedFact {
-                key: ContextKey::Strategies,
-                id: format!("recommendation-{}", i + 1).into(),
-                content: serde_json::json!({
-                    "vendor_id": vendor_id,
-                    "rank": i + 1,
-                    "score": score,
-                    "recommendation": if i == 0 { "recommended" } else { "alternative" }
-                })
-                .to_string(),
-                confidence: if i == 0 { 0.85 } else { 0.6 },
-                provenance: "consensus-agent".to_string(),
+            .map(|(i, (vendor_id, score))| {
+                ProposedFact::new(
+                    ContextKey::Strategies,
+                    format!("recommendation-{}", i + 1),
+                    serde_json::json!({
+                        "vendor_id": vendor_id,
+                        "rank": i + 1,
+                        "score": score,
+                        "recommendation": if i == 0 { "recommended" } else { "alternative" }
+                    })
+                    .to_string(),
+                    "consensus-agent",
+                )
+                .with_confidence(if i == 0 { 0.85 } else { 0.6 })
             })
             .collect();
 
@@ -566,13 +568,15 @@ impl Suggestor for ProcurementApprovalSimulationAgent {
             return AgentEffect::default();
         }
 
-        AgentEffect::with_proposal(ProposedFact {
-            key: ContextKey::Proposals,
-            id: "procurement-approval".into(),
-            content: "Approved by procurement".into(),
-            confidence: 0.95,
-            provenance: "procurement approval agent".into(),
-        })
+        AgentEffect::with_proposal(
+            ProposedFact::new(
+                ContextKey::Proposals,
+                "procurement-approval",
+                "Approved by procurement",
+                "procurement approval agent",
+            )
+            .with_confidence(0.95),
+        )
     }
 }
 

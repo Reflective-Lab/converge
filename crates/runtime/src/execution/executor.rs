@@ -15,6 +15,7 @@ use strum::IntoEnumIterator;
 use tracing::{Instrument, info, info_span};
 
 use crate::error::RuntimeError;
+use crate::semantic::PackName;
 use crate::templates::{PackConfig, SeedFact};
 
 use super::packs::{LlmConfig, register_pack_agents};
@@ -60,7 +61,7 @@ impl From<(ConvergeResult, u64)> for ExecutionResult {
 /// Builder for configuring and executing convergence jobs.
 pub struct JobExecutorBuilder {
     /// Pack ID to use.
-    pack_id: Option<String>,
+    pack_id: Option<PackName>,
     /// Pack configuration.
     pack_config: Option<PackConfig>,
     /// Seed facts.
@@ -93,7 +94,7 @@ impl JobExecutorBuilder {
     }
 
     /// Set the pack ID to use.
-    pub fn with_pack(mut self, pack_id: impl Into<String>) -> Self {
+    pub fn with_pack(mut self, pack_id: impl Into<PackName>) -> Self {
         self.pack_id = Some(pack_id.into());
         self
     }
@@ -211,7 +212,7 @@ impl JobExecutorBuilder {
 
 /// Job executor that runs convergence jobs.
 pub struct JobExecutor {
-    pack_id: String,
+    pack_id: PackName,
     pack_config: Option<PackConfig>,
     seeds: Vec<SeedFact>,
     budget: Budget,

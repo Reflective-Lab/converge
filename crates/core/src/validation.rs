@@ -67,12 +67,13 @@ impl ValidationAgent {
 
     /// Validates a single proposal against the config.
     pub fn validate_proposal(&self, proposal: &ProposedFact) -> ValidationResult {
-        if proposal.confidence < self.config.min_confidence {
+        if proposal.confidence() < self.config.min_confidence {
             return ValidationResult::Rejected {
                 proposal_id: proposal.id.to_string(),
                 reason: format!(
                     "confidence {} below threshold {}",
-                    proposal.confidence, self.config.min_confidence
+                    proposal.confidence(),
+                    self.config.min_confidence
                 ),
             };
         }

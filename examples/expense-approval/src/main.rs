@@ -383,13 +383,13 @@ impl Suggestor for ApprovalSimulationAgent {
                 .and_then(|v| v.as_str())
                 .unwrap_or("manager");
 
-            let proposal = ProposedFact {
-                key: ContextKey::Proposals,
-                id: format!("{current}-approval").into(),
-                content: format!("Approved by {current}"),
-                confidence: 0.95,
-                provenance: format!("{current} approval agent"),
-            };
+            let proposal = ProposedFact::new(
+                ContextKey::Proposals,
+                format!("{current}-approval"),
+                format!("Approved by {current}"),
+                format!("{current} approval agent"),
+            )
+            .with_confidence(0.95);
 
             return AgentEffect::with_proposal(proposal);
         }

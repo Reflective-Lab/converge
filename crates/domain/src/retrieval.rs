@@ -225,13 +225,13 @@ impl RetrievalResult {
             )
         };
 
-        ProposedFact {
-            key: target_key,
-            id: format!("retrieved-{}", self.id).into(),
-            content: self.content.clone(),
-            confidence: self.final_score,
+        ProposedFact::new(
+            target_key,
+            format!("retrieved-{}", self.id),
+            self.content.clone(),
             provenance,
-        }
+        )
+        .with_confidence(self.final_score)
     }
 }
 

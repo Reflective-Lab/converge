@@ -80,13 +80,15 @@ impl Suggestor for SummaryAgent {
             .collect::<Vec<_>>()
             .join("; ");
 
-        AgentEffect::with_proposal(ProposedFact {
-            key: ContextKey::Hypotheses,
-            id: format!("{}-summary", self.agent_name).into(),
-            content: format!("Combined signal: {summary}"),
-            confidence: 0.9,
-            provenance: format!("agent:{}", self.agent_name),
-        })
+        AgentEffect::with_proposal(
+            ProposedFact::new(
+                ContextKey::Hypotheses,
+                format!("{}-summary", self.agent_name),
+                format!("Combined signal: {summary}"),
+                format!("agent:{}", self.agent_name),
+            )
+            .with_confidence(0.9),
+        )
     }
 }
 

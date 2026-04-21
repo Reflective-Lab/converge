@@ -4,11 +4,11 @@
 
 //! Job template system for the Converge Runtime.
 //!
-//! Templates define reusable job configurations including agents, validation,
-//! and invariants. The hybrid model allows users to:
+//! Templates define reusable operational wiring for runtime packs.
+//! Semantic rules stay in pack specs, not YAML. The runtime layer lets users:
 //!
 //! 1. Pick a template (e.g., "growth-strategy")
-//! 2. Override specific parts (budget, agents, validation)
+//! 2. Override operational parts (budget, seeds, provider preferences)
 //! 3. Provide seed facts
 //!
 //! # Example
@@ -17,16 +17,17 @@
 //! let registry = TemplateRegistry::with_defaults();
 //! let template = registry.get("growth-strategy").unwrap();
 //!
-//! // Template defines agents, validation, invariants
+//! // Template defines typed pack wiring
 //! // User provides seeds and optional overrides
 //! ```
 //!
 //! # Template Format
 //!
-//! Templates are defined in YAML:
+//! Templates are defined in strict YAML wiring:
 //!
 //! ```yaml
 //! name: growth-strategy
+//! version: "1.0.0"
 //! description: Multi-agent growth strategy analysis
 //!
 //! budget:
@@ -34,22 +35,18 @@
 //!   max_facts: 500
 //!
 //! agents:
-//!   - name: MarketSignalAgent
-//!     type: llm
+//!   - id: market_signal
 //!     requirements: fast_extraction
-//!     output_key: Signals
-//!     depends_on: [Seeds]
-//!
-//! validation:
-//!   min_confidence: 0.7
-//!
-//! invariants:
-//!   - BrandSafetyInvariant
 //! ```
+//!
+//! Semantic keys such as `validation` and `invariants` are rejected at parse time.
 
 mod registry;
 mod types;
 mod validator;
+
+#[cfg(test)]
+mod proptests;
 
 pub use registry::TemplateRegistry;
 

@@ -31,6 +31,7 @@ pub use types::*;
 use crate::packs::{InvariantDef, InvariantResult, Pack, PackSolveResult, default_gate_evaluation};
 use converge_pack::gate::GateResult as Result;
 use converge_pack::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
+use converge_pack::{CONFIDENCE_STEP_MAJOR, CONFIDENCE_STEP_MINOR};
 
 /// Budget Allocation Pack
 pub struct BudgetAllocationPack;
@@ -102,20 +103,20 @@ fn calculate_confidence(output: &BudgetAllocationOutput, input: &BudgetAllocatio
 
     // Higher confidence if ROI is positive
     if output.portfolio_roi > 0.0 {
-        confidence += 0.2;
+        confidence += CONFIDENCE_STEP_MAJOR;
     }
 
     // Higher confidence if budget well utilized
     let utilization = output.total_allocated / input.total_budget;
     if utilization >= 0.8 {
-        confidence += 0.2;
+        confidence += CONFIDENCE_STEP_MAJOR;
     } else if utilization >= 0.5 {
-        confidence += 0.1;
+        confidence += CONFIDENCE_STEP_MINOR;
     }
 
     // Higher confidence if we funded multiple categories
     if output.allocations.len() >= 2 {
-        confidence += 0.1;
+        confidence += CONFIDENCE_STEP_MINOR;
     }
 
     confidence.min(1.0)

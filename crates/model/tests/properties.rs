@@ -88,14 +88,14 @@ proptest! {
     #[test]
     fn hypothesis_confidence_always_clamped(conf in -100.0f32..100.0) {
         let hyp = Hypothesis::new("h", "claim").with_confidence(conf);
-        prop_assert!(hyp.confidence >= 0.0);
-        prop_assert!(hyp.confidence <= 1.0);
+        prop_assert!(hyp.confidence() >= 0.0);
+        prop_assert!(hyp.confidence() <= 1.0);
     }
 
     #[test]
     fn hypothesis_confidence_preserves_valid(conf in 0.0f32..=1.0) {
         let hyp = Hypothesis::new("h", "claim").with_confidence(conf);
-        prop_assert!((hyp.confidence - conf).abs() < f32::EPSILON);
+        prop_assert!((hyp.confidence() - conf).abs() < f32::EPSILON);
     }
 }
 

@@ -42,6 +42,9 @@ pub use types::*;
 use crate::packs::{InvariantDef, InvariantResult, Pack, PackSolveResult, default_gate_evaluation};
 use converge_pack::gate::GateResult as Result;
 use converge_pack::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
+use converge_pack::{
+    CONFIDENCE_STEP_MAJOR, CONFIDENCE_STEP_MEDIUM, CONFIDENCE_STEP_MINOR, CONFIDENCE_STEP_TINY,
+};
 
 /// Capacity Planning Pack
 pub struct CapacityPlanningPack;
@@ -113,14 +116,14 @@ fn calculate_confidence(output: &CapacityPlanningOutput, input: &CapacityPlannin
     if output.summary.overall_fulfillment_ratio >= 0.95 {
         confidence += 0.3;
     } else if output.summary.overall_fulfillment_ratio >= 0.8 {
-        confidence += 0.2;
+        confidence += CONFIDENCE_STEP_MAJOR;
     } else if output.summary.overall_fulfillment_ratio >= 0.6 {
-        confidence += 0.1;
+        confidence += CONFIDENCE_STEP_MINOR;
     }
 
     // Higher confidence if no teams are over-utilized
     if output.summary.teams_over_capacity == 0 {
-        confidence += 0.15;
+        confidence += CONFIDENCE_STEP_MEDIUM;
     }
 
     // Higher confidence if utilization is balanced
@@ -139,7 +142,7 @@ fn calculate_confidence(output: &CapacityPlanningOutput, input: &CapacityPlannin
             let std_dev = variance.sqrt();
 
             if std_dev < 0.15 {
-                confidence += 0.1;
+                confidence += CONFIDENCE_STEP_MINOR;
             }
         }
     }
@@ -147,7 +150,7 @@ fn calculate_confidence(output: &CapacityPlanningOutput, input: &CapacityPlannin
     // Higher confidence if within budget (if specified)
     if let Some(budget) = input.constraints.max_budget {
         if output.summary.total_cost <= budget {
-            confidence += 0.05;
+            confidence += CONFIDENCE_STEP_TINY;
         }
     }
 

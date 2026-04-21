@@ -195,16 +195,17 @@ pub fn run_scenario(pack: &dyn Pack, scenario: &TestScenario) -> ScenarioResult 
             min_confidence,
             required_invariants,
         } => {
-            if solve_result.plan.confidence < *min_confidence {
+            if solve_result.plan.confidence() < *min_confidence {
                 return ScenarioResult::fail(
                     &scenario.name,
                     format!(
                         "Confidence too low: {} < {}",
-                        solve_result.plan.confidence, min_confidence
+                        solve_result.plan.confidence(),
+                        min_confidence
                     ),
                     duration_ms,
                 )
-                .with_confidence(solve_result.plan.confidence);
+                .with_confidence(solve_result.plan.confidence());
             }
 
             // Check required invariants passed
@@ -230,7 +231,7 @@ pub fn run_scenario(pack: &dyn Pack, scenario: &TestScenario) -> ScenarioResult 
             }
 
             ScenarioResult::pass(&scenario.name, duration_ms)
-                .with_confidence(solve_result.plan.confidence)
+                .with_confidence(solve_result.plan.confidence())
                 .with_decision(gate.decision)
         }
 

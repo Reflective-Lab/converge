@@ -29,6 +29,7 @@ pub use solver::*;
 pub use types::*;
 
 use crate::packs::{InvariantDef, InvariantResult, Pack, PackSolveResult, default_gate_evaluation};
+use converge_pack::CONFIDENCE_STEP_MINOR;
 use converge_pack::gate::GateResult as Result;
 use converge_pack::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
 
@@ -117,7 +118,7 @@ fn calculate_confidence(output: &MeetingSchedulerOutput, input: &MeetingSchedule
 
     // Bonus for no conflicts
     if output.conflicts.is_empty() {
-        confidence += 0.1;
+        confidence += CONFIDENCE_STEP_MINOR;
     }
 
     // Bonus for high preference score

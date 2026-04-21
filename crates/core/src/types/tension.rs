@@ -280,8 +280,8 @@ pub struct Hypothesis {
     pub claim: String,
     /// Proposals that support this hypothesis.
     pub supporting_proposals: Vec<ProposalId>,
-    /// Confidence score (0.0 - 1.0).
-    pub confidence: f32,
+    /// Confidence score (0.0 - 1.0). Always clamped at construction.
+    confidence: f32,
     /// Whether this hypothesis is testable.
     pub testable: bool,
 }
@@ -298,9 +298,23 @@ impl Hypothesis {
         }
     }
 
-    /// Set confidence score.
+    /// Returns the confidence score, always in [0.0, 1.0].
+    #[must_use]
+    pub fn confidence(&self) -> f32 {
+        self.confidence
+    }
+
+    /// Set confidence baseline, clamped to [0.0, 1.0].
+    #[must_use]
     pub fn with_confidence(mut self, confidence: f32) -> Self {
         self.confidence = confidence.clamp(0.0, 1.0);
+        self
+    }
+
+    /// Adjust confidence by a delta, clamped to [0.0, 1.0].
+    #[must_use]
+    pub fn adjust_confidence(mut self, delta: f32) -> Self {
+        self.confidence = (self.confidence + delta).clamp(0.0, 1.0);
         self
     }
 
@@ -407,7 +421,7 @@ mod tests {
             .with_support(vec![ProposalId::new("p1")]);
 
         assert_eq!(hyp.id, "h-1");
-        assert!((hyp.confidence - 0.8_f32).abs() < f32::EPSILON);
+        assert!((hyp.confidence() - 0.8_f32).abs() < f32::EPSILON);
         assert!(hyp.is_high_confidence());
         assert!(!hyp.is_low_confidence());
         assert!(hyp.testable);
@@ -416,10 +430,10 @@ mod tests {
     #[test]
     fn hypothesis_confidence_clamping() {
         let hyp = Hypothesis::new("h-1", "Test").with_confidence(1.5);
-        assert!((hyp.confidence - 1.0_f32).abs() < f32::EPSILON);
+        assert!((hyp.confidence() - 1.0_f32).abs() < f32::EPSILON);
 
         let hyp2 = Hypothesis::new("h-2", "Test").with_confidence(-0.5);
-        assert!((hyp2.confidence - 0.0_f32).abs() < f32::EPSILON);
+        assert!((hyp2.confidence() - 0.0_f32).abs() < f32::EPSILON);
     }
 
     #[test]

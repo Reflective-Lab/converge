@@ -31,6 +31,7 @@ pub use types::*;
 use crate::packs::{InvariantDef, InvariantResult, Pack, PackSolveResult, default_gate_evaluation};
 use converge_pack::gate::GateResult as Result;
 use converge_pack::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
+use converge_pack::{CONFIDENCE_STEP_MAJOR, CONFIDENCE_STEP_MINOR};
 
 /// Backlog Prioritization Pack
 pub struct BacklogPrioritizationPack;
@@ -104,22 +105,22 @@ fn calculate_confidence(
 
     // Higher confidence if we included items in capacity
     if output.included_count > 0 {
-        confidence += 0.2;
+        confidence += CONFIDENCE_STEP_MAJOR;
     }
 
     // Higher confidence if capacity is well utilized
     if output.total_effort > 0 {
         let utilization = output.total_effort as f64 / input.capacity_points as f64;
         if utilization >= 0.7 {
-            confidence += 0.2;
+            confidence += CONFIDENCE_STEP_MAJOR;
         } else if utilization >= 0.5 {
-            confidence += 0.1;
+            confidence += CONFIDENCE_STEP_MINOR;
         }
     }
 
     // Higher confidence if total value is good
     if output.total_value >= 100.0 {
-        confidence += 0.1;
+        confidence += CONFIDENCE_STEP_MINOR;
     }
 
     confidence.min(1.0)

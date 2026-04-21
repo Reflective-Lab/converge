@@ -33,6 +33,7 @@ pub use types::*;
 use crate::packs::{InvariantDef, InvariantResult, Pack, PackSolveResult, default_gate_evaluation};
 use converge_pack::gate::GateResult as Result;
 use converge_pack::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
+use converge_pack::{CONFIDENCE_STEP_MAJOR, CONFIDENCE_STEP_MINOR};
 
 /// Pricing Guardrails Pack
 pub struct PricingGuardrailsPack;
@@ -103,17 +104,17 @@ fn calculate_confidence(output: &PricingGuardrailsOutput) -> f64 {
 
     // Bonus for all margins met
     if output.guardrail_compliance.all_margins_met {
-        confidence += 0.2;
+        confidence += CONFIDENCE_STEP_MAJOR;
     }
 
     // Bonus for all within bounds
     if output.guardrail_compliance.all_within_bounds {
-        confidence += 0.2;
+        confidence += CONFIDENCE_STEP_MAJOR;
     }
 
     // Bonus for competitive position achieved
     if output.guardrail_compliance.competitive_position_achieved {
-        confidence += 0.1;
+        confidence += CONFIDENCE_STEP_MINOR;
     }
 
     confidence.min(1.0)

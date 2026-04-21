@@ -37,6 +37,7 @@ pub use types::*;
 use crate::packs::{InvariantDef, InvariantResult, Pack, PackSolveResult, default_gate_evaluation};
 use converge_pack::gate::GateResult as Result;
 use converge_pack::gate::{KernelTraceLink, ProblemSpec, PromotionGate, ProposedPlan};
+use converge_pack::{CONFIDENCE_STEP_MEDIUM, CONFIDENCE_STEP_MINOR, CONFIDENCE_STEP_PRIMARY};
 
 /// Inventory Replenishment Pack
 pub struct InventoryReplenishmentPack;
@@ -118,14 +119,14 @@ fn calculate_confidence(
 
     // Higher confidence if we're meeting service level target
     if output.stats.projected_service_level >= input.constraints.target_service_level {
-        confidence += 0.25;
+        confidence += CONFIDENCE_STEP_PRIMARY;
     } else if output.stats.projected_service_level >= input.constraints.target_service_level * 0.9 {
-        confidence += 0.15;
+        confidence += CONFIDENCE_STEP_MEDIUM;
     }
 
     // Higher confidence if budget utilization is reasonable (not too high, not too low)
     if output.stats.budget_utilization > 0.1 && output.stats.budget_utilization < 0.9 {
-        confidence += 0.1;
+        confidence += CONFIDENCE_STEP_MINOR;
     }
 
     // Higher confidence if we have projections showing no stockouts
@@ -134,7 +135,7 @@ fn calculate_confidence(
         .iter()
         .any(|p| p.stockout_probability > 0.3);
     if !has_stockout_risk {
-        confidence += 0.15;
+        confidence += CONFIDENCE_STEP_MEDIUM;
     }
 
     confidence.min(1.0)

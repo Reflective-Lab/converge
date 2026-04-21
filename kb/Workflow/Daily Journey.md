@@ -16,6 +16,14 @@ Your day, start to finish. Each phase has a skill or script.
 
 If it's your first session, `/focus` will point you to the key kb pages. Read them.
 
+Before you start implementation:
+1. Check `git status --short --branch`
+2. Keep the root checkout on clean `main`
+3. Create a topic branch, and a dedicated worktree if the task is more than trivial
+4. Use `just git-hygiene` when branch, worktree, or release state is unclear
+
+See [[Workflow/Git Strategy]].
+
 ## Working
 
 ```
@@ -24,6 +32,9 @@ If it's your first session, `/focus` will point you to the key kb pages. Read th
 /check              Lint, check, test — must be clean before you stop
 /pr [title]         Create a PR from current branch
 ```
+
+Do not stack unrelated work on one branch. If the task splits, split the branch
+or open another worktree.
 
 ## Reviewing
 
@@ -46,6 +57,9 @@ The kb is shared. Keep it current. Your teammates and their agents read it too.
 /done               What moved? What's open? KB updated?
 /wip                Save and push everything
 ```
+
+If the branch merged, remove the worktree and delete the remote branch. Do not
+leave stale refs behind for archaeology.
 
 ## Weekly
 
@@ -71,4 +85,4 @@ Monday:  /audit     Security, dependency, compliance, and drift audit
 | End the day | `/done` |
 | Get help | `/help` |
 
-See also: [[Workflow/Working with Claude]], [[Workflow/Working with Codex]], [[Workflow/Working with Gemini]]
+See also: [[Workflow/Git Strategy]], [[Workflow/Working with Claude]], [[Workflow/Working with Codex]], [[Workflow/Working with Gemini]]

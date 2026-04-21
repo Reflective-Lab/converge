@@ -17,13 +17,10 @@ async fn confidence_exactly_zero_accepted() {
             !ctx.has(ContextKey::Seeds)
         }
         async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
-            AgentEffect::with_proposal(ProposedFact {
-                key: ContextKey::Seeds,
-                id: "zero-1".into(),
-                content: "zero confidence".into(),
-                confidence: 0.0,
-                provenance: "zero-conf".into(),
-            })
+            AgentEffect::with_proposal(
+                ProposedFact::new(ContextKey::Seeds, "zero-1", "zero confidence", "zero-conf")
+                    .with_confidence(0.0),
+            )
         }
     }
     let mut engine = Engine::new();
@@ -42,7 +39,9 @@ async fn confidence_exactly_one_accepted() {
 }
 
 #[tokio::test]
-async fn confidence_slightly_above_one_rejected() {
+async fn confidence_slightly_above_one_clamped_and_accepted() {
+    // with_confidence clamps 1.0001 → 1.0 at construction time, so the
+    // proposal is valid and should be promoted.
     struct OverConfSuggestor;
     #[async_trait::async_trait]
     impl Suggestor for OverConfSuggestor {
@@ -56,22 +55,16 @@ async fn confidence_slightly_above_one_rejected() {
             true
         }
         async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
-            AgentEffect::with_proposal(ProposedFact {
-                key: ContextKey::Seeds,
-                id: "over-1".into(),
-                content: "over confidence".into(),
-                confidence: 1.0001,
-                provenance: "over-conf".into(),
-            })
+            AgentEffect::with_proposal(
+                ProposedFact::new(ContextKey::Seeds, "over-1", "over confidence", "over-conf")
+                    .with_confidence(1.0001),
+            )
         }
     }
     let mut engine = Engine::new();
     engine.register_suggestor(OverConfSuggestor);
-    let result = engine
-        .run(ContextState::new())
-        .await
-        .expect("converges with rejection");
-    assert!(!result.context.has(ContextKey::Seeds));
+    let result = engine.run(ContextState::new()).await.expect("converges");
+    assert!(result.context.has(ContextKey::Seeds));
 }
 
 #[tokio::test]
@@ -113,13 +106,10 @@ async fn empty_proposal_id_still_works() {
             !ctx.has(ContextKey::Seeds)
         }
         async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
-            AgentEffect::with_proposal(ProposedFact {
-                key: ContextKey::Seeds,
-                id: String::new().into(),
-                content: "has empty id".into(),
-                confidence: 0.8,
-                provenance: "empty-id".into(),
-            })
+            AgentEffect::with_proposal(
+                ProposedFact::new(ContextKey::Seeds, "", "has empty id", "empty-id")
+                    .with_confidence(0.8),
+            )
         }
     }
     let mut engine = Engine::new();

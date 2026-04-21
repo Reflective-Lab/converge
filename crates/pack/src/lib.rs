@@ -33,8 +33,10 @@ pub use agent::Suggestor;
 pub use context::{Context, ContextKey};
 pub use effect::AgentEffect;
 pub use fact::{
-    Fact, FactActor, FactActorKind, FactEvidenceRef, FactLocalTrace, FactPromotionRecord,
-    FactRemoteTrace, FactTraceLink, FactValidationSummary, ProposedFact, ValidationError,
+    CONFIDENCE_STEP_MAJOR, CONFIDENCE_STEP_MEDIUM, CONFIDENCE_STEP_MINOR, CONFIDENCE_STEP_PRIMARY,
+    CONFIDENCE_STEP_TINY, Fact, FactActor, FactActorKind, FactEvidenceRef, FactLocalTrace,
+    FactPromotionRecord, FactRemoteTrace, FactTraceLink, FactValidationSummary, ProposedFact,
+    ValidationError,
 };
 pub use gate::{
     AuthorityPolicy, ConstraintHardness, ConstraintSpec, ConstraintType, DeterminismSpec,

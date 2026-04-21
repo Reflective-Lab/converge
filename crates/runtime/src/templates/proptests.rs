@@ -15,43 +15,38 @@ use super::types::{
     AgentWiring, BudgetConfig, CompatibilityRequirements, CustomRequirements, PackConfig,
     RequirementsConfig,
 };
-use super::validator::{forbidden_keys, validate_pack_yaml_str, PackValidationError};
+use super::validator::{PackValidationError, forbidden_keys, validate_pack_yaml_str};
+use crate::semantic::{PackName, PackVersion, QualityThreshold, RequirementPreset};
 
-// =============================================================================
-// Strategies for generating test data
-// =============================================================================
-
-/// Generate a valid pack name (alphanumeric with hyphens)
+/// Generate a valid pack name (alphanumeric with hyphens).
 fn pack_name_strategy() -> impl Strategy<Value = String> {
-    "[a-z][a-z0-9-]{0,20}".prop_filter("no double hyphens", |s| !s.contains("--"))
-}
-
-/// Generate a semver version string
-fn version_strategy() -> impl Strategy<Value = String> {
-    (1u32..10, 0u32..20, 0u32..100).prop_map(|(major, minor, patch)| {
-        format!("{major}.{minor}.{patch}")
+    "[a-z][a-z0-9-]{0,20}".prop_filter("valid pack name", |s| {
+        crate::semantic::PackName::try_new(s.clone()).is_ok()
     })
 }
 
-/// Generate a valid agent ID (snake_case)
+/// Generate a semver version string.
+fn version_strategy() -> impl Strategy<Value = String> {
+    (1u32..10, 0u32..20, 0u32..100)
+        .prop_map(|(major, minor, patch)| format!("{major}.{minor}.{patch}"))
+}
+
+/// Generate a valid agent ID (snake_case).
 fn agent_id_strategy() -> impl Strategy<Value = String> {
     "[a-z][a-z0-9_]{0,30}"
 }
 
-/// Generate a description
+/// Generate a description.
 fn description_strategy() -> impl Strategy<Value = String> {
     "[A-Za-z0-9 ]{1,100}"
 }
 
-/// Generate optional spec path
+/// Generate optional spec path.
 fn spec_strategy() -> impl Strategy<Value = Option<String>> {
-    prop_oneof![
-        Just(None),
-        "specs/[a-z-]+\\.feature".prop_map(Some),
-    ]
+    prop_oneof![Just(None), "specs/[a-z-]+\\.feature".prop_map(Some),]
 }
 
-/// Generate budget config
+/// Generate budget config.
 fn budget_strategy() -> impl Strategy<Value = BudgetConfig> {
     (1u32..1000, 10u32..10000).prop_map(|(max_cycles, max_facts)| BudgetConfig {
         max_cycles,
@@ -59,56 +54,63 @@ fn budget_strategy() -> impl Strategy<Value = BudgetConfig> {
     })
 }
 
-/// Generate requirements config
+/// Generate requirements config.
 fn requirements_strategy() -> impl Strategy<Value = Option<RequirementsConfig>> {
     prop_oneof![
         Just(None),
         prop_oneof![
-            Just("fast_extraction".to_string()),
-            Just("analysis".to_string()),
-            Just("synthesis".to_string()),
-            Just("deep_research".to_string()),
+            Just(RequirementPreset::FastExtraction),
+            Just(RequirementPreset::Analysis),
+            Just(RequirementPreset::Synthesis),
+            Just(RequirementPreset::DeepResearch),
+            Just(RequirementPreset::Deterministic),
         ]
-        .prop_map(|s| Some(RequirementsConfig::Preset(s))),
+        .prop_map(|preset| Some(RequirementsConfig::Preset(preset))),
         (
-            prop_oneof![Just(None), Just(Some("cheap".to_string())), Just(Some("medium".to_string())), Just(Some("expensive".to_string()))],
+            prop_oneof![
+                Just(None),
+                Just(Some(converge_core::CostClass::VeryLow)),
+                Just(Some(converge_core::CostClass::Medium)),
+                Just(Some(converge_core::CostClass::VeryHigh))
+            ],
             prop_oneof![Just(None), (1000u32..60000).prop_map(Some)],
             any::<Option<bool>>(),
             any::<Option<bool>>(),
         )
-            .prop_map(|(cost_class, max_latency_ms, requires_reasoning, requires_web_search)| {
-                Some(RequirementsConfig::Custom(CustomRequirements {
-                    cost_class,
-                    max_latency_ms,
-                    requires_reasoning,
-                    requires_web_search,
-                    min_quality: None,
-                }))
-            }),
+            .prop_map(
+                |(cost_class, max_latency_ms, requires_reasoning, requires_web_search)| {
+                    Some(RequirementsConfig::Custom(CustomRequirements {
+                        cost_class,
+                        max_latency_ms,
+                        requires_reasoning,
+                        requires_web_search,
+                        min_quality: Some(QualityThreshold::new(0.7)),
+                    }))
+                }
+            ),
     ]
 }
 
-/// Generate a single agent wiring
+/// Generate a single agent wiring.
 fn agent_wiring_strategy() -> impl Strategy<Value = AgentWiring> {
     (agent_id_strategy(), requirements_strategy()).prop_map(|(id, requirements)| AgentWiring {
-        id,
+        id: id.into(),
         requirements,
     })
 }
 
-/// Generate a vector of agents with unique IDs
+/// Generate a vector of agents with unique IDs.
 fn unique_agents_strategy(max_count: usize) -> impl Strategy<Value = Vec<AgentWiring>> {
     prop::collection::vec(agent_wiring_strategy(), 0..max_count).prop_map(|agents| {
-        // Deduplicate by ID
         let mut seen = std::collections::HashSet::new();
         agents
             .into_iter()
-            .filter(|a| seen.insert(a.id.clone()))
+            .filter(|agent| seen.insert(agent.id.clone()))
             .collect()
     })
 }
 
-/// Generate a complete PackConfig
+/// Generate a complete PackConfig.
 fn pack_config_strategy() -> impl Strategy<Value = PackConfig> {
     (
         pack_name_strategy(),
@@ -118,24 +120,21 @@ fn pack_config_strategy() -> impl Strategy<Value = PackConfig> {
         budget_strategy(),
         unique_agents_strategy(10),
     )
-        .prop_map(|(name, version, description, spec, budget, agents)| PackConfig {
-            name,
-            version,
-            description,
-            spec,
-            requires: CompatibilityRequirements::default(),
-            budget,
-            agents,
-            metadata: std::collections::HashMap::new(),
-        })
+        .prop_map(
+            |(name, version, description, spec, budget, agents)| PackConfig {
+                name: PackName::new(name),
+                version: PackVersion::new(version),
+                description,
+                spec,
+                requires: CompatibilityRequirements::default(),
+                budget,
+                agents,
+                metadata: std::collections::HashMap::new(),
+            },
+        )
 }
 
-// =============================================================================
-// Property Tests: YAML Roundtrip
-// =============================================================================
-
 proptest! {
-    /// PackConfig survives YAML serialization roundtrip
     #[test]
     fn pack_config_yaml_roundtrip(pack in pack_config_strategy()) {
         let yaml = serde_yaml::to_string(&pack).expect("should serialize");
@@ -154,7 +153,6 @@ proptest! {
         }
     }
 
-    /// BudgetConfig survives YAML roundtrip
     #[test]
     fn budget_config_roundtrip(budget in budget_strategy()) {
         let yaml = serde_yaml::to_string(&budget).expect("should serialize");
@@ -164,7 +162,6 @@ proptest! {
         prop_assert_eq!(budget.max_facts, parsed.max_facts);
     }
 
-    /// AgentWiring survives YAML roundtrip
     #[test]
     fn agent_wiring_roundtrip(agent in agent_wiring_strategy()) {
         let yaml = serde_yaml::to_string(&agent).expect("should serialize");
@@ -174,12 +171,7 @@ proptest! {
     }
 }
 
-// =============================================================================
-// Property Tests: Validator Rejects Forbidden Keys
-// =============================================================================
-
 proptest! {
-    /// Any YAML with a forbidden key is rejected
     #[test]
     fn validator_rejects_forbidden_keys(
         name in pack_name_strategy(),
@@ -214,7 +206,6 @@ description: {description}
         }
     }
 
-    /// Valid YAML without forbidden keys is accepted
     #[test]
     fn validator_accepts_valid_yaml(pack in pack_config_strategy()) {
         let yaml = serde_yaml::to_string(&pack).expect("should serialize");
@@ -223,12 +214,7 @@ description: {description}
     }
 }
 
-// =============================================================================
-// Property Tests: Suggestor ID Uniqueness
-// =============================================================================
-
 proptest! {
-    /// Duplicate agent IDs are rejected
     #[test]
     fn duplicate_agent_ids_rejected(
         name in pack_name_strategy(),
@@ -252,12 +238,11 @@ agents:
         let result = super::TemplateRegistry::parse_yaml(&yaml);
         prop_assert!(result.is_err(), "Should reject duplicate agent IDs");
         prop_assert!(
-            result.unwrap_err().to_string().contains("Duplicate agent id"),
+            result.unwrap_err().to_string().contains("duplicate agent id"),
             "Error should mention duplicate agent id"
         );
     }
 
-    /// Unique agent IDs are accepted
     #[test]
     fn unique_agent_ids_accepted(
         name in pack_name_strategy(),
@@ -265,7 +250,6 @@ agents:
         id1 in agent_id_strategy(),
         id2 in agent_id_strategy().prop_filter("different from id1", |s| s.len() > 0),
     ) {
-        // Ensure IDs are different
         prop_assume!(id1 != id2);
 
         let yaml = format!(
@@ -287,19 +271,15 @@ agents:
     }
 }
 
-// =============================================================================
-// Property Tests: Requirements Parsing
-// =============================================================================
-
 proptest! {
-    /// Preset requirements parse correctly
     #[test]
     fn preset_requirements_parse(
         preset in prop_oneof![
-            Just("fast_extraction"),
-            Just("analysis"),
-            Just("synthesis"),
-            Just("deep_research"),
+            Just(RequirementPreset::FastExtraction),
+            Just(RequirementPreset::Analysis),
+            Just(RequirementPreset::Synthesis),
+            Just(RequirementPreset::DeepResearch),
+            Just(RequirementPreset::Deterministic),
         ]
     ) {
         let yaml = format!(
@@ -310,8 +290,9 @@ description: Test
 
 agents:
   - id: test_agent
-    requirements: {preset}
-"#
+    requirements: {}
+"#,
+            preset.as_str()
         );
 
         let result = super::TemplateRegistry::parse_yaml(&yaml);
@@ -319,8 +300,8 @@ agents:
 
         let pack = result.unwrap();
         match &pack.agents[0].requirements {
-            Some(RequirementsConfig::Preset(p)) => {
-                prop_assert_eq!(p, preset);
+            Some(RequirementsConfig::Preset(parsed)) => {
+                prop_assert_eq!(*parsed, preset);
             }
             other => {
                 prop_assert!(false, "Expected Preset, got: {:?}", other);
@@ -328,7 +309,6 @@ agents:
         }
     }
 
-    /// Custom requirements with cost_class parse correctly
     #[test]
     fn custom_requirements_parse(
         cost_class in prop_oneof![Just("cheap"), Just("medium"), Just("expensive")],
@@ -354,7 +334,9 @@ agents:
         let pack = result.unwrap();
         match &pack.agents[0].requirements {
             Some(RequirementsConfig::Custom(custom)) => {
-                prop_assert_eq!(custom.cost_class.as_deref(), Some(cost_class));
+                let expected_cost = super::types::parse_cost_class(cost_class)
+                    .expect("generated cost class should parse");
+                prop_assert_eq!(custom.cost_class, Some(expected_cost));
                 prop_assert_eq!(custom.max_latency_ms, Some(latency));
             }
             other => {
@@ -364,12 +346,7 @@ agents:
     }
 }
 
-// =============================================================================
-// Property Tests: Version Requirements
-// =============================================================================
-
 proptest! {
-    /// Missing required fields are rejected
     #[test]
     fn missing_version_rejected(
         name in pack_name_strategy(),
@@ -394,7 +371,6 @@ description: {description}
         }
     }
 
-    /// Missing name is rejected
     #[test]
     fn missing_name_rejected(
         version in version_strategy(),

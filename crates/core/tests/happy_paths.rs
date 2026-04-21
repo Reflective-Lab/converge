@@ -29,13 +29,15 @@ async fn seed_with_high_confidence_promoted() {
             !ctx.has(ContextKey::Seeds)
         }
         async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
-            AgentEffect::with_proposal(ProposedFact {
-                key: ContextKey::Seeds,
-                id: "high-conf-1".into(),
-                content: "high confidence fact".into(),
-                confidence: 1.0,
-                provenance: "high-conf-suggestor".into(),
-            })
+            AgentEffect::with_proposal(
+                ProposedFact::new(
+                    ContextKey::Seeds,
+                    "high-conf-1",
+                    "high confidence fact",
+                    "high-conf-suggestor",
+                )
+                .with_confidence(1.0),
+            )
         }
     }
     let mut engine = Engine::new();

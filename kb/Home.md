@@ -89,6 +89,7 @@ Knowledge base for the Converge platform — a correctness-first, context-driven
 ## Workflow
 
 - [[Workflow/Daily Journey]] — start-to-finish cheat sheet
+- [[Workflow/Git Strategy]] — branch, worktree, release, and remote hygiene rules
 - [[Workflow/Working with Claude]] — skills vs Justfile
 - [[Workflow/Working with Codex]] — plain-language workflow equivalents
 - [[Workflow/Working with Gemini]] — native tools + shared scripts

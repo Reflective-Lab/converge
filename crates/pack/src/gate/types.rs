@@ -185,8 +185,8 @@ pub struct ProposedPlan {
     pub summary: String,
     /// Typed plan payload (pack-specific)
     pub plan: serde_json::Value,
-    /// Calibrated confidence score (0.0 - 1.0)
-    pub confidence: f64,
+    /// Calibrated confidence score (0.0 - 1.0). Always clamped at construction.
+    confidence: f64,
     /// Link to kernel trace for replay/audit
     pub trace_link: KernelTraceLink,
 }
@@ -225,6 +225,12 @@ impl ProposedPlan {
         Ok(Self::new(
             plan_id, pack, summary, plan, confidence, trace_link,
         ))
+    }
+
+    /// Returns the confidence score, always in [0.0, 1.0].
+    #[must_use]
+    pub fn confidence(&self) -> f64 {
+        self.confidence
     }
 
     /// Deserialize plan payload to typed struct
@@ -314,11 +320,11 @@ mod tests {
     fn test_confidence_clamped() {
         let trace = KernelTraceLink::default();
         let plan = ProposedPlan::new("p", "pack", "s", serde_json::Value::Null, 1.5, trace);
-        assert_eq!(plan.confidence, 1.0);
+        assert_eq!(plan.confidence(), 1.0);
 
         let trace = KernelTraceLink::default();
         let plan = ProposedPlan::new("p", "pack", "s", serde_json::Value::Null, -0.5, trace);
-        assert_eq!(plan.confidence, 0.0);
+        assert_eq!(plan.confidence(), 0.0);
     }
 
     #[test]
