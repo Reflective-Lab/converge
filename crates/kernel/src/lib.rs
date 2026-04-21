@@ -25,3 +25,15 @@ pub use converge_core::{
 pub use converge_pack::{
     AgentEffect, Context, ContextKey, Fact, ProposedFact, Suggestor, ValidationError,
 };
+
+#[cfg(test)]
+mod tests {
+    use super::{BudgetResource, StopReason};
+
+    #[test]
+    fn kernel_reexports_runtime_stop_and_budget_types() {
+        let stop = StopReason::converged();
+        assert!(matches!(stop, StopReason::Converged));
+        assert!(matches!(BudgetResource::Tokens, BudgetResource::Tokens));
+    }
+}
