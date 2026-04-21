@@ -10,16 +10,16 @@
 pub use converge_core::gates::hitl::{GateDecision, TimeoutAction, TimeoutPolicy};
 pub use converge_core::gates::{
     AuthorityLevel, FlowAction, FlowGateAuthorizer, FlowGateContext, FlowGateInput,
-    FlowGateOutcome, FlowGatePrincipal, FlowGateResource, FlowPhase,
+    FlowGateOutcome, FlowGatePrincipal, FlowGateResource, FlowPhase, StopReason,
 };
 pub use converge_core::{
-    ApprovalPointId, BackendId, Budget, ChainId, ConstraintName, ConstraintValue, ContextState,
-    ConvergeError, ConvergeResult, CorrelationId, Criterion, CriterionEvaluator, CriterionId,
-    CriterionOutcome, CriterionResult, DecisionStep, Engine, EngineHitlPolicy, EventId, EventQuery,
-    ExperienceEvent, ExperienceEventEnvelope, ExperienceEventKind, ExperienceEventObserver,
-    ExperienceStore, HitlPause, IntegrityProof, Invariant, InvariantClass, InvariantResult,
-    LamportClock, MerkleRoot, PackId, RunResult, StreamingCallback, SuggestorId, TenantId,
-    TraceLinkId, TruthId, TypesBudgets, TypesIntentId, TypesIntentKind, TypesRootIntent,
+    ApprovalPointId, BackendId, Budget, BudgetResource, ChainId, ConstraintName, ConstraintValue,
+    ContextState, ConvergeError, ConvergeResult, CorrelationId, Criterion, CriterionEvaluator,
+    CriterionId, CriterionOutcome, CriterionResult, DecisionStep, Engine, EngineHitlPolicy,
+    EventId, EventQuery, ExperienceEvent, ExperienceEventEnvelope, ExperienceEventKind,
+    ExperienceEventObserver, ExperienceStore, HitlPause, IntegrityProof, Invariant, InvariantClass,
+    InvariantResult, LamportClock, MerkleRoot, PackId, RunResult, StreamingCallback, SuggestorId,
+    TenantId, TraceLinkId, TruthId, TypesBudgets, TypesIntentId, TypesIntentKind, TypesRootIntent,
     TypesRunHooks,
 };
 pub use converge_pack::{
