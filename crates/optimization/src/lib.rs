@@ -64,6 +64,7 @@ pub mod knapsack;
 pub mod provider;
 pub mod scheduling;
 pub mod setcover;
+pub mod suggestors;
 
 #[cfg(feature = "sat")]
 pub mod cp;

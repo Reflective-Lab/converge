@@ -2551,6 +2551,7 @@ dependencies = [
  "approx",
  "async-trait",
  "bitvec",
+ "converge-core",
  "converge-kernel",
  "converge-pack",
  "criterion",
@@ -2624,8 +2625,10 @@ version = "3.7.1"
 dependencies = [
  "arrow-array",
  "arrow-schema",
+ "async-trait",
  "base64 0.22.1",
  "converge-core",
+ "converge-optimization",
  "converge-pack",
  "converge-provider-api",
  "dotenv",

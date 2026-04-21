@@ -153,6 +153,12 @@ pub use contract::{
     TokenUsage, canonical_hash,
 };
 
+// Provider selection via bipartite matching
+pub mod selection_suggestor;
+pub use selection_suggestor::{
+    CapabilityAssignment, ProviderAssignment, ProviderRequest, ProviderSelectionSuggestor,
+};
+
 // Re-exports: tool integration
 pub use tools::{
     GraphQlConfig, GraphQlConverter, GraphQlOperationType, InlineToolConfig, InputSchema,

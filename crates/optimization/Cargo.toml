@@ -18,6 +18,7 @@ tracing.workspace = true
 
 # Converge integration
 converge-pack = { workspace = true, features = ["kernel-authority"] }
+converge-core.workspace = true
 async-trait.workspace = true
 
 # Data structures
