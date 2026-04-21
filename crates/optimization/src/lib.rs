@@ -20,11 +20,14 @@
 //! engine.register_suggestor(solver);
 //! ```
 //!
-//! ## Available Packs (11)
+//! ## Available Packs (21)
 //!
 //! LeadRouting, MeetingScheduler, BudgetAllocation, CapacityPlanning,
 //! InventoryReplenishment, InventoryRebalancing, AnomalyTriage,
-//! PricingGuardrails, ShippingChoice, VendorShortlist, BacklogPrioritization
+//! PricingGuardrails, ShippingChoice, VendorShortlist, BacklogPrioritization,
+//! AssignmentPack, BinPacking, ConstraintProgramming, FacilityLocation,
+//! GraphPartitioning, JobShopScheduling, NetworkFlow, StaffRostering,
+//! TravelingSalesman, VehicleRouting
 //!
 //! ## Feature Flags
 //!
