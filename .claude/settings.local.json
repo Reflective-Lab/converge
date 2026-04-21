@@ -71,7 +71,10 @@
       "Bash(python3 -c \"import sys,json; print\\(json.loads\\(sys.stdin.read\\(\\).split\\('\\\\\"text\\\\\":'\\)[1].split\\(',\\\\\"type\\\\\"'\\)[0]\\)[:200]\\)\")",
       "Bash(xargs sed:*)",
       "Bash(sort -t/ -k3)",
-      "Bash(git -C /Users/kpernyer/dev/work/converge log --oneline -20)"
+      "Bash(git -C /Users/kpernyer/dev/work/converge log --oneline -20)",
+      "Bash(awk '{print $NF}')",
+      "Bash([ -d \"/Users/kpernyer/dev/work/$repo\" ])",
+      "Bash(cat .git/hooks/pre-commit.d/*)"
     ]
   }
 }

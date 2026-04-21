@@ -1,5 +1,6 @@
 ---
 name: review
+model: opus
 description: Review a pull request for security, correctness, style, and ops.
 user-invocable: true
 argument-hint: [pr-number]

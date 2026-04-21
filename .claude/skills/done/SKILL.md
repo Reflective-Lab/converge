@@ -1,5 +1,6 @@
 ---
 name: done
+model: sonnet
 description: End session — progress, changelog, observations.
 user-invocable: true
 allowed-tools: Read, Edit, Bash

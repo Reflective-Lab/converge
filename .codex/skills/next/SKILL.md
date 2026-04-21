@@ -1,5 +1,6 @@
 ---
 name: next
+model: haiku
 description: List remaining tasks from the current milestone.
 user-invocable: true
 ---

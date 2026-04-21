@@ -1,5 +1,6 @@
 ---
 name: dev
+model: sonnet
 description: Start local development or run examples.
 user-invocable: true
 argument-hint: [runtime|example <name>]

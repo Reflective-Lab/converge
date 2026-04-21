@@ -1,5 +1,6 @@
 ---
 name: sync
+model: sonnet
 description: Morning briefing for team activity and repo health.
 user-invocable: true
 ---

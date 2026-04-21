@@ -1,5 +1,6 @@
 ---
 name: ticket
+model: sonnet
 description: Create a GitHub issue — detailed enough for an agent to execute.
 user-invocable: true
 argument-hint: [description]

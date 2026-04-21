@@ -1,5 +1,6 @@
 ---
 name: fix
+model: opus
 description: Fix a GitHub issue end to end.
 user-invocable: true
 argument-hint: [issue-number]

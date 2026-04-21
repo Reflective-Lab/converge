@@ -1,5 +1,6 @@
 ---
 name: help
+model: haiku
 description: Show the workflow cheat sheet for Codex in this repo.
 user-invocable: true
 ---

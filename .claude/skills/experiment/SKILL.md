@@ -1,5 +1,6 @@
 ---
 name: experiment
+model: opus
 description: Formulate a hypothesis, run an experiment, record the outcome.
 user-invocable: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent

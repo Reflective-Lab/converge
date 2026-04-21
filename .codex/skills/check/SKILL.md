@@ -1,5 +1,6 @@
 ---
 name: check
+model: sonnet
 description: Run the Converge quality gate.
 user-invocable: true
 ---

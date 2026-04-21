@@ -1,5 +1,6 @@
 ---
 name: deploy
+model: sonnet
 description: Deploy the Converge runtime using the documented repo path.
 user-invocable: true
 argument-hint: [cloud-run]

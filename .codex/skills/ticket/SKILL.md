@@ -1,5 +1,6 @@
 ---
 name: ticket
+model: sonnet
 description: Create an agent-ready GitHub issue.
 user-invocable: true
 argument-hint: [description]

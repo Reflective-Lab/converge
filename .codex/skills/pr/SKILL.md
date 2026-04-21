@@ -1,5 +1,6 @@
 ---
 name: pr
+model: sonnet
 description: Create a pull request from the current branch.
 user-invocable: true
 argument-hint: [title]

@@ -1,5 +1,6 @@
 ---
 name: focus
+model: sonnet
 description: Session opener with current milestone and build state.
 user-invocable: true
 ---

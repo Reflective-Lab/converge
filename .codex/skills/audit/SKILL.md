@@ -1,5 +1,6 @@
 ---
 name: audit
+model: opus
 description: Full workspace health - security, compliance, drift, and milestone audit.
 user-invocable: true
 ---

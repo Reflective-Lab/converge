@@ -1,5 +1,6 @@
 ---
 name: help
+model: haiku
 description: Show available skills — the daily workflow cheat sheet.
 user-invocable: true
 allowed-tools: Read
@@ -16,6 +17,7 @@ Monday:     /audit
 /dev            Start local dev environment
 /check          Lint + test. Am I clean?
 /fix <issue>    Fix GitHub issue → branch → PR
+/test [crate]   Expand test coverage (unit→soak pyramid)
 /pr [title]     Push and create PR
 /wip            Save WIP, push, switch devices
 

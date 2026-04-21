@@ -1,5 +1,6 @@
 ---
 name: done
+model: sonnet
 description: End-of-session summary with milestone and KB updates.
 user-invocable: true
 ---

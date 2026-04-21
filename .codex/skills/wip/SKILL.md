@@ -1,5 +1,6 @@
 ---
 name: wip
+model: haiku
 description: Save work in progress before switching context.
 user-invocable: true
 ---
