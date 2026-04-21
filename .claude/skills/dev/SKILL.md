@@ -10,7 +10,7 @@ allowed-tools: Bash, Read
 Start local dev with `just dev-up` or run an example.
 ## Recipes
 - `just dev-up` — start local runtime
-- `just smoke-test` — verify the local runtime
+- `just test-smoke` — verify the local runtime
 - `just dev-down` — stop the local runtime
 - `just example <name>` — run an example (e.g., `just example hello-convergence`)
 - `just examples` — list all examples

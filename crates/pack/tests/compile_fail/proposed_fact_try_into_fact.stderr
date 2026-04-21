@@ -1,0 +1,17 @@
+error[E0277]: the trait bound `Fact: TryFrom<ProposedFact>` is not satisfied
+  --> tests/compile_fail/proposed_fact_try_into_fact.rs:14:23
+   |
+14 |     let _fact: Fact = Fact::try_from(proposal).unwrap();
+   |                       ^^^^ the trait `From<ProposedFact>` is not implemented for `Fact`
+   |
+   = note: required for `ProposedFact` to implement `Into<Fact>`
+   = note: required for `Fact` to implement `TryFrom<ProposedFact>`
+
+error[E0277]: the trait bound `Fact: From<ProposedFact>` is not satisfied
+  --> tests/compile_fail/proposed_fact_try_into_fact.rs:14:23
+   |
+14 |     let _fact: Fact = Fact::try_from(proposal).unwrap();
+   |                       ^^^^^^^^^^^^^^^^^^^^^^^^ the trait `From<ProposedFact>` is not implemented for `Fact`
+   |
+   = note: required for `ProposedFact` to implement `Into<Fact>`
+   = note: required for `Fact` to implement `TryFrom<ProposedFact>`

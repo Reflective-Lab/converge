@@ -1,0 +1,25 @@
+error[E0624]: associated function `new` is private
+ --> tests/compile_fail/validation_report_external_construct.rs:9:31
+  |
+9 |       let _ = ValidationReport::new(todo!(), vec![], todo!());
+  |                                 ^^^ private associated function
+  |
+ ::: src/gates/validation.rs
+  |
+  | /     pub(crate) fn new(
+  | |         proposal_id: ProposalId,
+  | |         checks: Vec<CheckResult>,
+  | |         policy_version: ContentHash,
+  | |     ) -> Self {
+  | |_____________- private associated function defined here
+
+warning: unreachable expression
+ --> tests/compile_fail/validation_report_external_construct.rs:9:44
+  |
+9 |     let _ = ValidationReport::new(todo!(), vec![], todo!());
+  |                                   -------  ^^^^^^ unreachable expression
+  |                                   |
+  |                                   any code following this expression is unreachable
+  |
+  = note: `#[warn(unreachable_code)]` (part of `#[warn(unused)]`) on by default
+  = note: this warning originates in the macro `vec` (in Nightly builds, run with -Z macro-backtrace for more info)

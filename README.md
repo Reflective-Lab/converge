@@ -172,16 +172,21 @@ just example formation-mixed
 ## Workspace Commands
 
 ```bash
-just build          # cargo build --release
-just build-quick    # cargo build --profile quick-release
-just check          # cargo check --workspace
-just test           # cargo test --all-targets
-just test-all       # cargo test --all-targets --workspace
-just lint           # cargo fmt --check && cargo clippy --all-targets -- -D warnings
-just doc            # cargo doc --no-deps --workspace
-just focus          # workspace build + lib-test health
-just sync           # status + recent commits
-just status         # recent test tail + commit summary
+just build             # cargo build --release
+just build-quick       # cargo build --profile quick-release
+just check             # cargo check --workspace
+just test              # cargo test --all-targets
+just test-all          # cargo test --all-targets --workspace
+just test-bench        # compile benchmarks
+just test-soak         # long-running soak tests
+just sec-gate          # security regression gate (policy + runtime + compile-fail)
+just sec-deny          # dependency audit via cargo-deny
+just lint              # cargo fmt --check && cargo clippy --all-targets -- -D warnings
+just doc               # cargo doc --no-deps --workspace
+just wow-focus         # workspace build + lib-test health
+just git-sync          # status + recent commits
+just git-status        # recent test tail + commit summary
+just git-hygiene       # worktrees, branches, release tag, cleanup candidates
 ```
 
 ## Workspace Layout

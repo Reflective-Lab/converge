@@ -58,16 +58,29 @@ test-one name:
     cargo test --all-targets -- {{name}}
 
 # Run benchmarks (compile only)
-bench:
+test-bench:
     cargo bench --workspace --no-run
 
 # Run benchmarks (with execution)
-bench-run:
+test-bench-run:
     cargo bench --workspace
 
 # Run soak tests (long-running stability tests)
-soak:
+test-soak:
     cargo test --workspace -- --include-ignored soak
+
+# Security regression gate for policy, runtime, and public control surfaces
+sec-gate:
+    cargo check --workspace
+    cargo test -p converge-policy
+    cargo test -p converge-runtime --lib
+    cargo test -p converge-pack --test compile_fail
+    cargo test -p converge-core --test compile_fail --test truth_pipeline --test negative --test properties
+    cargo test -p converge-client --test messages
+
+# Smoke-test local runtime
+test-smoke url="http://127.0.0.1:8080":
+    bash ops/scripts/smoke-test.sh {{url}}
 
 # ── Lint & Format ─────────────────────────────────────────────────────
 
@@ -135,30 +148,17 @@ publish-dry-run:
         cargo publish --dry-run -p "$crate"
     done
 
-# ── Supply Chain ───────────────────────────────────────────────────────
+# ── Security ───────────────────────────────────────────────────────────
 
 # Audit dependencies (requires cargo-deny)
-deny:
+sec-deny:
     cargo deny check
 
 # Audit advisories only
-deny-advisories:
+sec-deny-advisories:
     cargo deny check advisories
 
-# Validate repository security/compliance documentation
-compliance-check:
-    bash ops/scripts/validate-security-docs.sh
-
-# Security regression gate for policy, runtime, and public control surfaces
-security-gate:
-    cargo check --workspace
-    cargo test -p converge-policy
-    cargo test -p converge-runtime --lib
-    cargo test -p converge-pack --test compile_fail
-    cargo test -p converge-core --test compile_fail --test truth_pipeline --test negative --test properties
-    cargo test -p converge-client --test messages
-
-INFRA_ENV := "ops/infra/environments/prod/converge-runtime"
+# ── Local Dev ──────────────────────────────────────────────────────────
 
 # Start local runtime, preferring native Rust if available
 dev-up mode="auto":
@@ -167,95 +167,6 @@ dev-up mode="auto":
 # Stop local runtime or compose stack
 dev-down mode="auto":
     bash ops/scripts/dev-down.sh {{mode}}
-
-# Smoke-test local runtime
-smoke-test url="http://127.0.0.1:8080":
-    bash ops/scripts/smoke-test.sh {{url}}
-
-# Deploy runtime to Google Cloud Run
-deploy-cloud-run:
-    bash ops/scripts/deploy-cloud-run.sh
-
-# ── Infrastructure ─────────────────────────────────────────────────────
-
-# Create the remote Terraform state bucket
-infra-bootstrap-state:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    : "${PROJECT_ID:?Set PROJECT_ID}"
-    : "${REGION:=europe-west1}"
-    : "${TF_STATE_BUCKET:?Set TF_STATE_BUCKET}"
-    gcloud storage buckets describe "gs://${TF_STATE_BUCKET}" --project "${PROJECT_ID}" >/dev/null 2>&1 || \
-      gcloud storage buckets create "gs://${TF_STATE_BUCKET}" --location "${REGION}" --project "${PROJECT_ID}"
-
-# Initialize Terraform for hosted deployment
-infra-init:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    : "${TF_STATE_BUCKET:?Set TF_STATE_BUCKET}"
-    cd {{INFRA_ENV}} && terraform init -backend-config="bucket=${TF_STATE_BUCKET}"
-
-# Preview Terraform changes
-infra-plan:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    : "${PROJECT_ID:?Set PROJECT_ID}"
-    : "${REGION:=europe-west1}"
-    cd {{INFRA_ENV}} && terraform plan \
-      -var "project_id=${PROJECT_ID}" \
-      -var "region=${REGION}"
-
-# Apply Terraform changes
-infra-apply:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    : "${PROJECT_ID:?Set PROJECT_ID}"
-    : "${REGION:=europe-west1}"
-    cd {{INFRA_ENV}} && terraform apply \
-      -var "project_id=${PROJECT_ID}" \
-      -var "region=${REGION}"
-
-# Show Terraform outputs
-infra-output:
-    cd {{INFRA_ENV}} && terraform output
-
-# Build and push the runtime image using Cloud Build
-cloud-build tag="latest":
-    #!/usr/bin/env bash
-    set -euo pipefail
-    : "${PROJECT_ID:?Set PROJECT_ID}"
-    REPO=$(cd {{INFRA_ENV}} && terraform output -raw registry_url)
-    gcloud builds submit \
-      --tag "${REPO}/converge-runtime:{{tag}}" \
-      --project "${PROJECT_ID}"
-
-# Apply Terraform with the selected runtime image tag
-deploy-runtime tag="latest":
-    #!/usr/bin/env bash
-    set -euo pipefail
-    : "${PROJECT_ID:?Set PROJECT_ID}"
-    : "${REGION:=europe-west1}"
-    cd {{INFRA_ENV}} && terraform apply \
-      -var "project_id=${PROJECT_ID}" \
-      -var "region=${REGION}" \
-      -var "runtime_image_tag={{tag}}"
-
-# Create a Secret Manager secret if missing
-secret-create name:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    : "${PROJECT_ID:?Set PROJECT_ID}"
-    gcloud secrets describe {{name}} --project "${PROJECT_ID}" >/dev/null 2>&1 || \
-      gcloud secrets create {{name}} --replication-policy="automatic" --project "${PROJECT_ID}"
-
-# Add a new Secret Manager version from a local file
-secret-put-file name path:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    : "${PROJECT_ID:?Set PROJECT_ID}"
-    gcloud secrets versions add {{name}} \
-      --data-file="{{path}}" \
-      --project "${PROJECT_ID}"
 
 # ── Examples ───────────────────────────────────────────────────────────
 
@@ -268,21 +179,21 @@ examples:
     @echo "Available examples:"
     @ls -1 examples/ | grep -v README
 
-# ── Git Workflow ───────────────────────────────────────────────────────
+# ── Git ────────────────────────────────────────────────────────────────
 
-# Create a worktree for parallel work (e.g., just worktree fix-auth)
-worktree branch:
+# Create a worktree for parallel work (e.g., just git-worktree fix-auth)
+git-worktree branch:
     git worktree add ../converge-{{branch}} -b {{branch}}
     @echo "Worktree ready at ../converge-{{branch}}"
-    @echo "When done: just worktree-rm {{branch}}"
+    @echo "When done: just git-worktree-rm {{branch}}"
 
 # Remove a worktree
-worktree-rm branch:
+git-worktree-rm branch:
     git worktree remove ../converge-{{branch}}
     @echo "Worktree removed. Branch '{{branch}}' still exists — delete with: git branch -d {{branch}}"
 
 # List active worktrees
-worktrees:
+git-worktrees:
     git worktree list
 
 # Report branch/worktree/release hygiene and remote cleanup candidates
@@ -371,27 +282,17 @@ git-hygiene:
         fi
     fi
 
-# ── jj (Jujutsu) Workflow ─────────────────────────────────────────────
+# Build health and recent commits
+git-status:
+    @cargo test --workspace -- --quiet 2>&1 | tail -5
+    @echo "---"
+    @git log --oneline -5
 
-# Show jj status
-jj-status:
-    jj status
-
-# Create a new change
-jj-new desc:
-    jj new -m "{{desc}}"
-
-# Show the change log
-jj-log:
-    jj log --limit 20
-
-# Squash current change into parent
-jj-squash:
-    jj squash
-
-# Push to git remote
-jj-push:
-    jj git push
+# Repo state and recent commits
+git-sync:
+    @git status --short
+    @echo "---"
+    @git log --oneline -5
 
 # ── Clean ──────────────────────────────────────────────────────────────
 
@@ -402,22 +303,10 @@ clean:
 # ── Workflow ──────────────────────────────────────────────────────────
 
 # Session opener — build + test health
-focus:
+wow-focus:
     @cargo build --workspace
     @cargo test --workspace --lib -- --quiet
     @echo "✓ workspace healthy"
-
-# Build health, test results
-status:
-    @cargo test --workspace -- --quiet 2>&1 | tail -5
-    @echo "---"
-    @git log --oneline -5
-
-# Team sync — repo state + recent commits
-sync:
-    @git status --short
-    @echo "---"
-    @git log --oneline -5
 
 # ── Info ───────────────────────────────────────────────────────────────
 

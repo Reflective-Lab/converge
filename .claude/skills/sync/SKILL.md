@@ -8,7 +8,7 @@ allowed-tools: Bash, Read, Grep
 # Sync
 Morning briefing — catch up on everything.
 ## Steps
-1. Run `just sync`
+1. Run `just git-sync`
 2. Read `MILESTONES.md` for milestone progress and open deliverables if needed.
 3. Summarize the key blockers or changes for the user.
 ## Output
@@ -23,4 +23,4 @@ Build:     <green|red>
 ```
 ## Rules
 - Under 2 minutes. Brevity over completeness.
-- Prefer the repo's `just sync` script over ad hoc git or GitHub commands.
+- Prefer the repo's `just git-sync` script over ad hoc git or GitHub commands.

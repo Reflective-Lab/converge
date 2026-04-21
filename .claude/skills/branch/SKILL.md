@@ -37,14 +37,14 @@ If `$ARGUMENTS` is provided, use it as the branch name. Otherwise ask.
 
 3. Create the worktree + branch:
    ```bash
-   just worktree <branch>
+   just git-worktree <branch>
    ```
    This runs: `git worktree add ../converge-<branch> -b <branch>`
 
 4. Tell the user:
    - Worktree path: `../converge-<branch>`
    - How to enter: `cd ../converge-<branch>`
-   - How to clean up when done: `just worktree-rm <branch>`
+   - How to clean up when done: `just git-worktree-rm <branch>`
 
 ## Rules
 - One concern per branch. If the task expands, split it.

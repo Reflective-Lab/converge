@@ -46,15 +46,23 @@ just build          # cargo build --release
 just build-quick    # cargo build --profile quick-release
 just test           # cargo test --all-targets
 just test-all       # cargo test --all-targets --workspace
+just test-bench     # run benchmarks (compile only)
+just test-bench-run # run benchmarks (with execution)
+just test-soak      # run long-running soak tests
+just test-layout    # guard non-standard Rust test file placement
+just test-runtime-wasm # run the feature-gated WASM property suite
+just sec-gate       # security regression gate
+just sec-deny       # audit dependencies (cargo-deny)
 just lint           # cargo fmt --check && cargo clippy -- -D warnings
 just fix-lint       # auto-fix lint issues
 just doc            # cargo doc --no-deps --workspace
-just focus          # Session opener — repo health + recent activity
-just sync           # Team sync — PRs, issues, recent commits
-just status         # Build health, test results
-just git-hygiene    # Worktrees, branch state, latest release tag, cleanup candidates
-just test-layout    # Guard non-standard Rust test file placement
-just test-runtime-wasm # Run the feature-gated WASM property suite
+just dev-up         # start local runtime
+just dev-down       # stop local runtime
+just test-smoke     # smoke-test local runtime
+just git-hygiene    # worktrees, branch state, latest release tag, cleanup candidates
+just git-status     # build health + recent commits
+just git-sync       # repo state + recent commits
+just wow-focus      # session opener — build + test health
 ```
 
 ## Rules
@@ -99,17 +107,17 @@ See `kb/Architecture/Hexagonal Architecture.md` for the full picture.
 
 ## Known Drift
 
-The codebase has known gaps between axioms and implementation. These are tracked in `kb/Architecture/Known Drift.md` with ADR-backed resolution plans. The most significant: agents can still emit facts directly via `AgentEffect::with_fact()`, bypassing the promotion gate. This is being fixed as a deliberate breaking change.
+The codebase has known gaps between axioms and implementation. These are tracked in `kb/Architecture/Known Drift.md` with ADR-backed resolution plans. The promotion gate is fully sealed: `AgentEffect` is proposal-only, `Fact` has no public constructor, and 26+ compile-fail tests prove external code cannot forge facts or bypass promotion.
 
 ## Workflows
 
-Run `just focus` at session start. See `kb/Workflow/Daily Journey.md` for the full cheat sheet.
+Run `just wow-focus` at session start. See `kb/Workflow/Daily Journey.md` for the full cheat sheet.
 Branch, worktree, and release discipline live in `kb/Workflow/Git Strategy.md`.
 
 | Workflow | Purpose |
 |---|---|
-| `/focus` / `just focus` | Session opener — orient yourself, see team activity |
-| `/sync` / `just sync` | Team sync — who did what, PRs waiting, unclaimed issues |
+| `/focus` / `just wow-focus` | Session opener — orient yourself, see team activity |
+| `/sync` / `just git-sync` | Team sync — who did what, PRs waiting, unclaimed issues |
 | `/next` | Pick the next task from the current milestone |
 | `/dev` | Start local development environment |
 | `/check` | Code quality — lint, check, test |

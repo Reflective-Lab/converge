@@ -9,8 +9,7 @@ allowed-tools: Bash, Read, Edit, Grep, Glob, Agent
 Weekly Converge repo review.
 ## Steps
 1. **Security**:
-   - Run `just compliance-check`
-   - If `cargo-deny` is installed, run `just deny`; otherwise note that it was unavailable
+   - If `cargo-deny` is installed, run `just sec-deny`; otherwise note that it was unavailable
    - Scan for obvious secrets or unsafe compliance claims
 2. **Build health**:
    - Run `just check`
