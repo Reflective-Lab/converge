@@ -4,24 +4,11 @@
 
 > Architecture follow-up for crate boundaries: [[Planning/CRATE-BOUNDARY-REALIGNMENT]].
 
-## Backlog: OR-Tools Native Solver Wiring
-**Epic:** E1 (optimization capability)
-
-Wire the existing `ortools-sys` FFI bindings into the CP and VRP pack solvers to replace the current backtracking and nearest-neighbor heuristics with production-grade solvers.
-
-- [ ] Wire CP-SAT into `constraint_programming` pack solver (replaces `BacktrackingSolver`)
-- [ ] Wire OR-Tools routing library into `vehicle_routing` pack solver (replaces `NearestNeighborVrpSolver`)
-- [ ] Add `brew install or-tools` / CI image requirement to dev setup docs
-- [ ] Add reference validation tests against published CP-SAT and VRP benchmarks
-- [ ] Ensure `ortools-sys` feature-gates so binaries without OR-Tools still link
-
-**Why this matters:**
-- Backtracking solver blows up exponentially for n > ~10 variables
-- Nearest-neighbor VRP produces routes 20–40% above optimal with no time-window support
-- OR-Tools CP-SAT and LNS give practical scale (hundreds of variables, 50+ stops) without writing new algorithms
-- FFI bindings already exist; this is integration work, not research
-
-**Prerequisite:** OR-Tools shared library available at link time (not currently in CI)
+## Moved: OR-Tools Native Solver Wiring → ferrox
+Moved: 2026-04-22 — C++ FFI dependency doesn't belong in a pure Rust platform crate.
+OR-Tools integration now lives in `~/dev/work/ferrox`. Converge pack solvers remain on the
+current backtracking/nearest-neighbor heuristics until ferrox exposes a Rust-native interface
+that Converge can consume without a C++ toolchain dependency.
 
 ## Planned: v3.4 — Lean Packaging & Embedding
 **Target:** 2026-06-15 | **Epic:** E1, E3 (Wolfgang/Organism embedding)

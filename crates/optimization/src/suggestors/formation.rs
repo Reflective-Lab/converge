@@ -227,6 +227,7 @@ impl Default for crate::graph::matching::Matching {
 mod tests {
     use super::*;
     use converge_core::{ContextState, Engine};
+    use converge_model::formation::{SuggestorCapability, SuggestorRole};
     use converge_pack::ContextKey;
     use converge_provider_api::{CostClass, LatencyClass};
 

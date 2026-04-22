@@ -2531,6 +2531,7 @@ dependencies = [
  "converge-kernel",
  "converge-model",
  "converge-pack",
+ "converge-provider-api",
  "criterion",
  "indexmap 2.14.0",
  "num-traits",
