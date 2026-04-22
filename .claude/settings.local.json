@@ -80,7 +80,11 @@
       "Bash(find:*)",
       "Bash(cargo metadata:*)",
       "Bash(python3 -c \"import json,sys; m=json.load\\(sys.stdin\\); pkgs=[p for p in m['packages'] if p['name']=='converge-core']; print\\(pkgs[0]['version'] if pkgs else 'not found'\\)\")",
-      "Bash(python3 -c \"import json,sys; m=json.load\\(sys.stdin\\); pkgs=[p for p in m['packages'] if p['name']=='converge-core']; print\\(pkgs[0]['source'] if pkgs else 'not found'\\)\")"
+      "Bash(python3 -c \"import json,sys; m=json.load\\(sys.stdin\\); pkgs=[p for p in m['packages'] if p['name']=='converge-core']; print\\(pkgs[0]['source'] if pkgs else 'not found'\\)\")",
+      "Bash(TRYBUILD=overwrite cargo test -p converge-core compile_fail_tests)",
+      "Bash(TRYBUILD=overwrite cargo test -p converge-pack compile_fail_tests)",
+      "Bash(gh release:*)",
+      "Bash(cargo fix:*)"
     ]
   }
 }

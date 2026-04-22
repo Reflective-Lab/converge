@@ -11,24 +11,17 @@ use petgraph::visit::EdgeRef;
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap};
 
-/// Find shortest path between two nodes
+/// Find shortest path between two nodes, returning the full node sequence.
 pub fn shortest_path<N, E>(
     graph: &Graph<N, E>,
     source: NodeId,
     target: NodeId,
     edge_cost: impl Fn(&E) -> Cost,
 ) -> Result<Option<Path>> {
-    let distances = dijkstra(graph, source, &edge_cost)?;
+    let (distances, predecessors) = dijkstra_with_paths(graph, source, edge_cost)?;
 
     match distances.get(&target) {
-        Some(&cost) => {
-            // Reconstruct path (simplified - just returns cost for now)
-            // Full path reconstruction would need parent tracking
-            Ok(Some(Path {
-                nodes: vec![source, target],
-                cost,
-            }))
-        }
+        Some(&cost) => Ok(Some(reconstruct_path(&predecessors, source, target, cost))),
         None => Ok(None),
     }
 }

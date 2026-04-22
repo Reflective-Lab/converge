@@ -85,4 +85,15 @@ pub trait Suggestor: Send + Sync {
     /// - For LLM suggestors: emit `ProposedFact` to `ContextKey::Proposals`,
     ///   not directly to the target key.
     async fn execute(&self, ctx: &dyn Context) -> AgentEffect;
+
+    /// Algorithmic complexity of this suggestor's core computation.
+    ///
+    /// Returns a short string describing time complexity and practical scale
+    /// guidance. `None` means negligible / not applicable (e.g. pure LLM
+    /// calls where latency is network-bound, not algorithmic).
+    ///
+    /// Examples: `"O(n³) — n = agents/tasks, practical for n ≤ 500"`
+    fn complexity_hint(&self) -> Option<&'static str> {
+        None
+    }
 }

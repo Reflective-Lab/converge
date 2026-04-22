@@ -29,6 +29,9 @@ members = [
     "examples/live-formation",
     "examples/intent-codec-loop",
     "examples/analytics-packs",
+    "examples/adaptive-gap-loop",
+    "examples/fixed-point-vs-budget",
+    "examples/reconciliation-loop",
 ]
 default-members = [
     "crates/model",

@@ -8,6 +8,9 @@ of the workspace.
 ```bash
 just examples
 just example hello-convergence
+just example adaptive-gap-loop
+just example fixed-point-vs-budget
+just example reconciliation-loop
 just example formation-mixed
 just example intent-codec-loop
 ```
@@ -22,6 +25,9 @@ Most example package names follow the directory directly:
 | Example | What it shows | Run |
 |---|---|---|
 | [hello-convergence](hello-convergence/) | Minimal convergence loop and fixed-point execution | `just example hello-convergence` |
+| [adaptive-gap-loop](adaptive-gap-loop/) | Generic gap-driven loop where discoveries mint more work until closure | `just example adaptive-gap-loop` |
+| [fixed-point-vs-budget](fixed-point-vs-budget/) | Same adaptive graph loop under two budgets, showing `Converged` vs `BudgetExhausted` with Dijkstra frontier planning | `just example fixed-point-vs-budget` |
+| [reconciliation-loop](reconciliation-loop/) | Noisy two-ledger reconciliation using candidate scoring plus exact Hungarian assignment | `just example reconciliation-loop` |
 | [custom-agent](custom-agent/) | A custom `Suggestor` implementation | `just example custom-agent` |
 | [custom-provider](custom-provider/) | A provider adapter implementing the provider API | `just example custom-provider` |
 | [meeting-scheduler](meeting-scheduler/) | Multi-step convergence over scheduling constraints | `just example meeting-scheduler` |
@@ -41,7 +47,7 @@ Most example package names follow the directory directly:
 
 ## For Consumers
 
-Start with `hello-convergence`, then read `formation-mixed`, then `intent-codec-loop`.
+Start with `hello-convergence`, then `adaptive-gap-loop`, then `fixed-point-vs-budget`, then `reconciliation-loop`, then `formation-mixed`, then `intent-codec-loop`.
 
 That pairing shows the stable contract clearly:
 
@@ -52,6 +58,28 @@ That pairing shows the stable contract clearly:
 - `Context` / `ContextState`
 
 Everything else is composition on top.
+
+`adaptive-gap-loop` adds the missing open-ended convergence story:
+
+- one seed starts a generic survey
+- suggestors discover gaps and reopen the loop with new requests
+- closure happens when the discovered graph is fully covered, not when a hardcoded stage counter finishes
+- budget stop and fixed-point stop are different runtime outcomes
+
+`fixed-point-vs-budget` makes that last point explicit:
+
+- same loop, same suggestors, different `Budget`
+- generous budget returns a full `ConvergeResult`
+- short budget returns `ConvergeError::BudgetExhausted`
+- the frontier planner uses real Dijkstra shortest-path routing from `converge-optimization`
+
+`reconciliation-loop` shows a larger data-massaging example without turning
+Converge into an application repo:
+
+- two noisy ledgers enter as raw records
+- a candidate scorer turns pair quality into a cost surface
+- Hungarian assignment finds the exact one-to-one reconciliation
+- residue summary leaves the unmatched items explicit for follow-up
 
 `intent-codec-loop` adds the missing formation story:
 

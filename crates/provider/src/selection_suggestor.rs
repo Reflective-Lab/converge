@@ -46,7 +46,7 @@ pub struct ProviderAssignment {
 }
 
 /// A single capability-to-backend assignment.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CapabilityAssignment {
     pub capability: Capability,
     pub backend_name: String,
@@ -56,6 +56,7 @@ pub struct CapabilityAssignment {
 
 const REQUEST_PREFIX: &str = "provider-request:";
 const ASSIGNMENT_PREFIX: &str = "provider-assignment:";
+const MALFORMED_PREFIX: &str = "provider-request-error:";
 
 /// Routes required capabilities to available backends via bipartite matching.
 ///
@@ -90,39 +91,68 @@ impl Suggestor for ProviderSelectionSuggestor {
     }
 
     fn accepts(&self, ctx: &dyn Context) -> bool {
-        ctx.get(ContextKey::Seeds)
-            .iter()
-            .any(|f| f.id.starts_with(REQUEST_PREFIX) && !assignment_exists(ctx, request_id(&f.id)))
+        ctx.get(ContextKey::Seeds).iter().any(|f| {
+            f.id.starts_with(REQUEST_PREFIX)
+                && match serde_json::from_str::<ProviderRequest>(&f.content) {
+                    Ok(_) => !assignment_exists(ctx, request_id(&f.id)),
+                    Err(_) => !malformed_diagnostic_exists(ctx, &f.id),
+                }
+        })
     }
 
     async fn execute(&self, ctx: &dyn Context) -> AgentEffect {
-        let requests: Vec<ProviderRequest> = ctx
+        let mut proposals = Vec::new();
+
+        for fact in ctx
             .get(ContextKey::Seeds)
             .iter()
             .filter(|f| f.id.starts_with(REQUEST_PREFIX))
-            .filter(|f| !assignment_exists(ctx, request_id(&f.id)))
-            .filter_map(|f| serde_json::from_str(&f.content).ok())
-            .collect();
+        {
+            match serde_json::from_str::<ProviderRequest>(&fact.content) {
+                Ok(req) => {
+                    if assignment_exists(ctx, request_id(&fact.id)) {
+                        continue;
+                    }
 
-        if requests.is_empty() {
-            return AgentEffect::empty();
+                    let assignment = route(&req, &self.backends);
+                    proposals.push(
+                        ProposedFact::new(
+                            ContextKey::Strategies,
+                            format!("{}{}", ASSIGNMENT_PREFIX, assignment.request_id),
+                            serde_json::to_string(&assignment).unwrap_or_default(),
+                            self.name(),
+                        )
+                        .with_confidence(assignment.coverage_ratio),
+                    );
+                }
+                Err(error) => {
+                    if malformed_diagnostic_exists(ctx, &fact.id) {
+                        continue;
+                    }
+
+                    let diagnostic = serde_json::json!({
+                        "request_fact_id": fact.id,
+                        "message": "malformed provider request ignored",
+                        "error": error.to_string(),
+                    });
+                    proposals.push(
+                        ProposedFact::new(
+                            ContextKey::Diagnostic,
+                            malformed_diagnostic_id(&fact.id),
+                            diagnostic.to_string(),
+                            self.name(),
+                        )
+                        .with_confidence(1.0),
+                    );
+                }
+            }
         }
 
-        let proposals: Vec<ProposedFact> = requests
-            .into_iter()
-            .map(|req| route(&req, &self.backends))
-            .map(|assignment| {
-                ProposedFact::new(
-                    ContextKey::Strategies,
-                    format!("{}{}", ASSIGNMENT_PREFIX, assignment.request_id),
-                    serde_json::to_string(&assignment).unwrap_or_default(),
-                    self.name(),
-                )
-                .with_confidence(assignment.coverage_ratio)
-            })
-            .collect();
-
-        AgentEffect::with_proposals(proposals)
+        if proposals.is_empty() {
+            AgentEffect::empty()
+        } else {
+            AgentEffect::with_proposals(proposals)
+        }
     }
 }
 
@@ -195,11 +225,23 @@ fn assignment_exists(ctx: &dyn Context, request_id: &str) -> bool {
         .any(|f| f.id == assignment_id)
 }
 
+fn malformed_diagnostic_id(fact_id: &str) -> String {
+    format!("{MALFORMED_PREFIX}{fact_id}")
+}
+
+fn malformed_diagnostic_exists(ctx: &dyn Context, fact_id: &str) -> bool {
+    let diagnostic_id = malformed_diagnostic_id(fact_id);
+    ctx.get(ContextKey::Diagnostic)
+        .iter()
+        .any(|fact| fact.id == diagnostic_id)
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use converge_core::{ContextState, Engine};
     use converge_provider_api::{BackendKind, Capability};
 
     struct MockBackend {
@@ -325,5 +367,62 @@ mod tests {
         let assignment = route(&req, &pool);
         assert!((assignment.coverage_ratio - 1.0).abs() < f64::EPSILON);
         assert!(assignment.assignments.is_empty());
+    }
+
+    #[test]
+    fn repeated_routing_is_deterministic_for_equal_candidates() {
+        let pool = vec![
+            backend("reasoner-a", &[Capability::Reasoning]),
+            backend("reasoner-b", &[Capability::Reasoning]),
+            backend("policy-a", &[Capability::AccessControl]),
+        ];
+        let req = request(
+            "req-7",
+            &[
+                Capability::Reasoning,
+                Capability::Reasoning,
+                Capability::AccessControl,
+            ],
+        );
+
+        let first = route(&req, &pool);
+        let second = route(&req, &pool);
+
+        assert_eq!(first.assignments, second.assignments);
+        assert_eq!(first.unmatched, second.unmatched);
+        assert_eq!(first.coverage_ratio, second.coverage_ratio);
+    }
+
+    #[tokio::test]
+    async fn malformed_request_emits_diagnostic_once() {
+        let mut engine = Engine::new();
+        engine.register_suggestor(ProviderSelectionSuggestor::new(vec![backend(
+            "anthropic",
+            &[Capability::Reasoning],
+        )]));
+
+        let mut ctx = ContextState::new();
+        ctx.add_input(ContextKey::Seeds, "provider-request:broken", "{")
+            .expect("seed should stage");
+
+        let first = engine.run(ctx).await.expect("run should converge");
+        let diagnostics = first.context.get(ContextKey::Diagnostic);
+        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(
+            diagnostics[0].id,
+            "provider-request-error:provider-request:broken"
+        );
+        assert!(!first.context.has(ContextKey::Strategies));
+
+        let mut rerun_engine = Engine::new();
+        rerun_engine.register_suggestor(ProviderSelectionSuggestor::new(vec![backend(
+            "anthropic",
+            &[Capability::Reasoning],
+        )]));
+        let second = rerun_engine
+            .run(first.context.clone())
+            .await
+            .expect("rerun should converge");
+        assert_eq!(second.context.get(ContextKey::Diagnostic).len(), 1);
     }
 }

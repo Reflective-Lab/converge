@@ -4904,6 +4904,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "example-adaptive-gap-loop"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "converge-kernel",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "example-analytics-packs"
 version = "0.0.0"
 dependencies = [
@@ -4949,6 +4960,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "example-fixed-point-vs-budget"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "converge-kernel",
+ "converge-optimization",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "example-formation-mixed"
 version = "0.0.0"
 dependencies = [
@@ -4987,6 +5010,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "example-live-formation"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "converge-core",
+ "converge-kernel",
+ "converge-optimization",
+ "converge-pack",
+ "converge-policy",
+ "converge-provider",
+ "converge-provider-api",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "example-loan-application"
 version = "0.0.0"
 dependencies = [
@@ -5006,6 +5045,18 @@ dependencies = [
  "converge-domain",
  "converge-experience",
  "converge-kernel",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "example-reconciliation-loop"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "converge-kernel",
+ "converge-optimization",
+ "serde",
  "serde_json",
  "tokio",
 ]

@@ -106,6 +106,28 @@ All major entities in the Converge knowledge base, organized by category.
 - [Working with Codex](Workflow/Working%20with%20Codex.md)
 - [Working with Gemini](Workflow/Working%20with%20Gemini.md)
 
+## Algorithms
+
+### Optimization
+- [Hungarian Algorithm](Algorithms/Hungarian%20Algorithm.md) — O(n³) optimal assignment
+- [Hopcroft-Karp Bipartite Matching](Algorithms/Hopcroft-Karp%20Bipartite%20Matching.md) — O(E√V) maximum matching
+- [0-1 Knapsack](Algorithms/0-1%20Knapsack.md) — DP pseudo-polynomial optimal subset
+- [Dijkstra Shortest Path](Algorithms/Dijkstra%20Shortest%20Path.md) — O((V+E) log V) SSSP
+- [Max Flow](Algorithms/Max%20Flow.md) — Ford-Fulkerson / Edmonds-Karp
+- [Min-Cost Flow](Algorithms/Min-Cost%20Flow.md) — successive shortest paths
+- [Greedy Set Cover](Algorithms/Greedy%20Set%20Cover.md) — O(ln n) approximation
+- [List Scheduling](Algorithms/List%20Scheduling.md) — EDD heuristic
+
+### Analytics
+- [Z-Score Anomaly Detection](Algorithms/Z-Score%20Anomaly%20Detection.md) — (x-μ)/σ threshold
+- [Descriptive Statistics](Algorithms/Descriptive%20Statistics.md) — mean, median, variance, range
+- [Linear Regression](Algorithms/Linear%20Regression.md) — y = w·x + b inference
+- [Logistic Classification](Algorithms/Logistic%20Classification.md) — sigmoid decision boundary
+- [Cosine Similarity](Algorithms/Cosine%20Similarity.md) — pairwise vector similarity
+- [Exponential Smoothing](Algorithms/Exponential%20Smoothing.md) — SES forecasting
+- [K-Means Clustering](Algorithms/K-Means%20Clustering.md) — Lloyd's algorithm
+- [Weighted Multi-Criteria Ranking](Algorithms/Weighted%20Multi-Criteria%20Ranking.md) — normalize-weight-sum MCDM
+
 ## Ecosystem
 
 - [Ecosystem](Ecosystem.md)

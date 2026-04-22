@@ -46,7 +46,7 @@ pub struct FormationPlan {
 }
 
 /// A single role-to-suggestor assignment.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RoleAssignment {
     pub role: SuggestorRole,
     pub suggestor: String,
@@ -56,16 +56,17 @@ pub struct RoleAssignment {
 
 const REQUEST_PREFIX: &str = "formation-request:";
 const PLAN_PREFIX: &str = "formation-plan:";
+const MALFORMED_PREFIX: &str = "formation-request-error:";
 
 /// Assembles a formation by matching required roles to available suggestors.
 ///
 /// # Construction
 ///
 /// ```rust,ignore
-/// let catalog: Vec<ProfileSnapshot> = engine
-///     .registered_suggestors()
-///     .map(|(name, profile)| ProfileSnapshot::from_profile(name, profile))
-///     .collect();
+/// let mut catalog = Vec::new();
+///
+/// register_profiled(&mut engine, &mut catalog, analysis_suggestor);
+/// register_profiled(&mut engine, &mut catalog, planning_suggestor);
 ///
 /// engine.register_suggestor(FormationAssemblySuggestor::new(catalog));
 /// ```
@@ -90,39 +91,68 @@ impl Suggestor for FormationAssemblySuggestor {
     }
 
     fn accepts(&self, ctx: &dyn Context) -> bool {
-        ctx.get(ContextKey::Seeds)
-            .iter()
-            .any(|f| f.id.starts_with(REQUEST_PREFIX) && !plan_exists(ctx, request_id(&f.id)))
+        ctx.get(ContextKey::Seeds).iter().any(|f| {
+            f.id.starts_with(REQUEST_PREFIX)
+                && match serde_json::from_str::<FormationRequest>(&f.content) {
+                    Ok(_) => !plan_exists(ctx, request_id(&f.id)),
+                    Err(_) => !malformed_diagnostic_exists(ctx, &f.id),
+                }
+        })
     }
 
     async fn execute(&self, ctx: &dyn Context) -> AgentEffect {
-        let requests: Vec<FormationRequest> = ctx
+        let mut proposals = Vec::new();
+
+        for fact in ctx
             .get(ContextKey::Seeds)
             .iter()
             .filter(|f| f.id.starts_with(REQUEST_PREFIX))
-            .filter(|f| !plan_exists(ctx, request_id(&f.id)))
-            .filter_map(|f| serde_json::from_str(&f.content).ok())
-            .collect();
+        {
+            match serde_json::from_str::<FormationRequest>(&fact.content) {
+                Ok(req) => {
+                    if plan_exists(ctx, request_id(&fact.id)) {
+                        continue;
+                    }
 
-        if requests.is_empty() {
-            return AgentEffect::empty();
+                    let plan = assemble(&req, &self.catalog);
+                    proposals.push(
+                        ProposedFact::new(
+                            ContextKey::Strategies,
+                            format!("{}{}", PLAN_PREFIX, plan.request_id),
+                            serde_json::to_string(&plan).unwrap_or_default(),
+                            self.name(),
+                        )
+                        .with_confidence(plan.coverage_ratio),
+                    );
+                }
+                Err(error) => {
+                    if malformed_diagnostic_exists(ctx, &fact.id) {
+                        continue;
+                    }
+
+                    let diagnostic = serde_json::json!({
+                        "request_fact_id": fact.id,
+                        "message": "malformed formation request ignored",
+                        "error": error.to_string(),
+                    });
+                    proposals.push(
+                        ProposedFact::new(
+                            ContextKey::Diagnostic,
+                            malformed_diagnostic_id(&fact.id),
+                            diagnostic.to_string(),
+                            self.name(),
+                        )
+                        .with_confidence(1.0),
+                    );
+                }
+            }
         }
 
-        let proposals: Vec<ProposedFact> = requests
-            .into_iter()
-            .map(|req| assemble(&req, &self.catalog))
-            .map(|plan| {
-                ProposedFact::new(
-                    ContextKey::Strategies,
-                    format!("{}{}", PLAN_PREFIX, plan.request_id),
-                    serde_json::to_string(&plan).unwrap_or_default(),
-                    self.name(),
-                )
-                .with_confidence(plan.coverage_ratio)
-            })
-            .collect();
-
-        AgentEffect::with_proposals(proposals)
+        if proposals.is_empty() {
+            AgentEffect::empty()
+        } else {
+            AgentEffect::with_proposals(proposals)
+        }
     }
 }
 
@@ -208,6 +238,17 @@ fn plan_exists(ctx: &dyn Context, request_id: &str) -> bool {
         .any(|f| f.id == plan_id)
 }
 
+fn malformed_diagnostic_id(fact_id: &str) -> String {
+    format!("{MALFORMED_PREFIX}{fact_id}")
+}
+
+fn malformed_diagnostic_exists(ctx: &dyn Context, fact_id: &str) -> bool {
+    let diagnostic_id = malformed_diagnostic_id(fact_id);
+    ctx.get(ContextKey::Diagnostic)
+        .iter()
+        .any(|fact| fact.id == diagnostic_id)
+}
+
 // ── Default for Matching (graceful degradation) ───────────────────────────────
 
 impl Default for crate::graph::matching::Matching {
@@ -225,7 +266,7 @@ impl Default for crate::graph::matching::Matching {
 mod tests {
     use super::*;
     use converge_core::profile::SuggestorCapability;
-    use converge_core::{CostClass, LatencyClass};
+    use converge_core::{ContextState, CostClass, Engine, LatencyClass};
     use converge_pack::ContextKey;
 
     fn snapshot(name: &str, role: SuggestorRole, caps: &[SuggestorCapability]) -> ProfileSnapshot {
@@ -363,5 +404,65 @@ mod tests {
         let plan = assemble(&req, &catalog);
         assert_eq!(plan.assignments.len(), 0);
         assert!((plan.coverage_ratio - 1.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn repeated_matching_is_deterministic_for_equal_candidates() {
+        let catalog = vec![
+            snapshot("analysis-a", SuggestorRole::Analysis, &[]),
+            snapshot("analysis-b", SuggestorRole::Analysis, &[]),
+            snapshot("planning-a", SuggestorRole::Planning, &[]),
+        ];
+        let req = request(
+            "r7",
+            &[
+                SuggestorRole::Analysis,
+                SuggestorRole::Analysis,
+                SuggestorRole::Planning,
+            ],
+            &[],
+        );
+
+        let first = assemble(&req, &catalog);
+        let second = assemble(&req, &catalog);
+
+        assert_eq!(first.assignments, second.assignments);
+        assert_eq!(first.unmatched_roles, second.unmatched_roles);
+        assert_eq!(first.coverage_ratio, second.coverage_ratio);
+    }
+
+    #[tokio::test]
+    async fn malformed_request_emits_diagnostic_once() {
+        let mut engine = Engine::new();
+        engine.register_suggestor(FormationAssemblySuggestor::new(vec![snapshot(
+            "analysis-a",
+            SuggestorRole::Analysis,
+            &[],
+        )]));
+
+        let mut ctx = ContextState::new();
+        ctx.add_input(ContextKey::Seeds, "formation-request:broken", "{")
+            .expect("seed should stage");
+
+        let first = engine.run(ctx).await.expect("run should converge");
+        let diagnostics = first.context.get(ContextKey::Diagnostic);
+        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(
+            diagnostics[0].id,
+            "formation-request-error:formation-request:broken"
+        );
+        assert!(!first.context.has(ContextKey::Strategies));
+
+        let mut rerun_engine = Engine::new();
+        rerun_engine.register_suggestor(FormationAssemblySuggestor::new(vec![snapshot(
+            "analysis-a",
+            SuggestorRole::Analysis,
+            &[],
+        )]));
+        let second = rerun_engine
+            .run(first.context.clone())
+            .await
+            .expect("rerun should converge");
+        assert_eq!(second.context.get(ContextKey::Diagnostic).len(), 1);
     }
 }

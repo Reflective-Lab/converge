@@ -1,0 +1,74 @@
+---
+source: llm
+---
+
+# Weighted Multi-Criteria Ranking
+
+**Complexity:** O(n * c) where n = items, c = criteria
+**Converge module:** `converge_analytics::packs::ranking::WeightedScoringSolver`
+**Reference:** Standard MCDM (Multi-Criteria Decision Making). See Hwang & Yoon (1981), *Multiple Attribute Decision Making*.
+
+## Algorithm Steps
+
+1. **Min-max normalize** each criterion to [0, 1]:
+   ```
+   normalized = (x - min) / (max - min)
+   ```
+   If direction is "lower is better", invert: normalized = 1 - normalized.
+
+2. **Weight and sum:**
+   ```
+   composite = sum(w_i * normalized_i)
+   ```
+
+3. **Rank** by composite score (descending).
+
+## Worked Example
+
+### Input
+
+3 items, 2 criteria, weights = [0.7, 0.3], both higher-is-better.
+
+| Item | Criterion 1 | Criterion 2 |
+|------|------------|------------|
+|  A   |    100     |     10     |
+|  B   |     50     |     90     |
+|  C   |     75     |     50     |
+
+### Step 1: Normalize
+
+**Criterion 1:** min=50, max=100
+- A: (100-50)/(100-50) = 1.0
+- B: (50-50)/(100-50) = 0.0
+- C: (75-50)/(100-50) = 0.5
+
+**Criterion 2:** min=10, max=90
+- A: (10-10)/(90-10) = 0.0
+- B: (90-10)/(90-10) = 1.0
+- C: (50-10)/(90-10) = 0.5
+
+### Step 2: Weighted sum
+
+| Item | 0.7 * C1 | 0.3 * C2 | Composite |
+|------|----------|----------|-----------|
+|  A   |   0.70   |   0.00   |   **0.70**|
+|  B   |   0.00   |   0.30   |   **0.30**|
+|  C   |   0.35   |   0.15   |   **0.50**|
+
+### Step 3: Rank
+
+1. A (0.70)
+2. C (0.50)
+3. B (0.30)
+
+### Interpretation
+
+Item A wins because criterion 1 has 70% weight and A dominates on it. Despite B's strong showing on criterion 2, the lower weight (30%) keeps it in last place.
+
+## Converge Validation
+
+```
+cargo test -p converge-analytics --test reference_validation ranking
+```
+
+Ranking order (A > C > B) and composite scores (0.70, 0.50, 0.30) confirmed.

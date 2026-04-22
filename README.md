@@ -160,14 +160,44 @@ The workspace currently ships these example crates:
 - `vendor-selection`
 - `loan-application`
 - `formation-mixed`
+- `intent-codec-loop`
+- `adaptive-gap-loop`
+- `fixed-point-vs-budget`
+- `reconciliation-loop`
+- `analytics-packs`
 
 ```bash
 just examples
 just example hello-convergence
+just example adaptive-gap-loop
+just example fixed-point-vs-budget
+just example reconciliation-loop
 just example formation-mixed
+just example intent-codec-loop
 ```
 
 `cargo build --workspace` compiles the examples as part of the workspace build.
+
+If you want the genuinely adaptive loop story rather than a bounded demo, start
+with `adaptive-gap-loop`. It shows suggestors discovering new work, reopening
+the loop, and converging only when the discovered graph is actually closed.
+
+If you want the stop-semantics story, continue with `fixed-point-vs-budget`.
+It runs the same adaptive graph loop twice and shows the real kernel contract:
+fixed point returns `ConvergeResult`, while budget stop returns
+`ConvergeError::BudgetExhausted`. It also uses real Dijkstra frontier planning
+from `converge-optimization`.
+
+If you want a larger data-massaging example that still belongs in Converge,
+continue with `reconciliation-loop`. It takes two noisy ledgers, scores pair
+quality, and uses exact Hungarian assignment from `converge-optimization` to
+produce a one-to-one reconciliation plus explicit residue.
+
+If you want the formation story rather than a single pre-arranged loop, start
+with `intent-codec-loop`. It shows a loose Gherkin-ish DD spec compiled into a
+`FormationRequest` and `ProviderRequest`, then answered by
+`FormationAssemblySuggestor` and `ProviderSelectionSuggestor` inside one real
+engine run.
 
 ## Workspace Commands
 
