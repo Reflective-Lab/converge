@@ -48,6 +48,45 @@ Two parallel paths:
 
 The algorithm automatically routes as much flow as possible through the cheapest path before using the expensive one.
 
+## Why it matters for agents
+
+**Business decision:** How do we route resources through a constrained network. Any time supply must reach demand through intermediate nodes with limited throughput and varying costs, this is the algorithm.
+
+Typical decisions: logistics routing across depots and distribution centers, budget allocation across cost centers with transfer limits, workforce deployment across projects through a capacity graph.
+
+**Formation arc — weekly logistics routing**
+
+A supply chain formation models 3 depots (supply), 2 hubs (transshipment), and 4 delivery zones (demand). Each arc has a capacity (trucks/day) and a cost (fuel + driver time per unit). Total demand for the week is 120 units.
+
+```
+Seeds ← "flow-request:logistics-week42"
+  num_nodes: 9
+  source: 0     ← virtual supersource aggregating depots
+  sink: 8       ← virtual supersink aggregating delivery zones
+  demand: 120
+  edges:
+    (depot-A → hub-1, cap=40, cost=2)
+    (depot-A → hub-2, cap=30, cost=5)
+    (depot-B → hub-1, cap=50, cost=1)   ← cheapest lane
+    (hub-1 → zone-north, cap=35, cost=3)
+    ... (14 more edges)
+```
+
+`FlowOptimizationSuggestor` runs successive shortest paths and writes:
+
+```
+Strategies ← "flow-plan:logistics-week42"
+  total_flow: 120
+  total_cost: 483          ← optimal routing cost
+  edge_flows: [40, 20, 50, 10, ...]   ← flow on each arc
+  fulfillment: 1.0         ← confidence = 1.0, demand fully met
+  feasible: true
+```
+
+If `fulfillment < 1.0` (demand cannot be met due to capacity), a capacity suggestor reads the low confidence and proposes a new flow request with adjusted demands or additional arcs. The formation re-converges.
+
+**Why the math matters:** A human planner routing by instinct — fill the cheapest lane first, then the next — is exactly what successive shortest paths does, but the algorithm considers the global residual network at each step. It cannot accidentally saturate a hub that was needed by a cheaper downstream arc.
+
 ## Converge Validation
 
 ```

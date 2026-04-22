@@ -56,6 +56,45 @@ p([1,0]) + p([0,0]) = 0.8176 + 0.1824 = 1.0 (because z values are symmetric: +1.
 
 1 positive, 1 negative.
 
+## Why it matters for agents
+
+**Business decision:** Will this happen or not — and how confident are we. Logistic classification produces a probability, not just a label, which makes it more useful than a hard rule: the probability becomes the `confidence` of a ProposedFact, letting the engine and downstream suggestors reason about uncertainty rather than treating every prediction as equally reliable.
+
+Typical decisions: will this customer churn this month, will this loan default, will this applicant pass the screening, is this transaction fraudulent.
+
+**Formation arc — churn prediction → intervention routing**
+
+A customer success formation runs every night. For each at-risk account, it classifies churn probability using a pre-fitted logistic model, then routes high-probability accounts to an intervention suggestor.
+
+```
+Constraints ← "churn-model:enterprise-tier"
+  weights: [3.0, -2.0, 1.5]   ← login_freq, support_tickets, nps_score
+  bias: -1.5
+  threshold: 0.5
+
+Seeds ← "accounts:renewal-check-2026-04"
+  [("acme-corp",   x=[0, 3, 2]),   ← low logins, 3 tickets, low NPS
+   ("globex-inc",  x=[1, 0, 4]),   ← active, no tickets, high NPS
+   ("initech-llc", x=[0, 1, 2])]
+```
+
+A `ChurnClassifierSuggestor` runs and writes:
+
+```
+Signals ← "churn-risk:2026-04"
+  [("acme-corp",   p=0.83, class=positive),   ← high churn risk
+   ("globex-inc",  p=0.12, class=negative),
+   ("initech-llc", p=0.54, class=positive)]   ← borderline
+
+Proposals ← "intervention:acme-corp"
+  content: "schedule executive business review"
+  confidence: 0.83   ← probability becomes confidence
+```
+
+The borderline case (0.54) gets a lower-confidence proposal — a human-in-the-loop gate fires before committing the intervention, since the model isn't sure. High-confidence cases (0.83) auto-route. The formation converges with differentiated responses calibrated to actual risk level.
+
+**Why the math matters:** A hard threshold rule ("flag any account with > 2 support tickets") has no sense of degree. An account with 3 tickets and high NPS is very different from one with 3 tickets and low NPS. Logistic regression captures the interaction and produces a probability the whole formation can act on proportionally.
+
 ## Converge Validation
 
 ```

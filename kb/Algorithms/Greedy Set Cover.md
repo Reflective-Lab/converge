@@ -58,6 +58,38 @@ Selected: {S0, S2}. **Total cost = 3 + 2 = 5.**
 
 This happens to be the optimal solution. The greedy guarantee says cost <= H(5) x OPT = (1 + 1/2 + 1/3 + 1/4 + 1/5) x 5 = 2.283 x 5 = 11.4, so cost <= 11.
 
+## Why it matters for agents
+
+**Business decision:** What is the smallest set of resources (tools, products, teams, vendors) that covers all the requirements. This is a coverage problem, not a matching problem — one resource can cover many requirements, and you want to minimize the number (or cost) of resources selected.
+
+Typical decisions: which 3 SaaS tools replace the current 12-tool stack with full coverage, which 4 sales reps can collectively cover all 20 required industry verticals, which subset of suppliers can cover all required components.
+
+**Formation arc — tool consolidation**
+
+A technology rationalization formation is tasked with reducing the 10-tool martech stack. Each tool covers a subset of required marketing capabilities (email, segmentation, attribution, A/B testing, CDP, reporting). The goal is the minimum set of tools that retains full capability coverage.
+
+```
+Seeds ← "cover-request:martech-consolidation"
+  universe: {email, segmentation, attribution, ab-test, cdp, reporting}
+  sets:
+    ("HubSpot",    covers: {email, segmentation, cdp, reporting}, cost: 4)
+    ("Segment",    covers: {cdp, segmentation},                   cost: 2)
+    ("Amplitude",  covers: {attribution, ab-test, reporting},     cost: 3)
+    ("Braze",      covers: {email, segmentation, ab-test},        cost: 3)
+    ("Mixpanel",   covers: {attribution, reporting},              cost: 2)
+```
+
+A `SetCoverSuggestor` (planned) would run greedy cost-effectiveness selection:
+
+1. HubSpot: covers 4 capabilities at cost 1.0/each → select
+2. Remaining: {attribution, ab-test}. Amplitude covers both at cost 1.5/each → select
+
+Result: {HubSpot, Amplitude}, total cost 7. Full coverage with 2 tools instead of 5.
+
+The `confidence` is 1.0 if full coverage is achieved, lower if the greedy solution leaves gaps (which happens when the universe is infeasible — some capability has no covering set).
+
+**Why the math matters:** The greedy algorithm is the best polynomial approximation to an NP-hard problem, proven to be within ln(n) of optimal. For 6 capabilities that is 1.79× at worst — in practice, it usually finds the optimal or near-optimal solution.
+
 ## Converge Validation
 
 ```

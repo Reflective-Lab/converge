@@ -71,6 +71,37 @@ min = 2, max = 9, range = 9 - 2 = **7**
 | Max       |  9.0  |
 | Range     |  7.0  |
 
+## Why it matters for agents
+
+**Business decision:** What does this data actually look like before we act on it. Descriptive statistics is the grounding step — it turns a raw signal into a trustworthy baseline. Without it, agents apply thresholds and comparisons to numbers they haven't characterized, producing confident-sounding outputs on top of meaningless inputs.
+
+Typical decisions: is this dataset worth running a model on, what is the baseline KPI we are measuring deviation from, is this batch of sensor readings healthy or has the instrument drifted.
+
+**Formation arc — data profiling before anomaly detection**
+
+An analytics formation receives a new batch of weekly expense data. Before any anomaly detection or forecasting can be trusted, a profiling suggestor runs descriptive statistics and writes a baseline to Signals. The anomaly suggestor declares a dependency on the baseline.
+
+```
+Seeds ← "expense-batch:may-2026"
+  values: [4200, 4350, 4100, 4500, 4250, 4400, 4300, 4450, 4200, 4380]
+
+→ StatsSuggestor computes and writes:
+
+Signals ← "stats:expense-batch-may-2026"
+  mean:    4313.0
+  median:  4325.0
+  std_dev: 113.7
+  min:     4100
+  max:     4500
+  range:   400
+```
+
+The anomaly suggestor reads these baseline stats and uses them to parameterize Z-score detection for the next batch. When the next batch arrives with a value of 6800, the z-score is (6800 - 4313) / 113.7 = 21.9 — unambiguously anomalous.
+
+Without the baseline, the anomaly suggestor would have to compute statistics on-the-fly from every batch, unable to compare across time. The descriptive stats become a stable reference point that the formation anchors on.
+
+**Why the math matters:** Mean alone misses skew. Stddev alone hides the range. Median separates from mean when there are outliers. A formation that only stores the mean as its baseline will set wrong thresholds on skewed data — the full profile is necessary for any downstream reasoning to be calibrated.
+
 ## Converge Validation
 
 ```

@@ -57,6 +57,44 @@ The clusters are separated by distance ~14.1 (Euclidean), while within-cluster d
 | P4    |    B    |
 | P5    |    B    |
 
+## Why it matters for agents
+
+**Business decision:** What natural groups exist in this population. Clustering is the exploratory step that precedes targeted action — you cannot tailor a message, price, or service to "all customers" but you can do so meaningfully to "the three segments that naturally emerge from the data."
+
+Typical decisions: customer segmentation before personalized outreach, market segment discovery for product positioning, grouping support tickets by issue type for routing, clustering sales opportunities by deal size and industry.
+
+**Formation arc — customer segmentation → targeted strategy**
+
+A marketing formation receives customer data across two dimensions: average order value (AOV) and purchase frequency. It clusters customers into 3 segments, then a downstream suggestor assigns a different retention strategy to each segment.
+
+```
+Seeds ← "cluster-request:customers-q3"
+  k: 3
+  records:
+    [low-AOV, low-freq]   × 200   ← "occasional"
+    [high-AOV, low-freq]  × 80    ← "high-value rare"
+    [mid-AOV, high-freq]  × 120   ← "loyal regulars"
+```
+
+A `ClusteringSuggestor` runs K-means and writes:
+
+```
+Strategies ← "cluster-plan:customers-q3"
+  clusters:
+    0: centroid=(25, 1.2),  size=200   ← occasional
+    1: centroid=(180, 0.8), size=80    ← high-value rare
+    2: centroid=(65, 6.5),  size=120   ← loyal regulars
+```
+
+Three downstream strategy suggestors each read from Strategies, each checking for their respective segment:
+- Segment 0 → "win-back email series"
+- Segment 1 → "white-glove outreach from account team"
+- Segment 2 → "loyalty reward program"
+
+The formation converges when all three strategies are proposed and the assignment plan is complete.
+
+**Why the math matters:** Without clustering, any downstream suggestor has to apply one strategy to all 400 customers. Personalization at segment level consistently outperforms by 20–40% in marketing response rates. The algorithm makes the segments discoverable rather than requiring a human analyst to define them first.
+
 ## Converge Validation
 
 ```

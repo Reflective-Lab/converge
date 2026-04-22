@@ -75,6 +75,42 @@ Take all items except tin (68, 45) and beer (52, 10):
 
 Remaining capacity: 400-372 = 28. Neither tin (68) nor beer (52) fits.
 
+## Why it matters for agents
+
+**Business decision:** What do we fund. Any time a budget cap forces a binary choice — take this initiative or not, ship this feature or not, hire this person or not — and each option has a cost and an expected return, this is the algorithm.
+
+Typical decisions: Q3 project portfolio selection, sprint backlog prioritization under velocity cap, marketing campaign mix under budget constraint.
+
+**Formation arc — quarterly initiative selection**
+
+A strategy formation receives 12 candidate initiatives from an LLM ideation suggestor, each with an estimated effort (story points) and expected business value (0–100 score). The engineering capacity cap is 80 story points for the quarter.
+
+```
+Seeds ← "portfolio-request:q3-initiatives"
+  budget: 80
+  items:
+    ("API redesign",       weight: 20, value: 40)
+    ("Mobile app",         weight: 35, value: 55)
+    ("Data pipeline",      weight: 15, value: 30)
+    ("Customer portal",    weight: 25, value: 50)
+    ("Analytics dashboard",weight: 10, value: 25)
+    ... (7 more)
+```
+
+`PortfolioSuggestor` runs and writes:
+
+```
+Strategies ← "portfolio-selection:q3-initiatives"
+  selected: ["Mobile app", "Customer portal", "Data pipeline",
+             "Analytics dashboard"]
+  total_value: 160
+  total_weight: 85 → wait, 35+25+15+10 = 85 > 80
+```
+
+Actually the DP finds the tighter-fitting subset: it will try all 2¹² = 4096 combinations implicitly, finding the exact subset that fits within 80 while maximizing value. A downstream `WorkScheduleSuggestor` then schedules the selected items across the quarter. The formation converges when both selection and schedule are stable.
+
+**Why the math matters:** A product manager eyeballing the list typically picks high-value items first (greedy by value), often leaving expensive-but-valuable items out while cheaper-but-mediocre items slip in. DP guarantees the true optimum. For 12 items the difference in value is typically 10–20%. At company scale, that compounds.
+
 ## Converge Validation
 
 ```

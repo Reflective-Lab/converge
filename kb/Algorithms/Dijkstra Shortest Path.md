@@ -57,6 +57,34 @@ Edges: 0->1 (7), 0->2 (9), 1->3 (10), 2->1 (1), 2->3 (2).
 
 Note: The path 0->1->3 costs 17, but 0->2->3 costs only 11.
 
+## Why it matters for agents
+
+**Business decision:** What is the cheapest path from where we are to where we want to be — through a graph of options, dependencies, or service hops. Unlike flow (which routes volume) or assignment (which matches sets), Dijkstra answers a single-query path question.
+
+Typical decisions: routing a customer support escalation through a service tier graph, finding the fastest capability chain for a multi-step agent task, resolving the cheapest dependency path in a project plan.
+
+**Formation arc — FormationAssemblySuggestor**
+
+`FormationAssemblySuggestor` (the built-in formation self-assembly suggestor) builds a graph where nodes are available agent roles and edges represent "agent A can hand off to agent B at a certain transition cost" based on capability overlap scores. Dijkstra finds the cheapest end-to-end chain from the entry role to the resolution role.
+
+For a customer intake formation with 6 possible agent roles:
+
+```
+Graph:
+  intake(0) --(2)--> triage(1) --(5)--> specialist(3)
+  intake(0) --(9)--> generalist(2) --(1)--> triage(1)
+                                  --(2)--> specialist(3)
+```
+
+Dijkstra from `intake` finds:
+- intake → triage → specialist: cost 2 + 5 = **7**
+- intake → generalist → specialist: cost 9 + 2 = **11**
+- intake → generalist → triage → specialist: cost 9 + 1 + 5 = **15**
+
+The optimal chain costs 7. The formation assembles along that path and proposes the role assignments to Strategies. Agents not on the optimal path are not activated.
+
+**Why the math matters:** Without Dijkstra, a formation would have to evaluate all possible chains (exponential in the number of roles). With it, the cheapest formation assembles in O((V + E) log V) regardless of how many roles exist — the formation self-selects its own minimal structure.
+
 ## Converge Validation
 
 ```

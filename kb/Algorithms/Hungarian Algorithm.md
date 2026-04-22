@@ -81,6 +81,38 @@ Cover with: row 2 + column B + column C = 3 lines.
 
 Optimal assignment: (0->2, 1->1, 2->0, 3->3) = 69 + 37 + 11 + 23 = **140**
 
+## Why it matters for agents
+
+**Business decision:** Who does what. Any time you have a pool of agents (people, services, machines) and a pool of tasks, and assigning the wrong agent to the wrong task has a measurable cost, this is the algorithm.
+
+Typical decisions: sales rep to territory, consultant to engagement, warehouse worker to picking zone, supplier to contract lot.
+
+**Formation arc — sales territory assignment**
+
+A sales operations formation needs to assign 5 reps to 5 territories for Q3. The cost matrix comes from estimated drive time × (1 - skill match score) for each rep-territory pair — lower is better.
+
+```
+Seeds ← "assignment-request:q3-sales"
+  agents: ["alice", "bob", "carol", "dan", "eve"]
+  tasks:  ["north", "south", "east", "west", "central"]
+  costs:  [[12, 3, 8, 9, 5],   ← alice is cheapest in south
+            [4, 9, 2, 7, 8],   ← bob is cheapest in east
+            ...]
+```
+
+`AssignmentSuggestor` runs one cycle and writes:
+
+```
+Strategies ← "assignment-plan:q3-sales"
+  assignments: [("alice","south"), ("bob","east"), ...]
+  total_cost: 18
+  utilization: 1.0        ← confidence = 1.0, all reps matched
+```
+
+A downstream `WorkScheduleSuggestor` reads the plan and converts it to a schedule of onboarding calls. The formation converges in two cycles: first the assignment, then the schedule.
+
+**Why the math matters:** Greedy assignment (give each rep their cheapest territory one by one) produces a cost of 22 on typical inputs. Hungarian guarantees the global optimum of 18. The difference compounds across hundreds of assignments per year.
+
 ## Converge Validation
 
 ```
