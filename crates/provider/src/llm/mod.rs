@@ -40,6 +40,8 @@ mod openai;
 mod openrouter;
 mod resilient;
 mod selection;
+#[cfg(feature = "staik")]
+mod staik;
 
 #[cfg(feature = "anthropic")]
 pub use anthropic::AnthropicBackend;
@@ -62,3 +64,5 @@ pub use selection::{
 
 #[cfg(feature = "gemini")]
 pub use gemini::GeminiBackend;
+#[cfg(feature = "staik")]
+pub use staik::StaikBackend;

@@ -28,6 +28,11 @@ We use strongly typed languages that compile to native code. Rust for the system
 
 Converge exposes six public crates. See `kb/Architecture/API Surfaces.md` for the full contract.
 
+Mantra for public surfaces:
+- semantics in `converge-model`
+- authoring in `converge-pack`
+- runnable machinery in `converge-kernel`
+
 | Crate | Purpose |
 |---|---|
 | `converge-pack` | Author packs, suggestors, invariants |
@@ -60,9 +65,10 @@ just dev-up         # start local runtime
 just dev-down       # stop local runtime
 just test-smoke     # smoke-test local runtime
 just git-hygiene    # worktrees, branch state, latest release tag, cleanup candidates
-just git-status     # build health + recent commits
-just git-sync       # repo state + recent commits
-just wow-focus      # session opener — build + test health
+just status         # build health + recent commits
+just sync           # repo state + recent commits
+just focus          # session opener — repo + build health
+just size-audit     # converge-runtime / converge-kernel packaging baseline
 ```
 
 ## Rules
@@ -111,13 +117,13 @@ The codebase has known gaps between axioms and implementation. These are tracked
 
 ## Workflows
 
-Run `just wow-focus` at session start. See `kb/Workflow/Daily Journey.md` for the full cheat sheet.
+Run `just focus` at session start. See `kb/Workflow/Daily Journey.md` for the full cheat sheet.
 Branch, worktree, and release discipline live in `kb/Workflow/Git Strategy.md`.
 
 | Workflow | Purpose |
 |---|---|
-| `/focus` / `just wow-focus` | Session opener — orient yourself, see team activity |
-| `/sync` / `just git-sync` | Team sync — who did what, PRs waiting, unclaimed issues |
+| `/focus` / `just focus` | Session opener — orient yourself, see team activity |
+| `/sync` / `just sync` | Team sync — who did what, PRs waiting, unclaimed issues |
 | `/next` | Pick the next task from the current milestone |
 | `/dev` | Start local development environment |
 | `/check` | Code quality — lint, check, test |

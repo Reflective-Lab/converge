@@ -4,19 +4,23 @@ source: mixed
 ---
 # System Overview
 
-Converge is a correctness-first, context-driven, multi-suggestor runtime.
+Converge is a correctness-first, context-driven, multi-suggestor **library**.
+
+It has no runtime. It does not own sockets, message buses, process lifecycle, or deployment. Those belong to [[Lattice]] — the execution mesh. Converge runs inside agent processes that participate in the Lattice mesh.
 
 The kernel is pure. It owns the convergence loop, the promotion gate, runtime
 invariants, typed stop reasons, HITL pauses, and the run integrity proof. It
-does not own formation assembly, intent decomposition, outcome learning, or app
-orchestration.
+does not own formation assembly, intent decomposition, outcome learning, app
+orchestration, or transport.
 
-## System View
+For the full ecosystem picture see `~/dev/work/kb/Architecture/Ecosystem Overview.md`.
+
+## System View (Converge internals)
 
 ```text
 ┌──────────────────────────────────────────┐
 │ Consumer Layer                           │
-│ Organism, Helms, apps                    │
+│ Organism, Helms, apps (via kernel API)   │
 └──────────────────────────────────────────┘
 ┌──────────────────────────────────────────┐
 │ Converge Kernel                          │
@@ -25,12 +29,17 @@ orchestration.
 ┌──────────────────────────────────────────┐
 │ Suggestor Layer                          │
 │ Domain, policy, solver, analytics, LLM   │
+│ (in-process or remote via Lattice/NATS)  │
 └──────────────────────────────────────────┘
 ┌──────────────────────────────────────────┐
 │ Provider / Tool Layer                    │
 │ LLMs, storage, search, solvers, services │
 └──────────────────────────────────────────┘
 ```
+
+Suggestors that run out-of-process (e.g. Ferrox SAT) are reached through the
+`Suggestor` trait — Lattice owns the transport (NATS). Converge never imports
+Lattice.
 
 ## Workspace Layout
 

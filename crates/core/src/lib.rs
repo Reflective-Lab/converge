@@ -207,7 +207,6 @@ pub mod integrity;
 pub mod invariant;
 pub mod kernel_boundary;
 pub mod model_selection;
-pub mod profile;
 pub mod prompt;
 pub mod recall;
 pub mod root_intent;
@@ -225,7 +224,6 @@ pub use formation::{
     DeliberatedFormation, Formation, FormationDecision, FormationKind, FormationOutcome,
     OpenClawFormation, ScoredFormation, ScoringWeights, StaticFormation,
 };
-pub use profile::{ProfileSnapshot, SuggestorCapability, SuggestorProfile, SuggestorRole};
 
 /// Re-export the Context trait from converge-pack as its canonical name.
 pub use converge_pack::Context;

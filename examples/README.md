@@ -88,6 +88,13 @@ Converge into an application repo:
 - formation and provider matching answer those requests in the same loop
 - the selected members then emit role-specific outputs until fixed point
 
+`live-formation` shows the same contract from the other side:
+
+- the input is already structured
+- a seeder writes `FormationRequest` and `ProviderRequest` directly
+- the engine still uses the same grouped formation machinery
+- the loop self-assembles from catalog + backend pool without an intent compiler
+
 ## Three Things To Know Before You Build
 
 **Converge reasons; something else acts.**

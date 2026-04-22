@@ -12,45 +12,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use converge_optimization::graph::matching::bipartite_matching;
 use converge_pack::{AgentEffect, Context, ContextKey, ProposedFact, Suggestor};
-use converge_provider_api::{Backend, Capability};
-use serde::{Deserialize, Serialize};
-
-// ── Request ───────────────────────────────────────────────────────────────────
-
-/// A provider selection request seeded into context.
-///
-/// Place this as a JSON-serialised fact under [`ContextKey::Seeds`] with an id
-/// prefixed `"provider-request:"`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProviderRequest {
-    /// Stable identifier (used for idempotency).
-    pub id: String,
-    /// Capabilities that must each be covered by at least one backend.
-    /// Duplicates request multiple independent backends for the same capability.
-    pub required_capabilities: Vec<Capability>,
-}
-
-// ── Assignment (output) ───────────────────────────────────────────────────────
-
-/// The proposed provider assignment produced by the suggestor.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProviderAssignment {
-    /// The request this assignment answers.
-    pub request_id: String,
-    /// Matched (capability, backend name) pairs.
-    pub assignments: Vec<CapabilityAssignment>,
-    /// Capabilities that no registered backend could satisfy.
-    pub unmatched: Vec<Capability>,
-    /// `assignments.len() / required_capabilities.len()` — 1.0 is full coverage.
-    pub coverage_ratio: f64,
-}
-
-/// A single capability-to-backend assignment.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct CapabilityAssignment {
-    pub capability: Capability,
-    pub backend_name: String,
-}
+use converge_provider_api::{Backend, CapabilityAssignment, ProviderAssignment, ProviderRequest};
 
 // ── Suggestor ─────────────────────────────────────────────────────────────────
 

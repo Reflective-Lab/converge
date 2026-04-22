@@ -84,7 +84,14 @@
       "Bash(TRYBUILD=overwrite cargo test -p converge-core compile_fail_tests)",
       "Bash(TRYBUILD=overwrite cargo test -p converge-pack compile_fail_tests)",
       "Bash(gh release:*)",
-      "Bash(cargo fix:*)"
+      "Bash(cargo fix:*)",
+      "Skill(focus)",
+      "Bash(just test-full:*)",
+      "Bash(otool:*)",
+      "Bash(just fmt:*)",
+      "Bash(just example-cp:*)",
+      "Bash(just example-mip:*)",
+      "Bash(wait)"
     ]
   }
 }

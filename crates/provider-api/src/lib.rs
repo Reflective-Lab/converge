@@ -30,7 +30,7 @@ pub use chat::{
 };
 pub use error::{BackendError, BackendErrorKind};
 pub use selection::{
-    AgentRequirements, BackendRequirements, BackendSelector, ComplianceLevel, CostClass, CostTier,
-    DataSovereignty, Jurisdiction, LatencyClass, ModelSelectorTrait, RequiredCapabilities,
-    SelectionCriteria, TaskComplexity,
+    AgentRequirements, BackendRequirements, BackendSelector, CapabilityAssignment, ComplianceLevel,
+    CostClass, CostTier, DataSovereignty, Jurisdiction, LatencyClass, ModelSelectorTrait,
+    ProviderAssignment, ProviderRequest, RequiredCapabilities, SelectionCriteria, TaskComplexity,
 };

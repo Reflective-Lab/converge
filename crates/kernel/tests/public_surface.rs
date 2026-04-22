@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use converge_kernel::{
     BudgetResource, DecisionStep, ExperienceEvent, ExperienceEventEnvelope, ExperienceEventKind,
     StopReason,
+    formation::{Capability, FormationRequest, ProviderRequest, SuggestorRole},
 };
 
 #[test]
@@ -69,4 +70,20 @@ fn kernel_reexports_budget_resource_for_budget_events() {
         }
         other => panic!("unexpected event shape: {other:?}"),
     }
+}
+
+#[test]
+fn kernel_formation_module_exposes_grouped_surface() {
+    let formation = FormationRequest {
+        id: "req-1".to_string(),
+        required_roles: vec![SuggestorRole::Analysis, SuggestorRole::Planning],
+        required_capabilities: vec![],
+    };
+    let provider = ProviderRequest {
+        id: "provider-1".to_string(),
+        required_capabilities: vec![Capability::Reasoning],
+    };
+
+    assert_eq!(formation.required_roles.len(), 2);
+    assert_eq!(provider.required_capabilities, vec![Capability::Reasoning]);
 }

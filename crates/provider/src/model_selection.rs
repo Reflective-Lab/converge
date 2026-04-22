@@ -921,6 +921,26 @@ impl Default for ModelSelector {
                     .with_compliance(ComplianceLevel::GDPR)
                     .with_multilingual(true),
                 // Kong AI Gateway — proxies to upstream models via kong.example.com
+                // Staik — Swedish OpenAI-compatible provider (EU/SE hosted)
+                #[cfg(feature = "staik")]
+                ModelMetadata::new("staik", "gemma4:31b", CostClass::VeryLow, 1800, 0.88)
+                    .with_reasoning(true)
+                    .with_vision(true)
+                    .with_context_tokens(262_144)
+                    .with_data_sovereignty(DataSovereignty::EU)
+                    .with_compliance(ComplianceLevel::GDPR),
+                #[cfg(feature = "staik")]
+                ModelMetadata::new("staik", "qwen3.6:35b-a3b", CostClass::VeryLow, 2000, 0.89)
+                    .with_reasoning(true)
+                    .with_vision(true)
+                    .with_context_tokens(262_144)
+                    .with_data_sovereignty(DataSovereignty::EU)
+                    .with_compliance(ComplianceLevel::GDPR),
+                #[cfg(feature = "staik")]
+                ModelMetadata::new("staik", "qwen3.5:9b", CostClass::VeryLow, 1200, 0.82)
+                    .with_context_tokens(262_144)
+                    .with_data_sovereignty(DataSovereignty::EU)
+                    .with_compliance(ComplianceLevel::GDPR),
                 #[cfg(feature = "kong")]
                 ModelMetadata::new("kong", "gpt-4o", CostClass::Low, 2500, 0.92)
                     .with_reasoning(true)
@@ -999,6 +1019,8 @@ pub fn is_provider_available(provider: &str) -> bool {
         "kimi" => std::env::var("KIMI_API_KEY").is_ok(),
         #[cfg(feature = "apertus")]
         "apertus" => std::env::var("APERTUS_API_KEY").is_ok(),
+        #[cfg(feature = "staik")]
+        "staik" => std::env::var("STAIK_API_KEY").is_ok(),
         // Search providers
         #[cfg(feature = "brave")]
         "brave" => std::env::var("BRAVE_API_KEY").is_ok(),
@@ -1061,6 +1083,7 @@ impl ProviderRegistry {
             "zhipu",
             "kimi",
             "apertus",
+            "staik",
             // Search providers
             "brave",
         ];

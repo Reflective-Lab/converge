@@ -21,6 +21,14 @@ Depend on the smallest public contract that satisfies the job:
 
 `converge-core` is not the default downstream integration surface.
 
+## Mantra
+
+For public API placement, keep repeating the rule until it becomes muscle memory:
+
+- semantics in `converge-model`
+- authoring in `converge-pack`
+- runnable machinery in `converge-kernel`
+
 ## Public Contracts
 
 ### `converge-pack`
@@ -47,6 +55,7 @@ Status:
 
 Purpose:
 - backend identity, capability routing, chat contracts, and selection criteria
+- provider selection request / assignment payloads
 
 Key surface:
 - `Backend`
@@ -66,6 +75,7 @@ Status:
 
 Purpose:
 - curated semantic types shared across kernel consumers
+- formation semantics shared across embedders and upper layers
 
 Key surface:
 - semantic output types
@@ -79,6 +89,7 @@ Status:
 
 Purpose:
 - embed the engine in-process
+- expose grouped batteries-included formation machinery for embedders
 
 Key surface:
 - `Engine`
@@ -93,6 +104,32 @@ Key surface:
 
 Status:
 - canonical in-process embedding surface
+
+## Formation Pattern Across Public Crates
+
+Formation support is intentionally split across the canonical surfaces:
+
+- `converge-model`
+  - `FormationRequest`
+  - `FormationPlan`
+  - `ProfileSnapshot`
+  - `SuggestorRole`
+  - `SuggestorCapability`
+  - `SuggestorProfile`
+- `converge-provider-api`
+  - `ProviderRequest`
+  - `ProviderAssignment`
+  - `CapabilityAssignment`
+- `converge-kernel::formation`
+  - grouped re-exports of the semantic types above
+  - `FormationAssemblySuggestor`
+  - `ProviderSelectionSuggestor`
+
+That split is deliberate: structure lives in the semantic crates, but runnable
+machinery is easy to find from the embedding surface.
+
+The public split is enforced with consumer-style compile-pass tests in
+`converge-model`, `converge-provider-api`, and `converge-kernel`.
 
 ### `converge-protocol`
 

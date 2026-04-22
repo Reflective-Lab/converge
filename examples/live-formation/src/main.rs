@@ -26,18 +26,13 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use converge_core::{
-    CostClass, LatencyClass,
-    profile::{ProfileSnapshot, SuggestorCapability, SuggestorRole},
-};
 use converge_kernel::{
     AgentEffect, Budget, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
-};
-use converge_optimization::suggestors::formation::{
-    FormationAssemblySuggestor, FormationPlan, FormationRequest,
-};
-use converge_provider::selection_suggestor::{
-    ProviderAssignment, ProviderRequest, ProviderSelectionSuggestor,
+    formation::{
+        CostClass, FormationAssemblySuggestor, FormationPlan, FormationRequest, LatencyClass,
+        ProfileSnapshot, ProviderAssignment, ProviderRequest, ProviderSelectionSuggestor,
+        SuggestorCapability, SuggestorRole,
+    },
 };
 use converge_provider_api::{Backend, BackendKind, Capability};
 

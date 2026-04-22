@@ -3,8 +3,9 @@
 use converge_core::ContentHash;
 use converge_model::{
     CaptureContext, ConflictType, Criterion, FactId, Frame, FrameConstraint, FrameId, Hypothesis,
-    Observation, ObservationError, ObservationId, ObservationKind, PromotionError, ProposalId,
-    Tension, TensionId, TensionResolution, TensionSide, TypeError, TypesValidationError,
+    Observation, ObservationError, ObservationId, ObservationKind, ProfileSnapshot, PromotionError,
+    ProposalId, SuggestorCapability, SuggestorRole, Tension, TensionId, TensionResolution,
+    TensionSide, TypeError, TypesValidationError,
 };
 
 #[test]
@@ -118,4 +119,21 @@ fn validation_error_serde_via_model() {
     let json = serde_json::to_string(&err).unwrap();
     let round: TypesValidationError = serde_json::from_str(&json).unwrap();
     assert_eq!(err, round);
+}
+
+#[test]
+fn formation_semantics_accessible_via_model() {
+    let snapshot = ProfileSnapshot {
+        name: "analysis-a".to_string(),
+        role: SuggestorRole::Analysis,
+        output_keys: vec![converge_model::ContextKey::Hypotheses],
+        cost_hint: converge_provider_api::CostClass::Medium,
+        latency_hint: converge_provider_api::LatencyClass::Interactive,
+        capabilities: vec![SuggestorCapability::Analytics],
+        confidence_min: 0.4,
+        confidence_max: 0.9,
+    };
+
+    assert_eq!(snapshot.role, SuggestorRole::Analysis);
+    assert_eq!(snapshot.capabilities, vec![SuggestorCapability::Analytics]);
 }

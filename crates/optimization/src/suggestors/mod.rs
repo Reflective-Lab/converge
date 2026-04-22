@@ -9,7 +9,7 @@ pub mod work_schedule;
 
 pub use assignment::{AssignmentPlan, AssignmentRequest, AssignmentSuggestor};
 pub use flow_optimization::{FlowEdgeSpec, FlowOptimizationSuggestor, FlowPlan, FlowRequest};
-pub use formation::{FormationAssemblySuggestor, FormationPlan, FormationRequest, RoleAssignment};
+pub use formation::FormationAssemblySuggestor;
 pub use portfolio::{PortfolioItem, PortfolioRequest, PortfolioSelection, PortfolioSuggestor};
 pub use work_schedule::{
     SchedulePlan, ScheduleRequest, ScheduleTask, ScheduledTask, WorkScheduleSuggestor,

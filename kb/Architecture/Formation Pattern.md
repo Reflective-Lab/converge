@@ -4,8 +4,18 @@ source: mixed
 ---
 # Formation Pattern
 
-How upper layers (Organism, Helms, applications) assemble teams of
-heterogeneous agents and run them in Converge.
+How embedders and upper layers assemble heterogeneous teams and run them in
+Converge without depending on internal crates.
+
+## Public Surface Rule
+
+This is the formation mantra:
+
+- semantics in `converge-model`
+- authoring in `converge-pack`
+- runnable machinery in `converge-kernel`
+
+For embedders, the grouped offering API is `converge_kernel::formation`.
 
 ## What is a Formation?
 
@@ -20,19 +30,21 @@ good answer to this intent."
 ## Building a Formation
 
 ```rust
-use converge_kernel::{Budget, ContextKey, ContextState, Engine, ProposedFact};
-use converge_optimization::SolverSuggestor;
-use converge_policy::PolicyGateSuggestor;
-use organism_simulation::OutcomeSimulationAgent;
+use converge_kernel::{
+    formation::{FormationAssemblySuggestor, ProviderSelectionSuggestor},
+    Budget, ContextKey, ContextState, Engine, ProposedFact,
+};
 
 // 1. Create engine
 let mut engine = Engine::with_budget(Budget::new(20));
 
 // 2. Register heterogeneous agents
-engine.register_suggestor(SolverSuggestor::budget_allocation(constraints));
-engine.register_suggestor(PolicyGateSuggestor::new(policy));
-engine.register_suggestor(OutcomeSimulationAgent::default_config());
+engine.register_suggestor(optimizer);
+engine.register_suggestor(policy_gate);
+engine.register_suggestor(simulation_agent);
 engine.register_suggestor(my_llm_planner);
+engine.register_suggestor(FormationAssemblySuggestor::new(catalog));
+engine.register_suggestor(ProviderSelectionSuggestor::new(backends));
 
 // 3. Seed context
 let mut ctx = ContextState::new();
@@ -58,6 +70,23 @@ implements it can participate. A single formation can include:
 - Application-specific agents from `helms`
 
 They all converge together in one Engine run.
+
+## Structured vs Loose Intent
+
+The canonical formation contract begins at structured requests:
+
+- `FormationRequest`
+- `ProviderRequest`
+
+Two upstream patterns are valid:
+
+- structured intent
+  - a seeder writes the requests directly
+- loose intent
+  - an upstream suggestor compiles it into the requests
+
+The built-in formation machinery does not care which upstream path produced the
+requests. It starts at the structured handoff.
 
 ## Organism's Role
 

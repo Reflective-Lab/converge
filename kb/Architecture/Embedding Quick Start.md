@@ -27,6 +27,16 @@ use converge_kernel::{
 Use `converge-pack` directly when you are authoring reusable pack crates. Use
 `converge-kernel` when you are embedding and running the engine.
 
+## Public Surface Mantra
+
+Keep the public placement rule simple:
+
+- semantics in `converge-model`
+- authoring in `converge-pack`
+- runnable machinery in `converge-kernel`
+
+For formations, the grouped embedder entrypoint is `converge_kernel::formation`.
+
 ## Naming Map
 
 | Removed / stale name | Current API |
@@ -124,13 +134,55 @@ One loop can mix many kinds of suggestors:
 
 ```rust
 engine.register_suggestor(MySuggestor);
-engine.register_suggestor(converge_optimization::suggestor::SolverSuggestor::budget_allocation());
+engine.register_suggestor(optimizer);
 engine.register_suggestor(policy_gate);
 engine.register_suggestor(knowledge_retrieval);
 ```
 
 Policy, optimization, analytics, knowledge, and custom LLM agents all enter
 through `Suggestor`.
+
+## Self-Assembling Formations
+
+For embedders, the stable grouped API is:
+
+```rust
+use std::sync::Arc;
+
+use converge_kernel::{
+    formation::{
+        Capability, FormationAssemblySuggestor, FormationRequest, ProfileSnapshot,
+        ProviderRequest, ProviderSelectionSuggestor, SuggestorCapability, SuggestorRole,
+    },
+    ContextKey, Engine,
+};
+use converge_provider_api::Backend;
+```
+
+The structured contract begins at:
+
+- `FormationRequest`
+- `ProviderRequest`
+
+There are two valid upstream patterns:
+
+- structured input
+  - a seeder writes those requests directly
+- loose input
+  - an upstream suggestor compiles intent into those requests first
+
+Once the requests exist, the formation machinery is the same:
+
+```rust,ignore
+let mut engine = Engine::new();
+
+engine.register_suggestor(FormationAssemblySuggestor::new(catalog));
+engine.register_suggestor(ProviderSelectionSuggestor::new(backends));
+```
+
+`catalog` is a `Vec<ProfileSnapshot>`. Converge does not introspect registered
+suggestors automatically; embedders or upper layers build that catalog when
+they register profiled suggestors.
 
 ## Running the Engine
 

@@ -5,6 +5,7 @@ source: llm
 
 | Date | File | Change | Author |
 |------|------|--------|--------|
+| 2026-04-22 | Algorithms/Problem Taxonomy.md | Created analytics and ML problem taxonomy cheat-sheet | mixed |
 | 2026-04-15 | Integrations/Response Formats.md; Architecture/Known Drift.md | Clarified that provider contract now enforces output format but not exact schema shape | llm |
 | 2026-04-15 | Ecosystem.md; Home.md | Reframed the ecosystem around Helm, Axiom, Organism, Converge, and Providers | llm |
 | 2026-04-13 | Architecture/Crate Map.md | Added auth, consensus, ledger, nats, observability crates | llm |

@@ -12,7 +12,14 @@ categories = ["algorithms"]
 
 [dependencies]
 converge-core.workspace = true
+converge-model.workspace = true
 converge-pack.workspace = true
+converge-provider-api.workspace = true
+converge-provider.workspace = true
+converge-optimization.workspace = true
+
+[dev-dependencies]
+trybuild.workspace = true
 
 [lints]
 workspace = true

@@ -29,6 +29,7 @@ Knowledge base for the Converge platform — a correctness-first, context-driven
 - [[Concepts/Invariants]] — executable guarantees
 - [[Concepts/Root Intent]] — scoping a convergence run
 - [[Concepts/Backends and Capabilities]] — provider abstraction
+- [[Concepts/Formations]] — self-assembling teams and structured formation requests
 - [[Concepts/Domain Packs]] — pre-built suggestor collections
 - [[Concepts/HITL Gates]] — human-in-the-loop decisions
 - [[Concepts/Experience and Recall]] — learning from past runs
@@ -54,6 +55,7 @@ Knowledge base for the Converge platform — a correctness-first, context-driven
 - [[Architecture/Ports]] — trait definitions (the boundary)
 - [[Architecture/Providers]] — adapter implementations (the outside world)
 - [[Architecture/Transport Protocols]] — gRPC, SSE, REST, WebSocket
+- [[Architecture/Lean Packaging and Embedding]] — runtime shell variants and embedding baseline
 - [[Architecture/Crate Map]] — workspace layout and layering
 - [[Architecture/Engine Execution Model]] — the 8-phase cycle
 - [[Architecture/Dependency Rules]] — what imports what and why

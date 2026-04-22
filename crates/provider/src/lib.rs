@@ -125,6 +125,8 @@ pub use llm::MistralBackend;
 pub use llm::OpenAiBackend;
 #[cfg(feature = "openrouter")]
 pub use llm::OpenRouterBackend;
+#[cfg(feature = "staik")]
+pub use llm::StaikBackend;
 pub use llm::{
     ChatBackendSelectionConfig, ChatBackendSelectionConfigError, ResilientChatBackend,
     SelectedChatBackend, select_chat_backend, select_chat_backend_with_secret_provider,
@@ -155,9 +157,7 @@ pub use contract::{
 
 // Provider selection via bipartite matching
 pub mod selection_suggestor;
-pub use selection_suggestor::{
-    CapabilityAssignment, ProviderAssignment, ProviderRequest, ProviderSelectionSuggestor,
-};
+pub use selection_suggestor::ProviderSelectionSuggestor;
 
 // Re-exports: tool integration
 pub use tools::{

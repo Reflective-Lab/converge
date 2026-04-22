@@ -259,7 +259,7 @@ impl AnthropicBackend {
         };
 
         finalize_chat_response(
-            req.response_format,
+            &req,
             ChatResponse {
                 content: text_parts.join(""),
                 tool_calls,

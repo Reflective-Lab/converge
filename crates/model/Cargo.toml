@@ -13,6 +13,8 @@ categories = ["algorithms"]
 [dependencies]
 converge-core.workspace = true
 converge-pack.workspace = true
+converge-provider-api.workspace = true
+serde.workspace = true
 
 [dev-dependencies]
 converge-core.workspace = true

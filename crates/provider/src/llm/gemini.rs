@@ -251,7 +251,7 @@ impl GeminiBackend {
         });
 
         finalize_chat_response(
-            req.response_format,
+            &req,
             ChatResponse {
                 content,
                 tool_calls,

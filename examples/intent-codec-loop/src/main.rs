@@ -16,18 +16,16 @@
 
 use std::sync::Arc;
 
-use converge_core::{
-    CostClass, LatencyClass, ProfileSnapshot, SuggestorCapability, SuggestorProfile, SuggestorRole,
-};
 use converge_kernel::{
     AgentEffect, Budget, Context, ContextKey, ContextState, ConvergeResult, Engine, ProposedFact,
     Suggestor,
+    formation::{
+        Capability, CostClass, FormationAssemblySuggestor, FormationPlan, FormationRequest,
+        LatencyClass, ProfileSnapshot, ProviderAssignment, ProviderRequest,
+        ProviderSelectionSuggestor, SuggestorCapability, SuggestorProfile, SuggestorRole,
+    },
 };
-use converge_optimization::suggestors::{
-    FormationAssemblySuggestor, FormationPlan, FormationRequest,
-};
-use converge_provider::{ProviderAssignment, ProviderRequest, ProviderSelectionSuggestor};
-use converge_provider_api::{Backend, BackendKind, Capability};
+use converge_provider_api::{Backend, BackendKind};
 use serde::{Deserialize, Serialize};
 
 const SPEC_PREFIX: &str = "intent-spec:";

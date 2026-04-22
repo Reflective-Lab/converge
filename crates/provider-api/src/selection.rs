@@ -125,6 +125,36 @@ pub trait BackendSelector: Send + Sync {
     fn select(&self, requirements: &BackendRequirements) -> Result<String, BackendError>;
 }
 
+/// Structured request for provider selection inside a convergence loop.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProviderRequest {
+    /// Stable request identifier used for idempotency.
+    pub id: String,
+    /// Capabilities that must each be covered by at least one backend.
+    /// Duplicates request multiple independent backends for the same capability.
+    pub required_capabilities: Vec<Capability>,
+}
+
+/// Structured result of provider selection.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProviderAssignment {
+    /// The request this assignment answers.
+    pub request_id: String,
+    /// Matched capability-to-backend assignments.
+    pub assignments: Vec<CapabilityAssignment>,
+    /// Capabilities that no registered backend could satisfy.
+    pub unmatched: Vec<Capability>,
+    /// `assignments.len() / required_capabilities.len()` — 1.0 is full coverage.
+    pub coverage_ratio: f64,
+}
+
+/// A single capability-to-backend assignment.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CapabilityAssignment {
+    pub capability: Capability,
+    pub backend_name: String,
+}
+
 /// Data jurisdiction requirements.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub enum Jurisdiction {
@@ -974,5 +1004,34 @@ mod tests {
 
         let r = AgentRequirements::fast_cheap().with_min_quality(-1.0);
         assert!(r.min_quality.abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn provider_request_and_assignment_roundtrip() {
+        let request = ProviderRequest {
+            id: "req-1".to_string(),
+            required_capabilities: vec![Capability::Reasoning, Capability::Scheduling],
+        };
+        let assignment = ProviderAssignment {
+            request_id: request.id.clone(),
+            assignments: vec![CapabilityAssignment {
+                capability: Capability::Reasoning,
+                backend_name: "solver-a".to_string(),
+            }],
+            unmatched: vec![Capability::Scheduling],
+            coverage_ratio: 0.5,
+        };
+
+        let request_back: ProviderRequest =
+            serde_json::from_str(&serde_json::to_string(&request).unwrap()).unwrap();
+        let assignment_back: ProviderAssignment =
+            serde_json::from_str(&serde_json::to_string(&assignment).unwrap()).unwrap();
+
+        assert_eq!(
+            request_back.required_capabilities,
+            request.required_capabilities
+        );
+        assert_eq!(assignment_back.assignments, assignment.assignments);
+        assert_eq!(assignment_back.unmatched, assignment.unmatched);
     }
 }

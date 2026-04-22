@@ -1,7 +1,6 @@
 // Copyright 2024-2026 Reflective Labs
 // SPDX-License-Identifier: MIT
 
-use std::collections::HashMap;
 use std::time::Duration;
 
 use reqwest::Client;
@@ -20,33 +19,25 @@ use converge_provider_api::{
     ToolCall as ChatToolCall,
 };
 
-/// OpenRouter backend — routes to any model through `openrouter.ai/api`.
-///
-/// OpenRouter uses the OpenAI chat completions format. Model names follow
-/// the `provider/model` convention (e.g. `anthropic/claude-sonnet-4`).
-pub struct OpenRouterBackend {
+pub struct StaikBackend {
     api_key: SecretString,
     model: String,
     base_url: String,
     client: Client,
     temperature: f32,
     max_retries: usize,
-    site_url: String,
-    site_name: String,
 }
 
-impl OpenRouterBackend {
+impl StaikBackend {
     #[must_use]
     pub fn new(api_key: impl Into<String>) -> Self {
         Self {
             api_key: SecretString::new(api_key),
-            model: "anthropic/claude-sonnet-4".to_string(),
-            base_url: "https://openrouter.ai/api".to_string(),
+            model: "gemma4:31b".to_string(),
+            base_url: "https://api.staik.se".to_string(),
             client: Client::new(),
             temperature: 0.0,
             max_retries: 3,
-            site_url: String::new(),
-            site_name: String::new(),
         }
     }
 
@@ -57,49 +48,23 @@ impl OpenRouterBackend {
     pub fn from_secret_provider(secrets: &dyn SecretProvider) -> BackendResult<Self> {
         let api_key =
             secrets
-                .get_secret("OPENROUTER_API_KEY")
+                .get_secret("STAIK_API_KEY")
                 .map_err(|e| BackendError::Unavailable {
-                    message: format!("OPENROUTER_API_KEY: {e}"),
+                    message: format!("STAIK_API_KEY: {e}"),
                 })?;
-
-        let model = secrets
-            .get_secret("OPENROUTER_MODEL")
-            .map(|s| s.expose().to_string())
-            .unwrap_or_else(|_| "anthropic/claude-sonnet-4".to_string());
-        let base_url = secrets
-            .get_secret("OPENROUTER_BASE_URL")
-            .map(|s| s.expose().to_string())
-            .unwrap_or_else(|_| "https://openrouter.ai/api".to_string());
-        let site_url = secrets
-            .get_secret("OPENROUTER_SITE_URL")
-            .map(|s| s.expose().to_string())
-            .unwrap_or_default();
-        let site_name = secrets
-            .get_secret("OPENROUTER_SITE_NAME")
-            .map(|s| s.expose().to_string())
-            .unwrap_or_default();
-
         Ok(Self {
             api_key,
-            model,
-            base_url,
+            model: "gemma4:31b".to_string(),
+            base_url: "https://api.staik.se".to_string(),
             client: Client::new(),
             temperature: 0.0,
             max_retries: 3,
-            site_url,
-            site_name,
         })
     }
 
     #[must_use]
     pub fn with_model(mut self, model: impl Into<String>) -> Self {
         self.model = model.into();
-        self
-    }
-
-    #[must_use]
-    pub fn with_base_url(mut self, url: impl Into<String>) -> Self {
-        self.base_url = url.into();
         self
     }
 
@@ -115,18 +80,6 @@ impl OpenRouterBackend {
         self
     }
 
-    #[must_use]
-    pub fn with_site_url(mut self, url: impl Into<String>) -> Self {
-        self.site_url = url.into();
-        self
-    }
-
-    #[must_use]
-    pub fn with_site_name(mut self, name: impl Into<String>) -> Self {
-        self.site_name = name.into();
-        self
-    }
-
     fn build_headers(&self) -> BackendResult<HeaderMap> {
         let mut headers = HeaderMap::new();
         headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
@@ -137,31 +90,16 @@ impl OpenRouterBackend {
                 message: format!("Invalid API key: {e}"),
             })?,
         );
-
-        if !self.site_url.is_empty() {
-            if let Ok(val) = HeaderValue::from_str(&self.site_url) {
-                headers.insert("HTTP-Referer", val);
-            }
-        }
-        if !self.site_name.is_empty() {
-            if let Ok(val) = HeaderValue::from_str(&self.site_name) {
-                headers.insert("X-Title", val);
-            }
-        }
-
         Ok(headers)
     }
 
-    fn build_request(&self, req: &ChatRequest) -> OpenRouterRequest {
+    fn build_request(&self, req: &ChatRequest) -> StaikRequest {
         let model = req.model.clone().unwrap_or_else(|| self.model.clone());
         let temperature = req.temperature.unwrap_or(self.temperature);
         let max_tokens = req.max_tokens.map(|t| t as usize).unwrap_or(4096);
 
         let mut messages = Vec::new();
 
-        // Append format instruction to system prompt for all structured formats.
-        // JSON also gets native response_format, but OpenAI-compatible APIs require
-        // the word "json" in the messages when using json_object mode.
         let system_content = if let Some(instruction) = req.response_format.system_instruction() {
             let base = req.system.clone().unwrap_or_default();
             Some(format!("{base}\n\n{instruction}"))
@@ -170,7 +108,7 @@ impl OpenRouterBackend {
         };
 
         if let Some(system) = &system_content {
-            messages.push(OpenRouterMessage {
+            messages.push(StaikMessage {
                 role: "system".to_string(),
                 content: Some(system.clone()),
                 tool_calls: None,
@@ -191,11 +129,11 @@ impl OpenRouterBackend {
                 Some(
                     msg.tool_calls
                         .iter()
-                        .map(|tool_call| OpenRouterResponseToolCall {
-                            id: tool_call.id.clone(),
-                            function: OpenRouterResponseFunction {
-                                name: tool_call.name.clone(),
-                                arguments: tool_call.arguments.clone(),
+                        .map(|tc| StaikResponseToolCall {
+                            id: tc.id.clone(),
+                            function: StaikResponseFunction {
+                                name: tc.name.clone(),
+                                arguments: tc.arguments.clone(),
                             },
                         })
                         .collect(),
@@ -206,7 +144,7 @@ impl OpenRouterBackend {
             } else {
                 Some(msg.content.clone())
             };
-            messages.push(OpenRouterMessage {
+            messages.push(StaikMessage {
                 role: role.to_string(),
                 content,
                 tool_calls,
@@ -214,15 +152,15 @@ impl OpenRouterBackend {
             });
         }
 
-        let tools: Option<Vec<OpenRouterTool>> = if req.tools.is_empty() {
+        let tools: Option<Vec<StaikTool>> = if req.tools.is_empty() {
             None
         } else {
             Some(
                 req.tools
                     .iter()
-                    .map(|t| OpenRouterTool {
+                    .map(|t| StaikTool {
                         r#type: "function".to_string(),
-                        function: OpenRouterFunction {
+                        function: StaikFunction {
                             name: t.name.clone(),
                             description: Some(t.description.clone()),
                             parameters: Some(t.parameters.clone()),
@@ -232,8 +170,6 @@ impl OpenRouterBackend {
             )
         };
 
-        // Only JSON has native API-level enforcement; other structured formats
-        // are handled via the system prompt instruction above.
         let response_format = match req.response_format {
             ResponseFormat::Json => Some(serde_json::json!({"type": "json_object"})),
             _ => None,
@@ -245,7 +181,7 @@ impl OpenRouterBackend {
             Some(req.stop_sequences.clone())
         };
 
-        OpenRouterRequest {
+        StaikRequest {
             model,
             messages,
             temperature: Some(temperature),
@@ -257,9 +193,9 @@ impl OpenRouterBackend {
     }
 
     async fn chat_async(&self, req: ChatRequest) -> Result<ChatResponse, ChatLlmError> {
-        let openrouter_req = self.build_request(&req);
+        let staik_req = self.build_request(&req);
         let model = req.model.clone().unwrap_or_else(|| self.model.clone());
-        let response = self.execute_with_retries(&model, &openrouter_req).await?;
+        let response = self.execute_with_retries(&model, &staik_req).await?;
 
         let choice = response.choices.first();
 
@@ -289,8 +225,6 @@ impl OpenRouterBackend {
             _ => None,
         });
 
-        let metadata = extract_openrouter_metadata(&response);
-
         finalize_chat_response(
             &req,
             ChatResponse {
@@ -303,7 +237,7 @@ impl OpenRouterBackend {
                 }),
                 model: Some(response.model),
                 finish_reason,
-                metadata,
+                metadata: Default::default(),
             },
         )
     }
@@ -311,8 +245,8 @@ impl OpenRouterBackend {
     async fn execute_with_retries(
         &self,
         model: &str,
-        request: &OpenRouterRequest,
-    ) -> Result<OpenRouterResponse, ChatLlmError> {
+        request: &StaikRequest,
+    ) -> Result<StaikResponse, ChatLlmError> {
         let url = format!("{}/v1/chat/completions", self.base_url);
         let headers = self.build_headers().map_err(map_backend_error)?;
 
@@ -334,13 +268,10 @@ impl OpenRouterBackend {
             match result {
                 Ok(response) => {
                     let status = response.status();
-
                     if status.is_success() {
-                        match response.json::<OpenRouterResponse>().await {
+                        match response.json::<StaikResponse>().await {
                             Ok(parsed) => return Ok(parsed),
-                            Err(e) => {
-                                last_error = Some(parse_error(e));
-                            }
+                            Err(e) => last_error = Some(parse_error(e)),
                         }
                     } else if status.as_u16() == 429 || status.as_u16() >= 500 {
                         let body = response.text().await.unwrap_or_default();
@@ -350,9 +281,7 @@ impl OpenRouterBackend {
                         return Err(classify_http_error(status.as_u16(), &body, model));
                     }
                 }
-                Err(e) => {
-                    last_error = Some(network_error(e));
-                }
+                Err(e) => last_error = Some(network_error(e)),
             }
         }
 
@@ -363,37 +292,7 @@ impl OpenRouterBackend {
     }
 }
 
-fn extract_openrouter_metadata(response: &OpenRouterResponse) -> HashMap<String, String> {
-    let mut meta = HashMap::new();
-
-    if let Some(provider) = &response.provider {
-        meta.insert("provider".to_string(), provider.clone());
-    }
-
-    if let Some(usage) = &response.usage {
-        if let Some(cost) = usage.cost {
-            meta.insert("cost".to_string(), cost.to_string());
-        }
-        if let Some(byok) = usage.is_byok {
-            meta.insert("is_byok".to_string(), byok.to_string());
-        }
-        if let Some(details) = &usage.cost_details {
-            if let Some(v) = details.upstream_inference_cost {
-                meta.insert("cost.upstream".to_string(), v.to_string());
-            }
-            if let Some(v) = details.upstream_inference_prompt_cost {
-                meta.insert("cost.prompt".to_string(), v.to_string());
-            }
-            if let Some(v) = details.upstream_inference_completions_cost {
-                meta.insert("cost.completion".to_string(), v.to_string());
-            }
-        }
-    }
-
-    meta
-}
-
-impl ChatBackend for OpenRouterBackend {
+impl ChatBackend for StaikBackend {
     type ChatFut<'a>
         = BoxFuture<'a, Result<ChatResponse, ChatLlmError>>
     where
@@ -405,19 +304,19 @@ impl ChatBackend for OpenRouterBackend {
 }
 
 // ============================================================================
-// OpenRouter API Types (OpenAI-compatible)
+// Staik API Types (OpenAI-compatible)
 // ============================================================================
 
 #[derive(Debug, Serialize)]
-struct OpenRouterRequest {
+struct StaikRequest {
     model: String,
-    messages: Vec<OpenRouterMessage>,
+    messages: Vec<StaikMessage>,
     #[serde(skip_serializing_if = "Option::is_none")]
     temperature: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     max_tokens: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    tools: Option<Vec<OpenRouterTool>>,
+    tools: Option<Vec<StaikTool>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     response_format: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -425,24 +324,24 @@ struct OpenRouterRequest {
 }
 
 #[derive(Debug, Serialize)]
-struct OpenRouterMessage {
+struct StaikMessage {
     role: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     content: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    tool_calls: Option<Vec<OpenRouterResponseToolCall>>,
+    tool_calls: Option<Vec<StaikResponseToolCall>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     tool_call_id: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
-struct OpenRouterTool {
+struct StaikTool {
     r#type: String,
-    function: OpenRouterFunction,
+    function: StaikFunction,
 }
 
 #[derive(Debug, Serialize)]
-struct OpenRouterFunction {
+struct StaikFunction {
     name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     description: Option<String>,
@@ -451,59 +350,41 @@ struct OpenRouterFunction {
 }
 
 #[derive(Debug, Deserialize)]
-struct OpenRouterResponse {
+struct StaikResponse {
     model: String,
-    choices: Vec<OpenRouterChoice>,
-    usage: Option<OpenRouterUsage>,
-    #[serde(default)]
-    provider: Option<String>,
+    choices: Vec<StaikChoice>,
+    usage: Option<StaikUsage>,
 }
 
 #[derive(Debug, Deserialize)]
-struct OpenRouterChoice {
-    message: OpenRouterResponseMessage,
+struct StaikChoice {
+    message: StaikResponseMessage,
     finish_reason: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
-struct OpenRouterResponseMessage {
+struct StaikResponseMessage {
     content: Option<String>,
-    tool_calls: Option<Vec<OpenRouterResponseToolCall>>,
+    tool_calls: Option<Vec<StaikResponseToolCall>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct OpenRouterResponseToolCall {
+struct StaikResponseToolCall {
     id: String,
-    function: OpenRouterResponseFunction,
+    function: StaikResponseFunction,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct OpenRouterResponseFunction {
+struct StaikResponseFunction {
     name: String,
     arguments: String,
 }
 
 #[derive(Debug, Deserialize)]
-struct OpenRouterUsage {
+struct StaikUsage {
     prompt_tokens: u32,
     completion_tokens: u32,
     total_tokens: u32,
-    #[serde(default)]
-    cost: Option<f64>,
-    #[serde(default)]
-    is_byok: Option<bool>,
-    #[serde(default)]
-    cost_details: Option<OpenRouterCostDetails>,
-}
-
-#[derive(Debug, Deserialize)]
-struct OpenRouterCostDetails {
-    #[serde(default)]
-    upstream_inference_cost: Option<f64>,
-    #[serde(default)]
-    upstream_inference_prompt_cost: Option<f64>,
-    #[serde(default)]
-    upstream_inference_completions_cost: Option<f64>,
 }
 
 // ============================================================================
@@ -513,33 +394,24 @@ struct OpenRouterCostDetails {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use converge_core::traits::{
-        ChatMessage, ChatRequest, ChatRole, ResponseFormat, ToolDefinition,
-    };
-    use wiremock::matchers::{header, method, path};
+    use converge_core::traits::{ChatMessage, ChatRequest, ChatRole, ResponseFormat};
+    use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     #[test]
-    fn test_openrouter_backend_creation() {
-        let backend = OpenRouterBackend::new("test-key")
-            .with_model("openai/gpt-4o")
-            .with_temperature(0.5);
+    fn test_staik_backend_creation() {
+        let backend = StaikBackend::new("sk-st-test")
+            .with_model("qwen3.5:9b")
+            .with_temperature(0.7);
 
-        assert_eq!(backend.model, "openai/gpt-4o");
-        assert_eq!(backend.temperature, 0.5);
-        assert_eq!(backend.api_key.expose(), "test-key");
-        assert_eq!(backend.base_url, "https://openrouter.ai/api");
+        assert_eq!(backend.model, "qwen3.5:9b");
+        assert_eq!(backend.temperature, 0.7);
+        assert_eq!(backend.api_key.expose(), "sk-st-test");
     }
 
     #[test]
-    fn test_default_model_is_claude() {
-        let backend = OpenRouterBackend::new("test-key");
-        assert_eq!(backend.model, "anthropic/claude-sonnet-4");
-    }
-
-    #[test]
-    fn test_build_request_basic() {
-        let backend = OpenRouterBackend::new("test-key");
+    fn test_build_request_default_model() {
+        let backend = StaikBackend::new("sk-st-test");
         let req = ChatRequest {
             messages: vec![ChatMessage {
                 role: ChatRole::User,
@@ -556,73 +428,14 @@ mod tests {
             model: None,
         };
 
-        let openrouter_req = backend.build_request(&req);
-
-        assert_eq!(openrouter_req.model, "anthropic/claude-sonnet-4");
-        assert_eq!(openrouter_req.messages.len(), 1);
-        assert_eq!(openrouter_req.messages[0].role, "user");
-        assert!(openrouter_req.tools.is_none());
+        let staik_req = backend.build_request(&req);
+        assert_eq!(staik_req.model, "gemma4:31b");
+        assert_eq!(staik_req.messages.len(), 1);
+        assert_eq!(staik_req.messages[0].role, "user");
     }
 
     #[test]
-    fn test_build_request_with_tools() {
-        let backend = OpenRouterBackend::new("test-key");
-        let req = ChatRequest {
-            messages: vec![ChatMessage {
-                role: ChatRole::User,
-                content: "What's the weather?".to_string(),
-                tool_calls: Vec::new(),
-                tool_call_id: None,
-            }],
-            system: None,
-            tools: vec![ToolDefinition {
-                name: "get_weather".to_string(),
-                description: "Get current weather".to_string(),
-                parameters: serde_json::json!({"type": "object", "properties": {"city": {"type": "string"}}}),
-            }],
-            response_format: ResponseFormat::default(),
-            max_tokens: None,
-            temperature: None,
-            stop_sequences: Vec::new(),
-            model: None,
-        };
-
-        let openrouter_req = backend.build_request(&req);
-        let tools = openrouter_req.tools.unwrap();
-
-        assert_eq!(tools.len(), 1);
-        assert_eq!(tools[0].function.name, "get_weather");
-    }
-
-    #[test]
-    fn test_site_headers_set() {
-        let backend = OpenRouterBackend::new("test-key")
-            .with_site_url("https://converge.zone")
-            .with_site_name("Converge Hackathon");
-
-        let headers = backend.build_headers().unwrap();
-
-        assert_eq!(
-            headers.get("HTTP-Referer").unwrap().to_str().unwrap(),
-            "https://converge.zone"
-        );
-        assert_eq!(
-            headers.get("X-Title").unwrap().to_str().unwrap(),
-            "Converge Hackathon"
-        );
-    }
-
-    #[test]
-    fn test_site_headers_omitted_when_empty() {
-        let backend = OpenRouterBackend::new("test-key");
-        let headers = backend.build_headers().unwrap();
-
-        assert!(headers.get("HTTP-Referer").is_none());
-        assert!(headers.get("X-Title").is_none());
-    }
-
-    #[test]
-    fn test_chat_with_mock_server() {
+    fn test_chat_happy_path() {
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
@@ -632,75 +445,46 @@ mod tests {
         runtime.block_on(async {
             Mock::given(method("POST"))
                 .and(path("/v1/chat/completions"))
-                .and(header("HTTP-Referer", "https://converge.zone"))
-                .and(header("X-Title", "Converge"))
                 .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
-                    "id": "gen-test",
-                    "model": "anthropic/claude-sonnet-4",
-                    "provider": "Anthropic",
+                    "model": "gemma4:31b",
                     "choices": [{
-                        "message": {
-                            "content": "Hello from OpenRouter!",
-                            "tool_calls": null
-                        },
+                        "message": {"content": "Hej!", "tool_calls": null},
                         "finish_reason": "stop"
                     }],
                     "usage": {
-                        "prompt_tokens": 10,
-                        "completion_tokens": 5,
-                        "total_tokens": 15,
-                        "cost": 0.000075,
-                        "is_byok": false,
-                        "cost_details": {
-                            "upstream_inference_cost": 0.000075,
-                            "upstream_inference_prompt_cost": 0.00003,
-                            "upstream_inference_completions_cost": 0.000045
-                        }
+                        "prompt_tokens": 5,
+                        "completion_tokens": 2,
+                        "total_tokens": 7
                     }
                 })))
                 .mount(&server)
                 .await;
         });
 
-        let backend = OpenRouterBackend::new("test-key")
-            .with_base_url(server.uri())
-            .with_site_url("https://converge.zone")
-            .with_site_name("Converge");
+        let backend = StaikBackend::new("sk-st-test").with_model("gemma4:31b");
+        // Override base_url for test
+        let mut backend = backend;
+        backend.base_url = server.uri();
 
         let response = runtime
             .block_on(backend.chat(ChatRequest {
                 messages: vec![ChatMessage {
                     role: ChatRole::User,
-                    content: "Hello".to_string(),
+                    content: "Hej!".to_string(),
                     tool_calls: Vec::new(),
                     tool_call_id: None,
                 }],
                 system: None,
                 tools: Vec::new(),
-                response_format: ResponseFormat::default(),
-                max_tokens: None,
-                temperature: None,
+                response_format: ResponseFormat::Text,
+                max_tokens: Some(16),
+                temperature: Some(0.0),
                 stop_sequences: Vec::new(),
                 model: None,
             }))
             .unwrap();
 
-        assert_eq!(response.content, "Hello from OpenRouter!");
+        assert_eq!(response.content, "Hej!");
         assert_eq!(response.finish_reason, Some(ChatFinishReason::Stop));
-        assert_eq!(response.usage.as_ref().unwrap().total_tokens, 15);
-
-        // Verify cost/provider metadata was captured from response body
-        assert_eq!(response.metadata.get("provider").unwrap(), "Anthropic");
-        assert_eq!(response.metadata.get("cost").unwrap(), "0.000075");
-        assert_eq!(response.metadata.get("is_byok").unwrap(), "false");
-        assert_eq!(response.metadata.get("cost.upstream").unwrap(), "0.000075");
-        assert_eq!(response.metadata.get("cost.prompt").unwrap(), "0.00003");
-        assert_eq!(
-            response.metadata.get("cost.completion").unwrap(),
-            "0.000045"
-        );
-
-        drop(server);
-        drop(runtime);
     }
 }

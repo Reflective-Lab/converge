@@ -6,6 +6,8 @@
 //! This crate is the curated semantic model surface for Converge.
 //! It intentionally excludes the execution engine and runtime adapters.
 
+pub mod formation;
+
 pub use converge_core::{
     Actor, ActorKind, ApprovalId, ApprovalPointId, ArtifactId, BackendId, CaptureContext, ChainId,
     ChosenSide, ConflictType, ConstraintKind, ConstraintName, ConstraintValue, Criterion,
@@ -20,3 +22,7 @@ pub use converge_core::{
     Validated, ValidationSummary,
 };
 pub use converge_pack::{ContextKey, ProposedFact, ValidationError};
+pub use formation::{
+    FormationPlan, FormationRequest, ProfileSnapshot, RoleAssignment, SuggestorCapability,
+    SuggestorProfile, SuggestorRole,
+};

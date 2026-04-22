@@ -115,6 +115,27 @@ Every loop participant is a `Suggestor`. There are no side-car pipeline traits f
 
 The mixed formation example shows this explicitly: one engine run combining an intent seeder, an optimization solver, a policy gate, and an LLM-style evaluator. See [examples/formation-mixed](examples/formation-mixed/).
 
+## Formation Offering API
+
+The stable formation pattern follows one rule:
+
+- semantics in `converge-model`
+- authoring in `converge-pack`
+- runnable machinery in `converge-kernel`
+
+For embedders, the grouped entrypoint is `converge_kernel::formation`:
+
+- semantic formation types such as `FormationRequest`, `FormationPlan`, `ProfileSnapshot`, `SuggestorRole`, and `SuggestorCapability`
+- provider selection payloads such as `ProviderRequest` and `ProviderAssignment`
+- built-in machinery such as `FormationAssemblySuggestor` and `ProviderSelectionSuggestor`
+
+The canonical structured boundary begins at `FormationRequest` and `ProviderRequest`.
+
+- If intent already arrives structured, a seeder can write those requests directly.
+- If intent is loose, an upstream suggestor such as an intent codec should compile it into those requests first.
+
+Both patterns are valid. The formation contract starts at the structured requests, not at the upstream compiler.
+
 ## Canonical Public Crates
 
 Six crates define the supported external API. Semver promises apply to these surfaces.
@@ -122,9 +143,9 @@ Six crates define the supported external API. Semver promises apply to these sur
 | Crate | Purpose |
 |---|---|
 | [`converge-pack`](crates/pack) | Author packs, suggestors, invariants |
-| [`converge-provider-api`](crates/provider-api) | Backend identity and capability routing |
-| [`converge-model`](crates/model) | Curated semantic types |
-| [`converge-kernel`](crates/kernel) | In-process embedding API |
+| [`converge-provider-api`](crates/provider-api) | Backend identity, capability routing, and provider selection payloads |
+| [`converge-model`](crates/model) | Curated semantic types, including formation semantics |
+| [`converge-kernel`](crates/kernel) | In-process embedding API and grouped formation machinery |
 | [`converge-protocol`](crates/protocol) | Generated `converge.v1` wire types |
 | [`converge-client`](crates/client) | Remote Rust SDK |
 
@@ -161,6 +182,7 @@ The workspace currently ships these example crates:
 - `loan-application`
 - `formation-mixed`
 - `intent-codec-loop`
+- `live-formation`
 - `adaptive-gap-loop`
 - `fixed-point-vs-budget`
 - `reconciliation-loop`
@@ -174,6 +196,7 @@ just example fixed-point-vs-budget
 just example reconciliation-loop
 just example formation-mixed
 just example intent-codec-loop
+just example live-formation
 ```
 
 `cargo build --workspace` compiles the examples as part of the workspace build.
@@ -199,6 +222,11 @@ with `intent-codec-loop`. It shows a loose Gherkin-ish DD spec compiled into a
 `FormationAssemblySuggestor` and `ProviderSelectionSuggestor` inside one real
 engine run.
 
+If you want the fully self-assembling story, continue with `live-formation`.
+It uses the same contract, but starts from direct structured requests instead
+of an intent codec and lets the engine assemble a five-member loop from a
+catalog plus backend pool.
+
 ## Workspace Commands
 
 ```bash
@@ -213,10 +241,11 @@ just sec-gate          # security regression gate (policy + runtime + compile-fa
 just sec-deny          # dependency audit via cargo-deny
 just lint              # cargo fmt --check && cargo clippy --all-targets -- -D warnings
 just doc               # cargo doc --no-deps --workspace
-just wow-focus         # workspace build + lib-test health
-just git-sync          # status + recent commits
-just git-status        # recent test tail + commit summary
+just focus             # session opener — repo state + workspace health
+just sync              # status + recent commits
+just status            # recent test tail + commit summary
 just git-hygiene       # worktrees, branches, release tag, cleanup candidates
+just size-audit        # converge-runtime / converge-kernel packaging baseline
 ```
 
 ## Workspace Layout
@@ -247,6 +276,7 @@ The knowledge base in `kb/` is the canonical project documentation.
 
 - [API Surfaces](kb/Architecture/API%20Surfaces.md)
 - [Embedding Quick Start](kb/Architecture/Embedding%20Quick%20Start.md)
+- [Formation Pattern](kb/Architecture/Formation%20Pattern.md)
 - [Suggestor Contract](kb/Architecture/Suggestor%20Contract.md)
 - [Crate Catalog](kb/Building/Crate%20Catalog.md)
 - [Examples Guide](examples/README.md)

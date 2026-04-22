@@ -251,7 +251,7 @@ impl KongBackend {
         let metadata = extract_gateway_headers(&resp_headers);
 
         finalize_chat_response(
-            req.response_format,
+            &req,
             ChatResponse {
                 content,
                 tool_calls,

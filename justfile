@@ -283,13 +283,13 @@ git-hygiene:
     fi
 
 # Build health and recent commits
-git-status:
+status:
     @cargo test --workspace -- --quiet 2>&1 | tail -5
     @echo "---"
     @git log --oneline -5
 
 # Repo state and recent commits
-git-sync:
+sync:
     @git status --short
     @echo "---"
     @git log --oneline -5
@@ -303,10 +303,61 @@ clean:
 # ── Workflow ──────────────────────────────────────────────────────────
 
 # Session opener — build + test health
-wow-focus:
+focus:
+    @just sync
+    @echo "---"
     @cargo build --workspace
     @cargo test --workspace --lib -- --quiet
     @echo "✓ workspace healthy"
+
+# Legacy aliases retained while docs and habits converge on focus/sync/status
+wow-focus: focus
+git-sync: sync
+git-status: status
+
+# Audit release artifact sizes for the lean-packaging milestone
+size-audit:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    target_dir="${CARGO_TARGET_DIR:-/tmp/converge-size-audit}"
+    runtime_bin="${target_dir}/release/converge-runtime"
+
+    mib() {
+        awk -v size="$1" 'BEGIN { printf "%.2f", size / (1024 * 1024) }'
+    }
+
+    runtime_size() {
+        local label="$1"
+        shift
+        cargo build -p converge-runtime --release --target-dir "${target_dir}" "$@" >/dev/null
+        local size
+        size="$(wc -c < "${runtime_bin}")"
+        printf "%-10s %12s bytes  %7s MiB\n" "${label}" "${size}" "$(mib "${size}")"
+    }
+
+    echo "──────────────────────────────────────────────"
+    echo "Lean Packaging Audit"
+    echo "──────────────────────────────────────────────"
+    echo "target dir: ${target_dir}"
+    echo
+    echo "converge-runtime"
+    echo "────────────────"
+    runtime_size "minimal" --no-default-features
+    runtime_size "standard"
+    runtime_size "full" --all-features
+
+    echo
+    echo "converge-kernel"
+    echo "───────────────"
+    cargo build -p converge-kernel --release --lib --target-dir "${target_dir}" >/dev/null
+    kernel_rlib="$(find "${target_dir}/release/deps" -name 'libconverge_kernel-*.rlib' | sort | tail -n1)"
+    if [ -z "${kernel_rlib}" ]; then
+        echo "kernel artifact not found"
+        exit 1
+    fi
+    kernel_size="$(wc -c < "${kernel_rlib}")"
+    printf "%-10s %12s bytes  %7s MiB\n" "release" "${kernel_size}" "$(mib "${kernel_size}")"
 
 # ── Info ───────────────────────────────────────────────────────────────
 

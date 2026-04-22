@@ -17,6 +17,8 @@ use crate::llm::MistralBackend;
 use crate::llm::OpenAiBackend;
 #[cfg(feature = "openrouter")]
 use crate::llm::OpenRouterBackend;
+#[cfg(feature = "staik")]
+use crate::llm::StaikBackend;
 use crate::model_selection::{ProviderRegistry, SelectionResult};
 use crate::secret::{EnvSecretProvider, SecretProvider};
 use converge_provider_api::selection::{
@@ -172,7 +174,7 @@ pub fn select_chat_backend_with_secret_provider(
     let registry = if let Some(provider) = config.provider_override.as_deref() {
         let provider = normalize_provider_name(provider).ok_or_else(|| LlmError::InvalidRequest {
             message: format!(
-                "Unsupported CONVERGE_LLM_FORCE_PROVIDER={provider}. Expected one of: anthropic, openai, gemini, mistral, openrouter, kong."
+                "Unsupported CONVERGE_LLM_FORCE_PROVIDER={provider}. Expected one of: anthropic, openai, gemini, mistral, openrouter, kong, staik."
             ),
         })?;
 
@@ -214,7 +216,7 @@ pub async fn select_healthy_chat_backend_with_secret_provider(
     let registry = if let Some(provider) = config.provider_override.as_deref() {
         let provider = normalize_provider_name(provider).ok_or_else(|| LlmError::InvalidRequest {
             message: format!(
-                "Unsupported CONVERGE_LLM_FORCE_PROVIDER={provider}. Expected one of: anthropic, openai, gemini, mistral, openrouter, kong."
+                "Unsupported CONVERGE_LLM_FORCE_PROVIDER={provider}. Expected one of: anthropic, openai, gemini, mistral, openrouter, kong, staik."
             ),
         })?;
         if !is_chat_provider_available(provider, secrets) {
@@ -311,6 +313,7 @@ fn chat_provider_registry(secrets: &dyn SecretProvider) -> ProviderRegistry {
         "mistral",
         "openrouter",
         "kong",
+        "staik",
     ]
     .into_iter()
     .filter(|provider| is_chat_provider_available(provider, secrets))
@@ -368,6 +371,13 @@ fn instantiate_selected_backend(
                 .with_model(model);
             Ok(Arc::new(backend))
         }
+        #[cfg(feature = "staik")]
+        "staik" => {
+            let backend = StaikBackend::from_secret_provider(secrets)
+                .map_err(backend_error)?
+                .with_model(model);
+            Ok(Arc::new(backend))
+        }
         _ => Err(LlmError::ProviderError {
             message: format!("Selected provider {provider} does not have a chat backend"),
             code: None,
@@ -398,6 +408,8 @@ fn is_chat_provider_available(provider: &str, secrets: &dyn SecretProvider) -> b
         "kong" => {
             secrets.has_secret("KONG_API_KEY") && std::env::var("KONG_AI_GATEWAY_URL").is_ok()
         }
+        #[cfg(feature = "staik")]
+        "staik" => secrets.has_secret("STAIK_API_KEY"),
         _ => false,
     }
 }
@@ -410,6 +422,7 @@ fn normalize_provider_name(value: &str) -> Option<&'static str> {
         "mistral" | "mixtral" => Some("mistral"),
         "openrouter" | "router" => Some("openrouter"),
         "kong" | "kong_gateway" | "kong_ai" => Some("kong"),
+        "staik" => Some("staik"),
         _ => None,
     }
 }

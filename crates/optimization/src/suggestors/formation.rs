@@ -8,49 +8,10 @@
 //! [`FormationPlan`] to [`ContextKey::Strategies`].
 
 use async_trait::async_trait;
-use converge_core::profile::{ProfileSnapshot, SuggestorCapability, SuggestorRole};
+use converge_model::formation::{FormationPlan, FormationRequest, ProfileSnapshot, RoleAssignment};
 use converge_pack::{AgentEffect, Context, ContextKey, ProposedFact, Suggestor};
-use serde::{Deserialize, Serialize};
 
 use crate::graph::matching::bipartite_matching;
-
-// ── Request ───────────────────────────────────────────────────────────────────
-
-/// A formation request seeded into context.
-///
-/// Place this as a JSON-serialised fact under [`ContextKey::Seeds`] with an id
-/// prefixed `"formation-request:"`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FormationRequest {
-    /// Stable identifier for this request (used to detect idempotency).
-    pub id: String,
-    /// Roles that must be covered.  Duplicates request multiple instances.
-    pub required_roles: Vec<SuggestorRole>,
-    /// Additional capability constraints applied after role matching.
-    pub required_capabilities: Vec<SuggestorCapability>,
-}
-
-// ── Plan (output) ─────────────────────────────────────────────────────────────
-
-/// The proposed formation plan produced by the suggestor.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FormationPlan {
-    /// The request this plan answers.
-    pub request_id: String,
-    /// Matched (role, suggestor name) pairs.
-    pub assignments: Vec<RoleAssignment>,
-    /// Roles that could not be filled from the catalog.
-    pub unmatched_roles: Vec<SuggestorRole>,
-    /// `assignments.len() / required_roles.len()` — 1.0 is full coverage.
-    pub coverage_ratio: f64,
-}
-
-/// A single role-to-suggestor assignment.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct RoleAssignment {
-    pub role: SuggestorRole,
-    pub suggestor: String,
-}
 
 // ── Suggestor ─────────────────────────────────────────────────────────────────
 
@@ -265,9 +226,9 @@ impl Default for crate::graph::matching::Matching {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use converge_core::profile::SuggestorCapability;
-    use converge_core::{ContextState, CostClass, Engine, LatencyClass};
+    use converge_core::{ContextState, Engine};
     use converge_pack::ContextKey;
+    use converge_provider_api::{CostClass, LatencyClass};
 
     fn snapshot(name: &str, role: SuggestorRole, caps: &[SuggestorCapability]) -> ProfileSnapshot {
         ProfileSnapshot {
