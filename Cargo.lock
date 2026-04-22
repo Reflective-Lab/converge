@@ -2528,7 +2528,6 @@ dependencies = [
  "async-trait",
  "bitvec",
  "converge-core",
- "converge-kernel",
  "converge-model",
  "converge-pack",
  "converge-provider-api",

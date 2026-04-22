@@ -1,6 +1,6 @@
 //! Integration tests: each new optimization pack as a Suggestor in the convergence loop.
 
-use converge_kernel::{Budget, ContextKey, ContextState, ConvergeResult, Engine};
+use converge_core::{Budget, ContextKey, ContextState, ConvergeResult, Engine};
 use converge_optimization::packs::constraint_programming::ConstraintProgrammingPack;
 use converge_optimization::packs::graph_partitioning::GraphPartitioningPack;
 use converge_optimization::packs::job_shop_scheduling::JobShopSchedulingPack;
