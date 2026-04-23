@@ -1,9 +1,10 @@
 //! Benchmarks for assignment algorithms
 
 use converge_optimization::assignment::{AssignmentProblem, auction, hungarian};
-use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
+use std::hint::black_box;
 
 fn random_costs(n: usize, seed: u64) -> Vec<Vec<i64>> {
     let mut rng = StdRng::seed_from_u64(seed);

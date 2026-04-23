@@ -1,11 +1,5 @@
-error[E0599]: no function or associated item named `new` found for struct `Fact` in the current scope
+error[E0599]: no function or associated item named `construct` found for struct `Fact` in the current scope
  --> tests/compile_fail/fact_new_without_feature.rs:8:23
   |
-8 |     let _fact = Fact::new(ContextKey::Seeds, "test-id", "test-content");
-  |                       ^^^ function or associated item not found in `Fact`
-  |
-help: there is a method `ne` with a similar name, but with different arguments
- --> $RUST/core/src/cmp.rs
-  |
-  |     fn ne(&self, other: &Rhs) -> bool {
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+8 |     let _fact = Fact::construct(ContextKey::Seeds, "test-id", "test-content");
+  |                       ^^^^^^^^^ function or associated item not found in `Fact`

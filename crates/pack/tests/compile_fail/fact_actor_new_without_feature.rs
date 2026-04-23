@@ -4,5 +4,5 @@
 use converge_pack::{FactActor, FactActorKind};
 
 fn main() {
-    let _ = FactActor::new("converge-engine", FactActorKind::System);
+    let _ = FactActor::construct("converge-engine", FactActorKind::System);
 }

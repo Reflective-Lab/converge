@@ -1,12 +1,10 @@
-// Contract: AgentEffect.proposals is Vec<ProposedFact>.
-// Even though the field is pub, you cannot push a Fact into it —
-// Fact and ProposedFact are distinct types with no conversion between them.
+// Contract: Fact and ProposedFact are distinct types with no implicit conversion.
+// You cannot assign a Fact where a ProposedFact is expected.
 
-use converge_pack::{AgentEffect, Fact};
+use converge_pack::{Fact, ProposedFact};
 
-fn main() {
-    let mut effect = AgentEffect::empty();
-    let fact: Fact = todo!();
-    // Fact ≠ ProposedFact — this must fail.
-    effect.proposals.push(fact);
+fn check(fact: Fact) {
+    let _: ProposedFact = fact;
 }
+
+fn main() {}

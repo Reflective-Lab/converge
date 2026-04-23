@@ -5,5 +5,5 @@
 use converge_pack::{ContextKey, Fact};
 
 fn main() {
-    let _fact = Fact::new(ContextKey::Seeds, "test-id", "test-content");
+    let _fact = Fact::construct(ContextKey::Seeds, "test-id", "test-content");
 }
