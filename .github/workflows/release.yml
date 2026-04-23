@@ -25,4 +25,14 @@ jobs:
       - name: Check workspace
         run: cargo check --workspace
       - name: Run tests
-        run: cargo test --workspace --exclude example-custom-agent --exclude example-meeting-scheduler --exclude example-custom-provider --exclude example-local-inference --exclude converge-runtime
+        run: >
+          cargo test --workspace
+          --exclude converge-remote
+          --exclude example-custom-agent
+          --exclude example-meeting-scheduler
+          --exclude example-custom-provider
+          --exclude example-local-inference
+          --exclude example-expense-approval
+          --exclude example-vendor-selection
+          --exclude example-loan-application
+          --exclude example-hello-convergence

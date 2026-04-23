@@ -1,21 +1,27 @@
-# cargo-deny configuration
+# cargo-deny configuration (0.19.x)
 # https://embarkstudios.github.io/cargo-deny/
 #
 # Run: cargo deny check  (or: just deny)
 
 [advisories]
-vulnerability = "deny"
-unmaintained = "warn"
+# Scope for unmaintained crate checks
+unmaintained = "workspace"
 yanked = "warn"
-notice = "warn"
 # Transitive advisories with no fix available — not in our code paths:
 # - lru 0.12.5 unsound IterMut (tantivy/lance)
 # - rustls-pemfile 2.2.0 (tonic/reqwest)
 # - rsa 0.9.10 timing side-channel, no fixed version (lance/object_store)
-ignore = ["RUSTSEC-2026-0002", "RUSTSEC-2025-0134", "RUSTSEC-2023-0071"]
+# - bincode 2.0.1 unmaintained, no alternative (surrealdb)
+# - dotenv 0.15.0 unmaintained (surrealdb)
+ignore = [
+    "RUSTSEC-2026-0002",
+    "RUSTSEC-2025-0134",
+    "RUSTSEC-2023-0071",
+    "RUSTSEC-2025-0141",
+    "RUSTSEC-2021-0141",
+]
 
 [licenses]
-unlicensed = "deny"
 allow = [
     "MIT",
     "Apache-2.0",
@@ -30,13 +36,19 @@ allow = [
     "OpenSSL",
     "CC0-1.0",
     "MPL-2.0",
+    "NCSA",
+    "Unlicense",
+    "CDLA-Permissive-2.0",
 ]
-copyleft = "deny"
 
 [[licenses.clarify]]
 name = "ring"
 expression = "MIT AND ISC AND OpenSSL"
 license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
+
+# Private/unpublished crates (proprietary + examples without license)
+[licenses.private]
+ignore = true
 
 [bans]
 multiple-versions = "warn"
