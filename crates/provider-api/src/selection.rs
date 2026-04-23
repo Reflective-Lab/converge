@@ -133,6 +133,13 @@ pub struct ProviderRequest {
     /// Capabilities that must each be covered by at least one backend.
     /// Duplicates request multiple independent backends for the same capability.
     pub required_capabilities: Vec<Capability>,
+    /// Rich backend requirements for a single role-scoped backend selection.
+    ///
+    /// When present, provider selection should choose one backend satisfying
+    /// the requirement envelope rather than only covering independent
+    /// capability slots.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub backend_requirements: Option<BackendRequirements>,
 }
 
 /// Structured result of provider selection.
@@ -1011,6 +1018,7 @@ mod tests {
         let request = ProviderRequest {
             id: "req-1".to_string(),
             required_capabilities: vec![Capability::Reasoning, Capability::Scheduling],
+            backend_requirements: None,
         };
         let assignment = ProviderAssignment {
             request_id: request.id.clone(),
@@ -1027,11 +1035,23 @@ mod tests {
         let assignment_back: ProviderAssignment =
             serde_json::from_str(&serde_json::to_string(&assignment).unwrap()).unwrap();
 
+        assert!(request_back.backend_requirements.is_none());
         assert_eq!(
             request_back.required_capabilities,
             request.required_capabilities
         );
         assert_eq!(assignment_back.assignments, assignment.assignments);
         assert_eq!(assignment_back.unmatched, assignment.unmatched);
+    }
+
+    #[test]
+    fn provider_request_defaults_missing_backend_requirements() {
+        let legacy_json = r#"{"id":"legacy","required_capabilities":["Reasoning"]}"#;
+
+        let request: ProviderRequest = serde_json::from_str(legacy_json).unwrap();
+
+        assert_eq!(request.id, "legacy");
+        assert_eq!(request.required_capabilities, vec![Capability::Reasoning]);
+        assert!(request.backend_requirements.is_none());
     }
 }

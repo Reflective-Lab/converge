@@ -80,6 +80,7 @@ impl axum::response::IntoResponse for RuntimeError {
                     ConvergeError::AgentFailed { .. } => {
                         axum::http::StatusCode::INTERNAL_SERVER_ERROR
                     }
+                    ConvergeError::InvalidResume { .. } => axum::http::StatusCode::BAD_REQUEST,
                     ConvergeError::Conflict { .. } => axum::http::StatusCode::CONFLICT,
                 };
                 (status, format!("Converge error: {e}"))
@@ -359,6 +360,16 @@ mod tests {
             response.status(),
             axum::http::StatusCode::INTERNAL_SERVER_ERROR
         );
+    }
+
+    #[tokio::test]
+    async fn test_invalid_resume_returns_bad_request() {
+        let converge_err = ConvergeError::InvalidResume {
+            reason: "decision gate_id does not match pause gate_id".to_string(),
+        };
+        let error = RuntimeError::Converge(converge_err);
+        let response = error.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::BAD_REQUEST);
     }
 
     #[tokio::test]

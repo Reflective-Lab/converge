@@ -54,6 +54,7 @@ Knowledge base for the Converge platform — a correctness-first, context-driven
 - [[Architecture/Known Drift]] — where code diverges from axioms (and how we fix it)
 - [[Architecture/Ports]] — trait definitions (the boundary)
 - [[Architecture/Providers]] — adapter implementations (the outside world)
+- [[Architecture/Formation Building Review]] — Organism-layer guidance for formation compilers, tournaments, learning, and bounded exploration
 - [[Architecture/Transport Protocols]] — gRPC, SSE, REST, WebSocket
 - [[Architecture/Lean Packaging and Embedding]] — runtime shell variants and embedding baseline
 - [[Architecture/Crate Map]] — workspace layout and layering
@@ -100,6 +101,8 @@ Knowledge base for the Converge platform — a correctness-first, context-driven
 
 - [[Planning/MILESTONES]] — scheduled delivery across releases
 - [[Planning/LAYER-API-HARDENING]] — move up the stack one layer at a time
+- [[Planning/Formation Business Strategy]] — business framing, go-to-market wedges, and trust-building autonomy
+- [[Planning/Organism Formation Compiler Milestone Draft]] — Organism compiler milestone with vendor selection as first proof wedge
 
 ## Experiments
 

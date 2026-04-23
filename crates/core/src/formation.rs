@@ -164,6 +164,9 @@ pub struct FormationDecision {
     pub candidates_considered: Vec<String>,
     pub rationale: String,
     pub confidence: f32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub correlation_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub experience_key: Option<String>,
 }
 
@@ -179,8 +182,14 @@ impl FormationDecision {
             candidates_considered: candidates,
             rationale: rationale.into(),
             confidence,
+            correlation_id: None,
             experience_key: None,
         }
+    }
+
+    pub fn with_correlation_id(mut self, correlation_id: impl Into<String>) -> Self {
+        self.correlation_id = Some(correlation_id.into());
+        self
     }
 
     pub fn with_experience_key(mut self, key: impl Into<String>) -> Self {
@@ -196,6 +205,9 @@ pub struct FormationOutcome {
     pub fixed_point_reached: bool,
     pub cycles_used: u32,
     pub extra_loops_used: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub correlation_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub quality_score: Option<f32>,
     pub forced_fixed_point: bool,
 }
@@ -213,9 +225,15 @@ impl FormationOutcome {
             fixed_point_reached,
             cycles_used,
             extra_loops_used: 0,
+            correlation_id: None,
             quality_score: None,
             forced_fixed_point: false,
         }
+    }
+
+    pub fn with_correlation_id(mut self, correlation_id: impl Into<String>) -> Self {
+        self.correlation_id = Some(correlation_id.into());
+        self
     }
 }
 
@@ -303,14 +321,17 @@ mod tests {
         assert_eq!(decision.candidates_considered, vec!["alpha", "beta"]);
         assert_eq!(decision.rationale, "best static fit");
         assert!((decision.confidence - 0.9).abs() < f32::EPSILON);
+        assert!(decision.correlation_id.is_none());
         assert!(decision.experience_key.is_none());
     }
 
     #[test]
-    fn formation_decision_with_experience_key() {
+    fn formation_decision_with_linkage_keys() {
         let formation = Formation::Deliberated(DeliberatedFormation::new(["a"], 3));
         let decision = FormationDecision::new(formation, "deliberated", 0.75)
+            .with_correlation_id("corr-abc-123")
             .with_experience_key("exp-abc-123");
+        assert_eq!(decision.correlation_id, Some("corr-abc-123".into()));
         assert_eq!(decision.experience_key, Some("exp-abc-123".into()));
     }
 
@@ -325,6 +346,7 @@ mod tests {
         assert_eq!(outcome.cycles_used, 4);
         assert_eq!(outcome.extra_loops_used, 0);
         assert!(!outcome.forced_fixed_point);
+        assert!(outcome.correlation_id.is_none());
         assert!(outcome.quality_score.is_none());
     }
 
@@ -371,11 +393,13 @@ mod tests {
     #[test]
     fn formation_decision_serde_roundtrip() {
         let formation = Formation::Scored(ScoredFormation::new(["a", "b", "c"], 2));
-        let decision =
-            FormationDecision::new(formation, "top-2 by score", 0.8).with_experience_key("xp-99");
+        let decision = FormationDecision::new(formation, "top-2 by score", 0.8)
+            .with_correlation_id("corr-99")
+            .with_experience_key("xp-99");
         let json = serde_json::to_string(&decision).unwrap();
         let back: FormationDecision = serde_json::from_str(&json).unwrap();
         assert_eq!(back.rationale, "top-2 by score");
+        assert_eq!(back.correlation_id, Some("corr-99".into()));
         assert_eq!(back.experience_key, Some("xp-99".into()));
         assert_eq!(back.selected_formation.kind(), FormationKind::Scored);
     }
@@ -383,7 +407,8 @@ mod tests {
     #[test]
     fn formation_outcome_serde_roundtrip() {
         let mut outcome =
-            FormationOutcome::new(FormationKind::OpenClaw, vec!["a".into()], false, 10);
+            FormationOutcome::new(FormationKind::OpenClaw, vec!["a".into()], false, 10)
+                .with_correlation_id("corr-formation-1");
         outcome.extra_loops_used = 3;
         outcome.forced_fixed_point = true;
         outcome.quality_score = Some(0.72);
@@ -391,6 +416,7 @@ mod tests {
         let json = serde_json::to_string(&outcome).unwrap();
         let back: FormationOutcome = serde_json::from_str(&json).unwrap();
         assert_eq!(back.extra_loops_used, 3);
+        assert_eq!(back.correlation_id, Some("corr-formation-1".into()));
         assert!(back.forced_fixed_point);
         assert!((back.quality_score.unwrap() - 0.72).abs() < f32::EPSILON);
     }

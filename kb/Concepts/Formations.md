@@ -60,6 +60,10 @@ Converge does not own:
 
 Those belong in upper layers such as Organism.
 
+For the current Organism-layer architecture guidance — descriptor contracts,
+formation compilers, tournaments, HITL→Cedar graduation, and OpenClaw guard
+rails — see [[Architecture/Formation Building Review]].
+
 ## Code Pattern
 
 See [[Architecture/Formation Pattern]] for the actual embedding recipe.

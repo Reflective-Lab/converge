@@ -151,8 +151,10 @@ use std::sync::Arc;
 
 use converge_kernel::{
     formation::{
-        Capability, FormationAssemblySuggestor, FormationRequest, ProfileSnapshot,
-        ProviderRequest, ProviderSelectionSuggestor, SuggestorCapability, SuggestorRole,
+        Capability, DeliberatedFormationTemplate, FormationAssemblySuggestor, FormationCatalog,
+        FormationRequest, FormationTemplate, FormationTemplateMetadata, FormationTemplateQuery,
+        ProfileSnapshot, ProviderRequest, ProviderSelectionSuggestor, SuggestorCapability,
+        SuggestorRole,
     },
     ContextKey, Engine,
 };
@@ -161,6 +163,8 @@ use converge_provider_api::Backend;
 
 The structured contract begins at:
 
+- `FormationTemplateQuery`
+- `FormationCatalog`
 - `FormationRequest`
 - `ProviderRequest`
 
@@ -169,9 +173,39 @@ There are two valid upstream patterns:
 - structured input
   - a seeder writes those requests directly
 - loose input
-  - an upstream suggestor compiles intent into those requests first
+  - an upstream suggestor matches a `FormationTemplate` and then compiles it
+    into those requests
 
 Once the requests exist, the formation machinery is the same:
+
+```rust
+let formation_catalog = FormationCatalog::new().with_template(
+    FormationTemplate::deliberated(DeliberatedFormationTemplate::new(
+        FormationTemplateMetadata::new(
+            "market-entry",
+            "Go or no-go market entry loop",
+            [SuggestorRole::Analysis, SuggestorRole::Planning],
+        )
+        .with_keyword("market")
+        .with_keyword("launch")
+        .with_entity("competitors")
+        .with_required_capability(SuggestorCapability::LlmReasoning),
+        3,
+    )),
+);
+
+let query = FormationTemplateQuery::new()
+    .with_keyword("launch")
+    .with_entity("competitors")
+    .with_required_capability(SuggestorCapability::LlmReasoning);
+
+let request = formation_catalog
+    .top_match(&query)
+    .expect("template should exist")
+    .to_request("launch-1");
+```
+
+Then assemble against the suggestor catalog for this run:
 
 ```rust,ignore
 let mut engine = Engine::new();
@@ -180,9 +214,9 @@ engine.register_suggestor(FormationAssemblySuggestor::new(catalog));
 engine.register_suggestor(ProviderSelectionSuggestor::new(backends));
 ```
 
-`catalog` is a `Vec<ProfileSnapshot>`. Converge does not introspect registered
-suggestors automatically; embedders or upper layers build that catalog when
-they register profiled suggestors.
+`catalog` here is still a `Vec<ProfileSnapshot>`. Converge does not introspect
+registered suggestors automatically; embedders or upper layers build that
+catalog when they register profiled suggestors.
 
 ## Running the Engine
 

@@ -23,6 +23,8 @@ pub use converge_core::{
 };
 pub use converge_pack::{ContextKey, ProposedFact, ValidationError};
 pub use formation::{
-    FormationPlan, FormationRequest, ProfileSnapshot, RoleAssignment, SuggestorCapability,
-    SuggestorProfile, SuggestorRole,
+    DeliberatedFormationTemplate, FormationCatalog, FormationKind, FormationPlan, FormationRequest,
+    FormationTemplate, FormationTemplateMetadata, FormationTemplateQuery,
+    OpenClawFormationTemplate, ProfileSnapshot, RoleAssignment, ScoredFormationTemplate,
+    ScoringWeights, StaticFormationTemplate, SuggestorCapability, SuggestorProfile, SuggestorRole,
 };

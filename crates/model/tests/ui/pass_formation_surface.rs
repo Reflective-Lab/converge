@@ -1,5 +1,6 @@
 use converge_model::{
-    ContextKey, FormationPlan, FormationRequest, ProfileSnapshot, RoleAssignment,
+    ContextKey, FormationCatalog, FormationPlan, FormationRequest, FormationTemplate,
+    FormationTemplateMetadata, ProfileSnapshot, RoleAssignment, StaticFormationTemplate,
     SuggestorCapability, SuggestorRole,
 };
 use converge_provider_api::{CostClass, LatencyClass};
@@ -31,4 +32,12 @@ fn main() {
         unmatched_roles: vec![SuggestorRole::Planning],
         coverage_ratio: 0.5,
     };
+
+    let _catalog = FormationCatalog::new().with_template(FormationTemplate::static_template(
+        StaticFormationTemplate::new(FormationTemplateMetadata::new(
+            "analysis-only",
+            "Single-role analysis template",
+            [SuggestorRole::Analysis],
+        )),
+    ));
 }

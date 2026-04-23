@@ -82,6 +82,7 @@ fn kernel_formation_module_exposes_grouped_surface() {
     let provider = ProviderRequest {
         id: "provider-1".to_string(),
         required_capabilities: vec![Capability::Reasoning],
+        backend_requirements: None,
     };
 
     assert_eq!(formation.required_roles.len(), 2);

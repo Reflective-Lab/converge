@@ -22,6 +22,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 3,469 lines of dead code: orphaned `consensus/` module, broken `billing/` module, orphaned `stress_tests.rs`.
 - `ContextView` alias (use `Context` directly).
 
+## [3.7.3] - 2026-04-23
+
+### Added
+- Formation template catalog semantics in `converge-model` and the grouped `converge-kernel::formation` surface for downstream formation builders.
+- HITL gate decisions as `ExperienceEvent::GateDecisionRecorded`, including experience summaries and store-level query coverage.
+- Optional `correlation_id` fields on `FormationDecision` and `FormationOutcome` so upper layers can join formation choices, runs, and outcomes.
+- Optional `BackendRequirements` on `ProviderRequest` so formation planners can express role-scoped backend needs through `converge-provider-api`.
+- Organism formation-builder KB notes covering formation compilation, business wedge strategy, and the vendor-selection milestone draft.
+
+### Changed
+- `Engine::resume` validates HITL `gate_id` matches before recording a decision or promoting a proposal.
+- `converge-kernel` now re-exports the HITL types needed by embedders instead of expanding the non-canonical `converge-core` root surface.
+- Provider selection can route a single backend against richer backend requirements when the request supplies them.
+
+### Fixed
+- Invalid HITL resume calls now return `ConvergeError::InvalidResume` and map to HTTP `400 Bad Request` in `converge-runtime`.
+
+### Known Limitations
+- `StoreObserver` still wraps engine events without tenant or correlation metadata. Formation-level correlation should be handled by an Organism-owned observer until a richer observer contract is justified.
+- Current backend selection can enforce backend kind, capabilities, replay, and offline constraints, but not every `BackendRequirements` dimension until backend metadata is expanded.
+
 ## [3.4.0] - 2026-04-19
 
 ### Added

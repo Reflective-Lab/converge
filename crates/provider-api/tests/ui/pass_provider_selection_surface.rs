@@ -11,6 +11,7 @@ fn main() {
     let request = ProviderRequest {
         id: "provider-1".to_string(),
         required_capabilities: vec![Capability::Reasoning],
+        backend_requirements: None,
     };
 
     let _assignment = ProviderAssignment {

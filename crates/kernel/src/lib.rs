@@ -16,8 +16,11 @@ pub mod formation {
     //! - runnable machinery in `converge-kernel`
 
     pub use converge_model::formation::{
-        FormationPlan, FormationRequest, ProfileSnapshot, RoleAssignment, SuggestorCapability,
-        SuggestorProfile, SuggestorRole,
+        DeliberatedFormationTemplate, FormationCatalog, FormationKind, FormationPlan,
+        FormationRequest, FormationTemplate, FormationTemplateMetadata, FormationTemplateQuery,
+        OpenClawFormationTemplate, ProfileSnapshot, RoleAssignment, ScoredFormationTemplate,
+        ScoringWeights, StaticFormationTemplate, SuggestorCapability, SuggestorProfile,
+        SuggestorRole,
     };
     pub use converge_optimization::suggestors::FormationAssemblySuggestor;
     pub use converge_provider::ProviderSelectionSuggestor;
@@ -27,7 +30,10 @@ pub mod formation {
     };
 }
 
-pub use converge_core::gates::hitl::{GateDecision, TimeoutAction, TimeoutPolicy};
+pub use converge_core::gates::hitl::{
+    ContextItem, GateDecision, GateEvent, GateEventKind, GateRequest, GateVerdict, HitlPolicy,
+    TimeoutAction, TimeoutPolicy,
+};
 pub use converge_core::gates::{
     AuthorityLevel, FlowAction, FlowGateAuthorizer, FlowGateContext, FlowGateInput,
     FlowGateOutcome, FlowGatePrincipal, FlowGateResource, FlowPhase, StopReason,
@@ -50,7 +56,10 @@ pub use converge_pack::{
 mod tests {
     use super::{
         BudgetResource, StopReason,
-        formation::{Capability, FormationRequest, ProviderRequest, SuggestorRole},
+        formation::{
+            Capability, FormationCatalog, FormationRequest, FormationTemplate,
+            FormationTemplateMetadata, ProviderRequest, StaticFormationTemplate, SuggestorRole,
+        },
     };
 
     #[test]
@@ -70,9 +79,27 @@ mod tests {
         let provider = ProviderRequest {
             id: "provider-1".to_string(),
             required_capabilities: vec![Capability::Reasoning],
+            backend_requirements: None,
         };
 
         assert_eq!(formation.required_roles, vec![SuggestorRole::Analysis]);
         assert_eq!(provider.required_capabilities, vec![Capability::Reasoning]);
+    }
+
+    #[test]
+    fn kernel_reexports_template_catalog_surface() {
+        let catalog = FormationCatalog::new().with_template(FormationTemplate::static_template(
+            StaticFormationTemplate::new(FormationTemplateMetadata::new(
+                "analysis-only",
+                "Single-role analysis formation",
+                [SuggestorRole::Analysis],
+            )),
+        ));
+
+        assert_eq!(catalog.len(), 1);
+        assert_eq!(
+            catalog.get("analysis-only").map(FormationTemplate::id),
+            Some("analysis-only")
+        );
     }
 }

@@ -303,7 +303,7 @@ impl Engine {
     /// Sets the event observer for audit trail capture.
     ///
     /// When set, the engine emits `ExperienceEvent`s during convergence:
-    /// `FactPromoted`, `OutcomeRecorded`, `BudgetExceeded`.
+    /// `FactPromoted`, `OutcomeRecorded`, `BudgetExceeded`, and HITL gate decisions.
     pub fn set_event_observer(&mut self, observer: Arc<dyn ExperienceEventObserver>) {
         self.event_observer = Some(observer);
     }
@@ -345,7 +345,26 @@ impl Engine {
     /// On rejection: the proposal is discarded and convergence continues
     /// without it (may still converge on remaining facts).
     pub async fn resume(&mut self, mut pause: HitlPause, decision: GateDecision) -> RunResult {
+        // Validate gate_id match — a mismatched decision would pair the wrong
+        // human verdict with this gate request, poisoning HITL training data.
+        if decision.gate_id != pause.request.gate_id {
+            return RunResult::Complete(Err(ConvergeError::InvalidResume {
+                reason: format!(
+                    "decision gate_id '{}' does not match pause gate_id '{}'",
+                    decision.gate_id.as_str(),
+                    pause.request.gate_id.as_str(),
+                ),
+            }));
+        }
+
         let event = GateEvent::from_decision(&decision);
+        emit_experience_event(
+            self.event_observer.as_ref(),
+            ExperienceEvent::GateDecisionRecorded {
+                request: pause.request.clone(),
+                decision: decision.clone(),
+            },
+        );
         pause.gate_events.push(event);
 
         let mut tracked = TrackedContext::new(pause.context);
@@ -2879,6 +2898,8 @@ mod tests {
     #[tokio::test]
     async fn hitl_resume_approve_promotes_proposal() {
         let mut engine = Engine::new();
+        let observer = Arc::new(TestObserver::default());
+        engine.set_event_observer(observer.clone());
         engine.register_suggestor(SeedSuggestor);
         engine.register_suggestor(ProposingAgent);
         engine.set_hitl_policy(EngineHitlPolicy {
@@ -2907,6 +2928,16 @@ mod tests {
             RunResult::Complete(Err(e)) => panic!("Unexpected error after resume: {e:?}"),
             RunResult::HitlPause(_) => panic!("Should not pause again"),
         }
+
+        let events = observer.events.lock().expect("observer lock");
+        assert!(events.iter().any(|event| {
+            matches!(
+                event,
+                ExperienceEvent::GateDecisionRecorded { request, decision }
+                    if request.summary == "market analysis suggests growth"
+                        && decision.decided_by == "admin@example.com"
+            )
+        }));
     }
 
     #[tokio::test]
@@ -2943,6 +2974,49 @@ mod tests {
             RunResult::Complete(Err(e)) => panic!("Unexpected error: {e:?}"),
             RunResult::HitlPause(_) => panic!("Should not pause again"),
         }
+    }
+
+    #[tokio::test]
+    async fn hitl_resume_with_wrong_gate_id_returns_invalid_resume() {
+        let mut engine = Engine::new();
+        let observer = Arc::new(TestObserver::default());
+        engine.set_event_observer(observer.clone());
+        engine.register_suggestor(SeedSuggestor);
+        engine.register_suggestor(ProposingAgent);
+        engine.set_hitl_policy(EngineHitlPolicy {
+            confidence_threshold: Some(0.8),
+            gated_keys: Vec::new(),
+            timeout: TimeoutPolicy::default(),
+        });
+
+        let result = engine.run_with_hitl(ContextState::new()).await;
+        let pause = match result {
+            RunResult::HitlPause(p) => *p,
+            RunResult::Complete(_) => panic!("Expected HITL pause"),
+        };
+
+        // Resume with a different gate_id — simulates stale or misrouted decision
+        let wrong_gate_id = GateId::new("hitl-wrong-gate");
+        let decision = GateDecision::approve(wrong_gate_id, "admin@example.com");
+        let resumed = engine.resume(pause, decision).await;
+
+        match resumed {
+            RunResult::Complete(Err(ConvergeError::InvalidResume { reason })) => {
+                assert!(reason.contains("does not match"));
+            }
+            RunResult::Complete(Ok(_)) => panic!("Should not succeed with wrong gate_id"),
+            RunResult::Complete(Err(e)) => panic!("Wrong error variant: {e:?}"),
+            RunResult::HitlPause(_) => panic!("Should not pause"),
+        }
+
+        // No GateDecisionRecorded event should have been emitted
+        let events = observer.events.lock().expect("observer lock");
+        assert!(
+            !events
+                .iter()
+                .any(|e| matches!(e, ExperienceEvent::GateDecisionRecorded { .. })),
+            "mismatched resume must not emit GateDecisionRecorded"
+        );
     }
 
     #[tokio::test]

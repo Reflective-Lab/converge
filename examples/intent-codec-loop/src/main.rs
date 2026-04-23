@@ -258,6 +258,7 @@ impl Suggestor for IntentCodecSuggestor {
             let provider_request = ProviderRequest {
                 id: request_id.to_string(),
                 required_capabilities: compiled.required_provider_capabilities.clone(),
+                backend_requirements: None,
             };
             let route = IntentRoute {
                 request_id: request_id.to_string(),

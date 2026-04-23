@@ -13,6 +13,7 @@ All major entities in the Converge knowledge base, organized by category.
 - [Crate Map](Architecture/Crate%20Map.md)
 - [Dependency Rules](Architecture/Dependency%20Rules.md)
 - [Engine Execution Model](Architecture/Engine%20Execution%20Model.md)
+- [Formation Building Review](Architecture/Formation%20Building%20Review.md)
 - [Hexagonal Architecture](Architecture/Hexagonal%20Architecture.md)
 - [Known Drift](Architecture/Known%20Drift.md)
 - [Ports](Architecture/Ports.md)
@@ -45,6 +46,8 @@ All major entities in the Converge knowledge base, organized by category.
 ## Planning
 
 - [Milestones](Planning/MILESTONES.md)
+- [Formation Business Strategy](Planning/Formation%20Business%20Strategy.md)
+- [Organism Formation Compiler Milestone Draft](Planning/Organism%20Formation%20Compiler%20Milestone%20Draft.md)
 - [Layer API Hardening](Planning/LAYER-API-HARDENING.md)
 
 ## Concepts

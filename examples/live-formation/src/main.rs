@@ -29,12 +29,15 @@ use async_trait::async_trait;
 use converge_kernel::{
     AgentEffect, Budget, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
     formation::{
-        CostClass, FormationAssemblySuggestor, FormationPlan, FormationRequest, LatencyClass,
-        ProfileSnapshot, ProviderAssignment, ProviderRequest, ProviderSelectionSuggestor,
-        SuggestorCapability, SuggestorRole,
+        CostClass, DeliberatedFormationTemplate, FormationAssemblySuggestor, FormationCatalog,
+        FormationPlan, FormationTemplate, FormationTemplateMetadata, FormationTemplateQuery,
+        LatencyClass, ProfileSnapshot, ProviderAssignment, ProviderRequest,
+        ProviderSelectionSuggestor, SuggestorCapability, SuggestorRole,
     },
 };
 use converge_provider_api::{Backend, BackendKind, Capability};
+
+const MARKET_ENTRY_TEMPLATE_ID: &str = "market-entry";
 
 // ── Mock backends (stand-ins for live integrations) ───────────────────────────
 
@@ -116,7 +119,9 @@ fn snap(
 
 // ── Phase 1: Seeder ───────────────────────────────────────────────────────────
 
-struct OpportunitySeeder;
+struct OpportunitySeeder {
+    formation_catalog: FormationCatalog,
+}
 
 #[async_trait]
 impl Suggestor for OpportunitySeeder {
@@ -148,18 +153,35 @@ impl Suggestor for OpportunitySeeder {
             "launch_budget_usd": 5_000_000
         });
 
-        // Formation request: which roles do we need for this decision?
-        let formation_req = FormationRequest {
-            id: "launch".to_string(),
-            required_roles: vec![
-                SuggestorRole::Analysis,
-                SuggestorRole::Planning,
-                SuggestorRole::Evaluation,
-                SuggestorRole::Constraint,
-                SuggestorRole::Synthesis,
-            ],
-            required_capabilities: vec![],
+        let query = FormationTemplateQuery::new()
+            .with_keyword("market")
+            .with_keyword("launch")
+            .with_entity("market")
+            .with_entity("competitors")
+            .with_required_capability(SuggestorCapability::LlmReasoning)
+            .with_required_capability(SuggestorCapability::PolicyEnforcement);
+        let Some(template) = self.formation_catalog.top_match(&query) else {
+            let diagnostic = serde_json::json!({
+                "request_id": "launch",
+                "message": "no formation template matched the market-entry signal",
+            });
+            return AgentEffect::with_proposal(
+                ProposedFact::new(
+                    ContextKey::Diagnostic,
+                    "formation-template-miss:launch",
+                    diagnostic.to_string(),
+                    self.name(),
+                )
+                .with_confidence(1.0),
+            );
         };
+        let formation_req = template.to_request("launch");
+        let template_selection = serde_json::json!({
+            "request_id": "launch",
+            "template_id": template.id(),
+            "template_kind": template.kind(),
+            "required_roles": formation_req.required_roles.clone(),
+        });
 
         // Provider request: which capabilities do we need?
         let provider_req = ProviderRequest {
@@ -169,6 +191,7 @@ impl Suggestor for OpportunitySeeder {
                 Capability::AnomalyDetection,
                 Capability::MathematicalProgramming,
             ],
+            backend_requirements: None,
         };
 
         AgentEffect::with_proposals(vec![
@@ -182,6 +205,12 @@ impl Suggestor for OpportunitySeeder {
                 ContextKey::Seeds,
                 "formation-request:launch",
                 serde_json::to_string(&formation_req).unwrap(),
+                self.name(),
+            ),
+            ProposedFact::new(
+                ContextKey::Diagnostic,
+                "formation-template:launch",
+                template_selection.to_string(),
                 self.name(),
             ),
             ProposedFact::new(
@@ -723,6 +752,46 @@ async fn main() {
     }
     println!();
 
+    // ── Formation template catalog ───────────────────────────────────────────
+    let formation_catalog = FormationCatalog::new().with_template(FormationTemplate::deliberated(
+        DeliberatedFormationTemplate::new(
+            FormationTemplateMetadata::new(
+                MARKET_ENTRY_TEMPLATE_ID,
+                "Market entry go/no-go with policy and synthesis coverage",
+                [
+                    SuggestorRole::Analysis,
+                    SuggestorRole::Planning,
+                    SuggestorRole::Evaluation,
+                    SuggestorRole::Constraint,
+                    SuggestorRole::Synthesis,
+                ],
+            )
+            .with_keyword("market")
+            .with_keyword("launch")
+            .with_keyword("entry")
+            .with_entity("market")
+            .with_entity("region")
+            .with_entity("competitors")
+            .with_required_capability(SuggestorCapability::LlmReasoning)
+            .with_required_capability(SuggestorCapability::PolicyEnforcement),
+            3,
+        ),
+    ));
+
+    println!(
+        "Formation template catalog ({} registered):",
+        formation_catalog.len()
+    );
+    for template in formation_catalog.iter() {
+        println!(
+            "  {:<24} kind={:?}  roles={}",
+            template.id(),
+            template.kind(),
+            template.metadata().required_roles.len()
+        );
+    }
+    println!();
+
     // ── Suggestor catalog (for formation assembly) ────────────────────────────
     let catalog = vec![
         snap(
@@ -785,7 +854,7 @@ async fn main() {
     });
 
     // Phase 1: seeder
-    engine.register_suggestor(OpportunitySeeder);
+    engine.register_suggestor(OpportunitySeeder { formation_catalog });
 
     // Phase 1: self-assembly (both read Seeds → write Strategies)
     engine.register_suggestor(ProviderSelectionSuggestor::new(backends));

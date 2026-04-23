@@ -37,6 +37,13 @@ pub enum ConvergeError {
     #[error("agent failed: {agent_id}")]
     AgentFailed { agent_id: String },
 
+    /// Invalid HITL gate resume (e.g., gate_id mismatch between decision and pause).
+    #[error("invalid gate resume: {reason}")]
+    InvalidResume {
+        /// What went wrong.
+        reason: String,
+    },
+
     /// Conflicting facts detected for the same ID.
     #[error(
         "conflict detected for fact '{id}': existing content '{existing}' vs new content '{new}'"
@@ -61,7 +68,9 @@ impl ConvergeError {
             Self::InvariantViolation { context, .. } | Self::Conflict { context, .. } => {
                 Some(context)
             }
-            Self::BudgetExhausted { .. } | Self::AgentFailed { .. } => None,
+            Self::BudgetExhausted { .. }
+            | Self::AgentFailed { .. }
+            | Self::InvalidResume { .. } => None,
         }
     }
 
@@ -82,6 +91,10 @@ impl ConvergeError {
             Self::AgentFailed { agent_id } => StopReason::AgentRefused {
                 agent_id: agent_id.clone(),
                 reason: "agent execution failed".to_string(),
+            },
+            Self::InvalidResume { reason } => StopReason::Error {
+                message: format!("invalid gate resume: {reason}"),
+                category: crate::gates::ErrorCategory::Internal,
             },
             Self::Conflict {
                 id, existing, new, ..
@@ -208,6 +221,31 @@ mod tests {
         };
         let reason = err.stop_reason();
         assert!(matches!(reason, StopReason::AgentRefused { .. }));
+    }
+
+    #[test]
+    fn invalid_resume_display() {
+        let err = ConvergeError::InvalidResume {
+            reason: "gate_id mismatch".into(),
+        };
+        assert_eq!(err.to_string(), "invalid gate resume: gate_id mismatch");
+    }
+
+    #[test]
+    fn invalid_resume_has_no_context() {
+        let err = ConvergeError::InvalidResume {
+            reason: "test".into(),
+        };
+        assert!(err.context().is_none());
+    }
+
+    #[test]
+    fn stop_reason_invalid_resume() {
+        let err = ConvergeError::InvalidResume {
+            reason: "wrong gate".into(),
+        };
+        let reason = err.stop_reason();
+        assert!(matches!(reason, StopReason::Error { .. }));
     }
 
     #[test]

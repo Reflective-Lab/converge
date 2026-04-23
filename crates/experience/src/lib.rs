@@ -194,6 +194,7 @@ pub fn event_kind_label(kind: ExperienceEventKind) -> &'static str {
         ExperienceEventKind::BudgetExceeded => "budget_exceeded",
         ExperienceEventKind::PolicySnapshotCaptured => "policy_snapshot_captured",
         ExperienceEventKind::HypothesisResolved => "hypothesis_resolved",
+        ExperienceEventKind::GateDecisionRecorded => "gate_decision_recorded",
     }
 }
 
@@ -214,6 +215,7 @@ pub struct ExperienceEventSummary {
     pub budget_exceeded: usize,
     pub policy_snapshot_captured: usize,
     pub hypothesis_resolved: usize,
+    pub gate_decision_recorded: usize,
     pub by_kind: BTreeMap<String, usize>,
 }
 
@@ -250,6 +252,7 @@ pub fn summarize_events(events: &[ExperienceEventEnvelope]) -> ExperienceEventSu
             ExperienceEventKind::BudgetExceeded => summary.budget_exceeded += 1,
             ExperienceEventKind::PolicySnapshotCaptured => summary.policy_snapshot_captured += 1,
             ExperienceEventKind::HypothesisResolved => summary.hypothesis_resolved += 1,
+            ExperienceEventKind::GateDecisionRecorded => summary.gate_decision_recorded += 1,
         }
     }
 
@@ -489,6 +492,77 @@ mod tests {
             .with_tenant("tenant-a")
             .with_correlation("corr-xyz");
         assert!(store.append_event(envelope).is_ok());
+    }
+
+    #[test]
+    fn gate_decision_recorded_lands_in_store_and_summary() {
+        use converge_core::gates::hitl::{
+            ContextItem, GateDecision, GateRequest, GateVerdict, TimeoutAction, TimeoutPolicy,
+        };
+        use converge_core::{GateId, ProposalId, Timestamp};
+
+        let store = InMemoryExperienceStore::new();
+
+        let gate_id = GateId::new("hitl-test-001");
+        let request = GateRequest {
+            gate_id: gate_id.clone(),
+            proposal_id: ProposalId::new("proposal-42"),
+            summary: "Approve $12k vendor contract".into(),
+            agent_id: "procurement-agent".into(),
+            rationale: Some("Best price-to-quality ratio".into()),
+            context_data: vec![
+                ContextItem::new("vendor", "Acme Corp"),
+                ContextItem::new("amount", "$12,000"),
+            ],
+            cycle: 5,
+            requested_at: Timestamp::now(),
+            timeout: TimeoutPolicy {
+                timeout_secs: 3600,
+                action: TimeoutAction::Reject,
+            },
+        };
+
+        let decision = GateDecision {
+            gate_id,
+            verdict: GateVerdict::Approve,
+            decided_by: "cfo@example.com".into(),
+            decided_at: Timestamp::now(),
+        };
+
+        let event = ExperienceEvent::GateDecisionRecorded { request, decision };
+        let envelope = ExperienceEventEnvelope::new("evt-gate-1", event)
+            .with_tenant("tenant-a")
+            .with_correlation("corr-formation-run-7");
+        store.append_event(envelope).expect("append gate event");
+
+        // Verify queryable by kind
+        let query = EventQuery {
+            kinds: vec![ExperienceEventKind::GateDecisionRecorded],
+            ..Default::default()
+        };
+        let results = store.query_events(&query).expect("query gate events");
+        assert_eq!(results.len(), 1);
+        assert_eq!(
+            results[0].event.kind(),
+            ExperienceEventKind::GateDecisionRecorded
+        );
+
+        // Verify queryable by correlation
+        let corr_query = EventQuery {
+            correlation_id: Some("corr-formation-run-7".into()),
+            ..Default::default()
+        };
+        let corr_results = store
+            .query_events(&corr_query)
+            .expect("query by correlation");
+        assert_eq!(corr_results.len(), 1);
+
+        // Verify summary counts it
+        let all = store.query_events(&EventQuery::default()).expect("all");
+        let summary = summarize_events(&all);
+        assert_eq!(summary.gate_decision_recorded, 1);
+        assert_eq!(summary.total_events, 1);
+        assert_eq!(summary.by_kind.get("gate_decision_recorded"), Some(&1));
     }
 }
 

@@ -2,10 +2,11 @@
 
 use converge_core::ContentHash;
 use converge_model::{
-    CaptureContext, ConflictType, Criterion, FactId, Frame, FrameConstraint, FrameId, Hypothesis,
-    Observation, ObservationError, ObservationId, ObservationKind, ProfileSnapshot, PromotionError,
-    ProposalId, SuggestorCapability, SuggestorRole, Tension, TensionId, TensionResolution,
-    TensionSide, TypeError, TypesValidationError,
+    CaptureContext, ConflictType, Criterion, FactId, FormationCatalog, FormationTemplate,
+    FormationTemplateMetadata, Frame, FrameConstraint, FrameId, Hypothesis, Observation,
+    ObservationError, ObservationId, ObservationKind, ProfileSnapshot, PromotionError, ProposalId,
+    StaticFormationTemplate, SuggestorCapability, SuggestorRole, Tension, TensionId,
+    TensionResolution, TensionSide, TypeError, TypesValidationError,
 };
 
 #[test]
@@ -136,4 +137,21 @@ fn formation_semantics_accessible_via_model() {
 
     assert_eq!(snapshot.role, SuggestorRole::Analysis);
     assert_eq!(snapshot.capabilities, vec![SuggestorCapability::Analytics]);
+}
+
+#[test]
+fn formation_template_catalog_accessible_via_model() {
+    let catalog = FormationCatalog::new().with_template(FormationTemplate::static_template(
+        StaticFormationTemplate::new(FormationTemplateMetadata::new(
+            "analysis-only",
+            "Single-role analysis template",
+            [SuggestorRole::Analysis],
+        )),
+    ));
+
+    assert_eq!(catalog.len(), 1);
+    assert_eq!(
+        catalog.get("analysis-only").map(FormationTemplate::id),
+        Some("analysis-only")
+    );
 }

@@ -27,6 +27,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::StopReason as EngineStopReason;
+use crate::gates::hitl::{GateDecision, GateRequest};
 use crate::governed_artifact::{GovernedArtifactState, LifecycleEvent, RollbackRecord};
 use crate::kernel_boundary::{
     DecisionStep, KernelPolicy, KernelProposal, ReplayTrace, Replayability,
@@ -126,6 +127,7 @@ pub enum ExperienceEventKind {
     BudgetExceeded,
     PolicySnapshotCaptured,
     HypothesisResolved,
+    GateDecisionRecorded,
 }
 
 /// Append-only experience event payloads.
@@ -231,6 +233,11 @@ pub enum ExperienceEvent {
         formed_cycle: u32,
         resolved_cycle: u32,
     },
+    /// Human decision on a HITL gate recorded for audit and later policy mining.
+    GateDecisionRecorded {
+        request: GateRequest,
+        decision: GateDecision,
+    },
 }
 
 impl ExperienceEvent {
@@ -253,6 +260,7 @@ impl ExperienceEvent {
             Self::BudgetExceeded { .. } => ExperienceEventKind::BudgetExceeded,
             Self::PolicySnapshotCaptured { .. } => ExperienceEventKind::PolicySnapshotCaptured,
             Self::HypothesisResolved { .. } => ExperienceEventKind::HypothesisResolved,
+            Self::GateDecisionRecorded { .. } => ExperienceEventKind::GateDecisionRecorded,
         }
     }
 }

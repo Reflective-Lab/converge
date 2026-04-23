@@ -3,9 +3,10 @@ use std::sync::Arc;
 use converge_kernel::{
     ContextKey,
     formation::{
-        Capability, CostClass, FormationAssemblySuggestor, FormationRequest, LatencyClass,
-        ProfileSnapshot, ProviderRequest, ProviderSelectionSuggestor, SuggestorCapability,
-        SuggestorProfile, SuggestorRole,
+        Capability, CostClass, FormationAssemblySuggestor, FormationCatalog, FormationRequest,
+        FormationTemplate, FormationTemplateMetadata, LatencyClass, ProfileSnapshot,
+        ProviderRequest, ProviderSelectionSuggestor, StaticFormationTemplate,
+        SuggestorCapability, SuggestorProfile, SuggestorRole,
     },
 };
 use converge_provider_api::{Backend, BackendKind};
@@ -63,9 +64,17 @@ fn main() {
     let _provider = ProviderRequest {
         id: "provider-1".to_string(),
         required_capabilities: vec![Capability::Reasoning],
+        backend_requirements: None,
     };
 
     let catalog = vec![ProfileSnapshot::from_profile("analysis-a", &AnalysisProfile)];
+    let _templates = FormationCatalog::new().with_template(FormationTemplate::static_template(
+        StaticFormationTemplate::new(FormationTemplateMetadata::new(
+            "analysis-only",
+            "Single-role analysis template",
+            [SuggestorRole::Analysis],
+        )),
+    ));
     let backends: Vec<Arc<dyn Backend>> = vec![Arc::new(MockBackend)];
 
     let _assembly = FormationAssemblySuggestor::new(catalog);

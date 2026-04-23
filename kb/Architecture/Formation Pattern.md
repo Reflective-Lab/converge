@@ -75,6 +75,8 @@ They all converge together in one Engine run.
 
 The canonical formation contract begins at structured requests:
 
+- `FormationTemplateQuery`
+- `FormationCatalog`
 - `FormationRequest`
 - `ProviderRequest`
 
@@ -83,10 +85,25 @@ Two upstream patterns are valid:
 - structured intent
   - a seeder writes the requests directly
 - loose intent
-  - an upstream suggestor compiles it into the requests
+  - an upstream suggestor matches a `FormationTemplate` from the catalog and
+    then compiles it into the requests
 
 The built-in formation machinery does not care which upstream path produced the
 requests. It starts at the structured handoff.
+
+## Formation Templates vs Suggestor Catalogs
+
+There are two distinct catalogs in the current design:
+
+| Layer | Type | Purpose |
+|---|---|---|
+| Upper-layer selection | `FormationCatalog` | Match problem signals (`keywords`, `entities`, required capabilities) to reusable formation templates |
+| Concrete assembly | `Vec<ProfileSnapshot>` | Match required roles to the registered suggestors available in this run |
+
+`FormationTemplate::to_request(...)` intentionally carries only required roles
+today. Template-level capability metadata stays on the catalog entry because the
+current `FormationRequest.required_capabilities` field is still interpreted as a
+global per-suggestor eligibility gate by `FormationAssemblySuggestor`.
 
 ## Organism's Role
 
@@ -98,6 +115,10 @@ Organism is the formation guru — it decides WHICH agents to include:
 4. Run it (possibly multiple competing formations)
 5. Evaluate results, reform if needed
 6. Feed outcomes into learning
+
+See [[Formation Building Review]] for the current Organism-layer guidance on
+formation compilers, tournaments, descriptor contracts, HITL graduation, and
+OpenClaw guard rails.
 
 ## Competing Formations
 
@@ -154,4 +175,4 @@ detection coordinates the multi-cycle pipeline automatically.
 
 See [[Analytics Packs]] for the full catalog, input schemas, and invariant definitions.
 
-See also: [[Suggestor Contract]], [[Hexagonal Architecture]], [[Analytics Packs]]
+See also: [[Formation Building Review]], [[Suggestor Contract]], [[Hexagonal Architecture]], [[Analytics Packs]]

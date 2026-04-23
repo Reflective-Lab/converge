@@ -12,7 +12,9 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use converge_optimization::graph::matching::bipartite_matching;
 use converge_pack::{AgentEffect, Context, ContextKey, ProposedFact, Suggestor};
-use converge_provider_api::{Backend, CapabilityAssignment, ProviderAssignment, ProviderRequest};
+use converge_provider_api::{
+    Backend, BackendRequirements, CapabilityAssignment, ProviderAssignment, ProviderRequest,
+};
 
 // ── Suggestor ─────────────────────────────────────────────────────────────────
 
@@ -121,6 +123,10 @@ impl Suggestor for ProviderSelectionSuggestor {
 // ── Matching logic ────────────────────────────────────────────────────────────
 
 fn route(req: &ProviderRequest, backends: &[Arc<dyn Backend>]) -> ProviderAssignment {
+    if let Some(requirements) = &req.backend_requirements {
+        return route_backend_requirements(req, requirements, backends);
+    }
+
     // Left = required capability slots (index = position in req.required_capabilities).
     // Right = backends (index = position in `backends`).
     // Edge: backends[j].has_capability(req.required_capabilities[i]).
@@ -174,6 +180,56 @@ fn route(req: &ProviderRequest, backends: &[Arc<dyn Backend>]) -> ProviderAssign
     }
 }
 
+fn route_backend_requirements(
+    req: &ProviderRequest,
+    requirements: &BackendRequirements,
+    backends: &[Arc<dyn Backend>],
+) -> ProviderAssignment {
+    let required_capabilities = if requirements.required_capabilities.is_empty() {
+        req.required_capabilities.clone()
+    } else {
+        requirements.required_capabilities.clone()
+    };
+
+    let matched_backend = backends.iter().find(|backend| {
+        backend.kind() == requirements.kind
+            && required_capabilities
+                .iter()
+                .all(|capability| backend.has_capability(capability.clone()))
+            && (!requirements.requires_replay || backend.supports_replay())
+            && (!requirements.requires_offline || !backend.requires_network())
+    });
+
+    if let Some(backend) = matched_backend {
+        let assignments = required_capabilities
+            .iter()
+            .cloned()
+            .map(|capability| CapabilityAssignment {
+                capability,
+                backend_name: backend.name().to_string(),
+            })
+            .collect::<Vec<_>>();
+        return ProviderAssignment {
+            request_id: req.id.clone(),
+            assignments,
+            unmatched: Vec::new(),
+            coverage_ratio: 1.0,
+        };
+    }
+
+    let coverage_ratio = if required_capabilities.is_empty() {
+        1.0
+    } else {
+        0.0
+    };
+    ProviderAssignment {
+        request_id: req.id.clone(),
+        assignments: Vec::new(),
+        unmatched: required_capabilities,
+        coverage_ratio,
+    }
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 fn request_id(fact_id: &str) -> &str {
@@ -208,7 +264,10 @@ mod tests {
 
     struct MockBackend {
         name: &'static str,
+        kind: BackendKind,
         capabilities: Vec<Capability>,
+        supports_replay: bool,
+        requires_network: bool,
     }
 
     impl Backend for MockBackend {
@@ -216,23 +275,36 @@ mod tests {
             self.name
         }
         fn kind(&self) -> BackendKind {
-            BackendKind::Llm
+            self.kind.clone()
         }
         fn capabilities(&self) -> Vec<Capability> {
             self.capabilities.clone()
         }
         fn supports_replay(&self) -> bool {
-            false
+            self.supports_replay
         }
         fn requires_network(&self) -> bool {
-            true
+            self.requires_network
         }
     }
 
     fn backend(name: &'static str, caps: &[Capability]) -> Arc<dyn Backend> {
+        backend_with(name, BackendKind::Llm, caps, false, true)
+    }
+
+    fn backend_with(
+        name: &'static str,
+        kind: BackendKind,
+        caps: &[Capability],
+        supports_replay: bool,
+        requires_network: bool,
+    ) -> Arc<dyn Backend> {
         Arc::new(MockBackend {
             name,
+            kind,
             capabilities: caps.to_vec(),
+            supports_replay,
+            requires_network,
         })
     }
 
@@ -240,6 +312,7 @@ mod tests {
         ProviderRequest {
             id: id.to_string(),
             required_capabilities: caps.to_vec(),
+            backend_requirements: None,
         }
     }
 
@@ -329,6 +402,36 @@ mod tests {
         let assignment = route(&req, &pool);
         assert!((assignment.coverage_ratio - 1.0).abs() < f64::EPSILON);
         assert!(assignment.assignments.is_empty());
+    }
+
+    #[test]
+    fn backend_requirements_select_one_backend_satisfying_role_constraints() {
+        let pool = vec![
+            backend("remote-llm", &[Capability::AccessControl]),
+            backend_with(
+                "local-policy",
+                BackendKind::Policy,
+                &[Capability::AccessControl],
+                true,
+                false,
+            ),
+        ];
+        let req = ProviderRequest {
+            id: "policy-role".to_string(),
+            required_capabilities: vec![],
+            backend_requirements: Some(
+                BackendRequirements::access_policy()
+                    .with_replay()
+                    .with_offline(),
+            ),
+        };
+
+        let assignment = route(&req, &pool);
+
+        assert_eq!(assignment.assignments.len(), 1);
+        assert_eq!(assignment.assignments[0].backend_name, "local-policy");
+        assert!(assignment.unmatched.is_empty());
+        assert!((assignment.coverage_ratio - 1.0).abs() < f64::EPSILON);
     }
 
     #[test]
