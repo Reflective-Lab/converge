@@ -47,6 +47,7 @@ Knowledge base for the Converge platform — a correctness-first, context-driven
 ## Architecture
 
 - [[Architecture/System Overview]] — system design, dependency graph, and runtime shape
+- [[Architecture/Layer Contract]] — Converge's authority boundary in the Axiom -> Organism -> Converge stack
 - [[Architecture/Hexagonal Architecture]] — ports and adapters, the big picture
 - [[Architecture/API Surfaces]] — the six public crates and who uses what
 - [[Architecture/Golden Path Matrix]] — the first dependency each next layer should reach for
