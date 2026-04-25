@@ -52,7 +52,7 @@ default-members = [
 ]
 
 [workspace.package]
-version = "3.7.3"
+version = "3.7.4"
 edition = "2024"
 rust-version = "1.94.0"
 license = "MIT"
@@ -61,23 +61,23 @@ publish = false
 
 [workspace.dependencies]
 # Internal crates — path (local dev) + version (crates.io publish)
-converge-model = { path = "crates/model", version = "3.7.3" }
-converge-pack = { path = "crates/pack", version = "3.7.3", features = ["strum"] }
-converge-protocol = { path = "crates/protocol", version = "3.7.3" }
-converge-kernel = { path = "crates/kernel", version = "3.7.3" }
-converge-client = { path = "crates/client", version = "3.7.3" }
-converge-core = { path = "crates/core", version = "3.7.3" }
-converge-provider-api = { path = "crates/provider-api", version = "3.7.3" }
-converge-provider = { path = "crates/provider", version = "3.7.3" }
-converge-domain = { path = "crates/domain", version = "3.7.3" }
-converge-experience = { path = "crates/experience", version = "3.7.3" }
-converge-knowledge = { path = "crates/knowledge", version = "3.7.3" }
-converge-optimization = { path = "crates/optimization", version = "3.7.3" }
-ortools-sys = { path = "crates/optimization/ortools-sys", version = "3.7.3" }
-converge-analytics = { path = "crates/analytics", version = "3.7.3" }
-converge-policy = { path = "crates/policy", version = "3.7.3" }
-converge-runtime = { path = "crates/runtime", version = "3.7.3" }
-converge-storage = { path = "crates/storage", version = "3.7.3", default-features = false }
+converge-model = { path = "crates/model", version = "3.7.4" }
+converge-pack = { path = "crates/pack", version = "3.7.4", features = ["strum"] }
+converge-protocol = { path = "crates/protocol", version = "3.7.4" }
+converge-kernel = { path = "crates/kernel", version = "3.7.4" }
+converge-client = { path = "crates/client", version = "3.7.4" }
+converge-core = { path = "crates/core", version = "3.7.4" }
+converge-provider-api = { path = "crates/provider-api", version = "3.7.4" }
+converge-provider = { path = "crates/provider", version = "3.7.4" }
+converge-domain = { path = "crates/domain", version = "3.7.4" }
+converge-experience = { path = "crates/experience", version = "3.7.4" }
+converge-knowledge = { path = "crates/knowledge", version = "3.7.4" }
+converge-optimization = { path = "crates/optimization", version = "3.7.4" }
+ortools-sys = { path = "crates/optimization/ortools-sys", version = "3.7.4" }
+converge-analytics = { path = "crates/analytics", version = "3.7.4" }
+converge-policy = { path = "crates/policy", version = "3.7.4" }
+converge-runtime = { path = "crates/runtime", version = "3.7.4" }
+converge-storage = { path = "crates/storage", version = "3.7.4", default-features = false }
 
 # Shared dependencies
 anyhow = "1"
