@@ -39,7 +39,7 @@ futures = { workspace = true, optional = true }
 tokio.workspace = true
 
 [features]
-default = ["anthropic", "gemini", "openai", "openrouter", "mistral", "kong", "staik", "registry", "brave", "tavily"]
+default = ["anthropic", "gemini", "openai", "openrouter", "mistral", "arcee", "writer", "minmax", "kong", "staik", "registry", "brave", "tavily"]
 
 # Private convenience feature: any provider that needs HTTP pulls this in
 _http = ["dep:reqwest"]
@@ -58,6 +58,8 @@ grok = ["_http"]
 kimi = ["_http"]
 kong = ["_http"]
 staik = ["_http"]
+arcee = ["_http"]
+writer = ["_http"]
 minmax = ["_http"]
 baidu = ["_http", "dep:urlencoding"]
 zhipu = ["_http"]

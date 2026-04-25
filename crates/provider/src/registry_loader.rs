@@ -240,6 +240,10 @@ pub enum CapabilityYaml {
     NativeCompaction,
     /// Reasoning effort controls (e.g., low/medium/high)
     ReasoningEffort,
+    /// Strong content generation / business writing
+    ContentGeneration,
+    /// Business acumen (financial, strategic, market analysis)
+    BusinessAcumen,
 }
 
 impl CapabilityYaml {
@@ -271,6 +275,8 @@ impl CapabilityYaml {
             Self::ApplyPatch => "apply_patch",
             Self::NativeCompaction => "native_compaction",
             Self::ReasoningEffort => "reasoning_effort",
+            Self::ContentGeneration => "content_generation",
+            Self::BusinessAcumen => "business_acumen",
         }
     }
 }
@@ -702,6 +708,10 @@ pub struct LoadedModel {
     pub supports_multilingual: bool,
     /// Web search support.
     pub supports_web_search: bool,
+    /// Content generation / business writing support.
+    pub supports_content_generation: bool,
+    /// Business acumen (financial, strategic, market analysis).
+    pub supports_business_acumen: bool,
 
     // === ENRICHED FIELDS ===
     /// Model architecture (dense, moe, hybrid).
@@ -878,6 +888,8 @@ impl LoadedRegistry {
                 .with_vision(model.supports_vision)
                 .with_structured_output(model.supports_structured_output)
                 .with_code(model.supports_code)
+                .with_content_generation(model.supports_content_generation)
+                .with_business_acumen(model.supports_business_acumen)
                 .with_location(&provider.country, &provider.region);
 
                 selector = selector.with_model(metadata);
@@ -1054,6 +1066,9 @@ pub fn load_registry_from_str(yaml: &str) -> Result<LoadedRegistry, RegistryErro
                 supports_reasoning: capabilities.contains(&CapabilityYaml::Reasoning),
                 supports_multilingual: capabilities.contains(&CapabilityYaml::Multilingual),
                 supports_web_search: capabilities.contains(&CapabilityYaml::WebSearch),
+                supports_content_generation: capabilities
+                    .contains(&CapabilityYaml::ContentGeneration),
+                supports_business_acumen: capabilities.contains(&CapabilityYaml::BusinessAcumen),
                 // Enriched fields
                 architecture: model_yaml.architecture.into(),
                 total_params_b: model_yaml.total_params_b,

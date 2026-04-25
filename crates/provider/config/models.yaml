@@ -1291,6 +1291,72 @@ providers:
           swe_bench_multilingual: 72.5
         notes: "Lightweight coding model optimized for agentic workflows; preserve reasoning between turns for best performance."
 
+      MiniMax-Text-01:
+        cost_class: Low
+        typical_latency_ms: 4000
+        quality: 0.87
+        context_tokens: 1000000
+        max_output_tokens: 8192
+        capabilities: [tool_use, structured_output, multilingual]
+        architecture: moe
+        pricing:
+          input_per_m: 0.21
+          output_per_m: 0.70
+        publisher: MiniMax
+        family: M2
+        tags: [long_context, multilingual]
+        notes: "Flagship MiniMax model with 1M context; OpenAI-compatible endpoint."
+
+  arcee:
+    env_key: ARCEE_API_KEY
+    key_url: https://app.arcee.ai
+    api_url: https://api.arcee.ai/v2
+    country: US
+    region: US
+    compliance: [SOC2]
+    provider_type: direct
+    models:
+      trinity-large-preview:
+        cost_class: Medium
+        typical_latency_ms: 3100
+        quality: 0.86
+        context_tokens: 128000
+        max_output_tokens: 8192
+        capabilities: [tool_use, structured_output, code]
+        architecture: dense
+        pricing:
+          input_per_m: 0.50
+          output_per_m: 1.50
+        publisher: Arcee AI
+        family: Trinity
+        tags: [tool_calling, efficient, us]
+        notes: "Small, efficient model for structured tasks and tool-calling; strong quality-per-cost ratio."
+
+  writer:
+    env_key: WRITER_API_KEY
+    key_url: https://dev.writer.com
+    api_url: https://api.writer.com/v1
+    country: US
+    region: US
+    compliance: [SOC2, GDPR]
+    provider_type: direct
+    models:
+      palmyra-x5:
+        cost_class: Low
+        typical_latency_ms: 4200
+        quality: 0.90
+        context_tokens: 1040000
+        max_output_tokens: 8192
+        capabilities: [tool_use, structured_output, code, reasoning, content_generation, business_acumen]
+        architecture: hybrid
+        pricing:
+          input_per_m: 0.60
+          output_per_m: 6.00
+        publisher: Writer
+        family: Palmyra
+        tags: [enterprise, agentic, long_context, business_writing]
+        notes: "Enterprise model with hybrid attention and 1M context; optimized for business writing, stakeholder summaries, and large-scale agent memory."
+
   doubao:
     env_key: DOUBAO_API_KEY
     key_url: https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey
@@ -1569,15 +1635,15 @@ providers:
         quality: 0.90
         context_tokens: 1040000
         max_output_tokens: 8192
-        capabilities: [tool_use, structured_output, code, reasoning]
+        capabilities: [tool_use, structured_output, code, reasoning, content_generation, business_acumen]
         architecture: hybrid
         pricing:
           input_per_m: 0.60
           output_per_m: 6.00
         publisher: Writer
         family: Palmyra
-        tags: [enterprise, agentic, long_context]
-        notes: "Enterprise-focused model with hybrid attention and 1M context; optimized for large-scale agent memory."
+        tags: [enterprise, agentic, long_context, business_writing]
+        notes: "Enterprise-focused model with hybrid attention and 1M context; optimized for business writing and large-scale agent memory."
 
       liquid/lfm-2.5-1.2b-thinking:free:
         cost_class: VeryLow

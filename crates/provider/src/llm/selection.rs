@@ -7,10 +7,14 @@ use thiserror::Error;
 
 #[cfg(feature = "anthropic")]
 use crate::llm::AnthropicBackend;
+#[cfg(feature = "arcee")]
+use crate::llm::ArceeBackend;
 #[cfg(feature = "gemini")]
 use crate::llm::GeminiBackend;
 #[cfg(feature = "kong")]
 use crate::llm::KongBackend;
+#[cfg(feature = "minmax")]
+use crate::llm::MinMaxBackend;
 #[cfg(feature = "mistral")]
 use crate::llm::MistralBackend;
 #[cfg(feature = "openai")]
@@ -19,6 +23,8 @@ use crate::llm::OpenAiBackend;
 use crate::llm::OpenRouterBackend;
 #[cfg(feature = "staik")]
 use crate::llm::StaikBackend;
+#[cfg(feature = "writer")]
+use crate::llm::WriterBackend;
 use crate::model_selection::{ProviderRegistry, SelectionResult};
 use crate::secret::{EnvSecretProvider, SecretProvider};
 use converge_provider_api::selection::{
@@ -98,6 +104,12 @@ impl ChatBackendSelectionConfig {
         if env_flag("CONVERGE_LLM_WEB_SEARCH")? {
             capabilities.web_search = true;
         }
+        if env_flag("CONVERGE_LLM_CONTENT_GENERATION")? {
+            capabilities.content_generation = true;
+        }
+        if env_flag("CONVERGE_LLM_BUSINESS_ACUMEN")? {
+            capabilities.business_acumen = true;
+        }
         if let Ok(value) = std::env::var("CONVERGE_LLM_CONTEXT_TOKENS") {
             capabilities.min_context_tokens = Some(value.parse::<usize>().map_err(|_| {
                 ChatBackendSelectionConfigError::invalid(
@@ -174,7 +186,7 @@ pub fn select_chat_backend_with_secret_provider(
     let registry = if let Some(provider) = config.provider_override.as_deref() {
         let provider = normalize_provider_name(provider).ok_or_else(|| LlmError::InvalidRequest {
             message: format!(
-                "Unsupported CONVERGE_LLM_FORCE_PROVIDER={provider}. Expected one of: anthropic, openai, gemini, mistral, openrouter, kong, staik."
+                "Unsupported CONVERGE_LLM_FORCE_PROVIDER={provider}. Expected one of: anthropic, openai, gemini, mistral, arcee, writer, minmax, openrouter, kong, staik."
             ),
         })?;
 
@@ -216,7 +228,7 @@ pub async fn select_healthy_chat_backend_with_secret_provider(
     let registry = if let Some(provider) = config.provider_override.as_deref() {
         let provider = normalize_provider_name(provider).ok_or_else(|| LlmError::InvalidRequest {
             message: format!(
-                "Unsupported CONVERGE_LLM_FORCE_PROVIDER={provider}. Expected one of: anthropic, openai, gemini, mistral, openrouter, kong, staik."
+                "Unsupported CONVERGE_LLM_FORCE_PROVIDER={provider}. Expected one of: anthropic, openai, gemini, mistral, arcee, writer, minmax, openrouter, kong, staik."
             ),
         })?;
         if !is_chat_provider_available(provider, secrets) {
@@ -311,6 +323,9 @@ fn chat_provider_registry(secrets: &dyn SecretProvider) -> ProviderRegistry {
         "openai",
         "gemini",
         "mistral",
+        "arcee",
+        "writer",
+        "minmax",
         "openrouter",
         "kong",
         "staik",
@@ -378,6 +393,27 @@ fn instantiate_selected_backend(
                 .with_model(model);
             Ok(Arc::new(backend))
         }
+        #[cfg(feature = "arcee")]
+        "arcee" => {
+            let backend = ArceeBackend::from_secret_provider(secrets)
+                .map_err(backend_error)?
+                .with_model(model);
+            Ok(Arc::new(backend))
+        }
+        #[cfg(feature = "writer")]
+        "writer" => {
+            let backend = WriterBackend::from_secret_provider(secrets)
+                .map_err(backend_error)?
+                .with_model(model);
+            Ok(Arc::new(backend))
+        }
+        #[cfg(feature = "minmax")]
+        "minmax" => {
+            let backend = MinMaxBackend::from_secret_provider(secrets)
+                .map_err(backend_error)?
+                .with_model(model);
+            Ok(Arc::new(backend))
+        }
         _ => Err(LlmError::ProviderError {
             message: format!("Selected provider {provider} does not have a chat backend"),
             code: None,
@@ -410,6 +446,12 @@ fn is_chat_provider_available(provider: &str, secrets: &dyn SecretProvider) -> b
         }
         #[cfg(feature = "staik")]
         "staik" => secrets.has_secret("STAIK_API_KEY"),
+        #[cfg(feature = "arcee")]
+        "arcee" => secrets.has_secret("ARCEE_API_KEY"),
+        #[cfg(feature = "writer")]
+        "writer" => secrets.has_secret("WRITER_API_KEY"),
+        #[cfg(feature = "minmax")]
+        "minmax" => secrets.has_secret("MINMAX_API_KEY"),
         _ => false,
     }
 }
@@ -423,6 +465,9 @@ fn normalize_provider_name(value: &str) -> Option<&'static str> {
         "openrouter" | "router" => Some("openrouter"),
         "kong" | "kong_gateway" | "kong_ai" => Some("kong"),
         "staik" => Some("staik"),
+        "arcee" => Some("arcee"),
+        "writer" | "palmyra" => Some("writer"),
+        "minmax" | "minimax" => Some("minmax"),
         _ => None,
     }
 }

@@ -275,6 +275,8 @@ pub struct RequiredCapabilities {
     pub code: bool,
     pub multilingual: bool,
     pub web_search: bool,
+    pub content_generation: bool,
+    pub business_acumen: bool,
 }
 
 impl RequiredCapabilities {
@@ -322,6 +324,18 @@ impl RequiredCapabilities {
     #[must_use]
     pub fn with_web_search(mut self) -> Self {
         self.web_search = true;
+        self
+    }
+
+    #[must_use]
+    pub fn with_content_generation(mut self) -> Self {
+        self.content_generation = true;
+        self
+    }
+
+    #[must_use]
+    pub fn with_business_acumen(mut self) -> Self {
+        self.business_acumen = true;
         self
     }
 }
@@ -517,6 +531,8 @@ impl SelectionCriteria {
             data_sovereignty: DataSovereignty::from_jurisdiction(self.jurisdiction, user_region),
             compliance: self.compliance.unwrap_or(ComplianceLevel::None),
             requires_multilingual: self.capabilities.multilingual,
+            requires_content_generation: self.capabilities.content_generation,
+            requires_business_acumen: self.capabilities.business_acumen,
         }
     }
 }
@@ -537,6 +553,8 @@ pub struct AgentRequirements {
     pub data_sovereignty: DataSovereignty,
     pub compliance: ComplianceLevel,
     pub requires_multilingual: bool,
+    pub requires_content_generation: bool,
+    pub requires_business_acumen: bool,
 }
 
 impl AgentRequirements {
@@ -556,6 +574,8 @@ impl AgentRequirements {
             data_sovereignty: DataSovereignty::Any,
             compliance: ComplianceLevel::None,
             requires_multilingual: false,
+            requires_content_generation: false,
+            requires_business_acumen: false,
         }
     }
 
@@ -575,6 +595,8 @@ impl AgentRequirements {
             data_sovereignty: DataSovereignty::Any,
             compliance: ComplianceLevel::None,
             requires_multilingual: false,
+            requires_content_generation: false,
+            requires_business_acumen: false,
         }
     }
 
@@ -594,6 +616,8 @@ impl AgentRequirements {
             data_sovereignty: DataSovereignty::Any,
             compliance: ComplianceLevel::None,
             requires_multilingual: false,
+            requires_content_generation: false,
+            requires_business_acumen: false,
         }
     }
 
@@ -613,6 +637,8 @@ impl AgentRequirements {
             data_sovereignty: DataSovereignty::Any,
             compliance: ComplianceLevel::None,
             requires_multilingual: false,
+            requires_content_generation: false,
+            requires_business_acumen: false,
         }
     }
 
@@ -632,6 +658,8 @@ impl AgentRequirements {
             data_sovereignty: DataSovereignty::Any,
             compliance: ComplianceLevel::None,
             requires_multilingual: false,
+            requires_content_generation: false,
+            requires_business_acumen: false,
         }
     }
 
@@ -697,6 +725,18 @@ impl AgentRequirements {
     #[must_use]
     pub fn with_multilingual(mut self, requires: bool) -> Self {
         self.requires_multilingual = requires;
+        self
+    }
+
+    #[must_use]
+    pub fn with_content_generation(mut self, requires: bool) -> Self {
+        self.requires_content_generation = requires;
+        self
+    }
+
+    #[must_use]
+    pub fn with_business_acumen(mut self, requires: bool) -> Self {
+        self.requires_business_acumen = requires;
         self
     }
 

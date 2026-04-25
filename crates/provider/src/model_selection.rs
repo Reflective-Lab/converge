@@ -103,6 +103,10 @@ pub enum RejectionReason {
     },
     /// Multilingual required but not supported.
     MultilingualRequired,
+    /// Content generation capability required but not supported.
+    ContentGenerationRequired,
+    /// Business acumen capability required but not supported.
+    BusinessAcumenRequired,
 }
 
 impl std::fmt::Display for RejectionReason {
@@ -160,6 +164,12 @@ impl std::fmt::Display for RejectionReason {
                 write!(f, "compliance {model_has:?} != required {required:?}")
             }
             Self::MultilingualRequired => write!(f, "multilingual required but not supported"),
+            Self::ContentGenerationRequired => {
+                write!(f, "content generation required but not supported")
+            }
+            Self::BusinessAcumenRequired => {
+                write!(f, "business acumen required but not supported")
+            }
         }
     }
 }
@@ -199,6 +209,10 @@ pub struct ModelMetadata {
     pub supports_structured_output: bool,
     /// Whether this model is specialized for code.
     pub supports_code: bool,
+    /// Whether this model excels at content generation / business writing.
+    pub supports_content_generation: bool,
+    /// Whether this model has business acumen (financial, strategic, market analysis).
+    pub supports_business_acumen: bool,
     /// Provider's country (ISO code, e.g., "US", "FR", "CN").
     pub country: String,
     /// Provider's region (e.g., "US", "EU", "CN", "LOCAL").
@@ -232,6 +246,8 @@ impl ModelMetadata {
             supports_vision: false,
             supports_structured_output: false,
             supports_code: false,
+            supports_content_generation: false,
+            supports_business_acumen: false,
             country: "US".to_string(),
             region: "US".to_string(),
         }
@@ -304,6 +320,20 @@ impl ModelMetadata {
     #[must_use]
     pub fn with_code(mut self, supports: bool) -> Self {
         self.supports_code = supports;
+        self
+    }
+
+    /// Sets content generation / business writing capability.
+    #[must_use]
+    pub fn with_content_generation(mut self, supports: bool) -> Self {
+        self.supports_content_generation = supports;
+        self
+    }
+
+    /// Sets business acumen capability.
+    #[must_use]
+    pub fn with_business_acumen(mut self, supports: bool) -> Self {
+        self.supports_business_acumen = supports;
         self
     }
 
@@ -385,6 +415,16 @@ impl ModelMetadata {
 
         // Multilingual check
         if requirements.requires_multilingual && !self.supports_multilingual {
+            return false;
+        }
+
+        // Content generation check
+        if requirements.requires_content_generation && !self.supports_content_generation {
+            return false;
+        }
+
+        // Business acumen check
+        if requirements.requires_business_acumen && !self.supports_business_acumen {
             return false;
         }
 
@@ -549,6 +589,16 @@ impl ModelMetadata {
         // Multilingual check
         if requirements.requires_multilingual && !self.supports_multilingual {
             return Some(RejectionReason::MultilingualRequired);
+        }
+
+        // Content generation check
+        if requirements.requires_content_generation && !self.supports_content_generation {
+            return Some(RejectionReason::ContentGenerationRequired);
+        }
+
+        // Business acumen check
+        if requirements.requires_business_acumen && !self.supports_business_acumen {
+            return Some(RejectionReason::BusinessAcumenRequired);
         }
 
         None
