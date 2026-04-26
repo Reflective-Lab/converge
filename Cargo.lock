@@ -1153,9 +1153,9 @@ dependencies = [
 
 [[package]]
 name = "blake3"
-version = "1.8.4"
+version = "1.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d2d5991425dfd0785aed03aedcf0b321d61975c9b5b3689c774a2610ae0b51e"
+checksum = "0aa83c34e62843d924f905e0f5c866eb1dd6545fc4d719e803d9ba6030371fce"
 dependencies = [
  "arrayref",
  "arrayvec",
@@ -1931,9 +1931,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.60"
+version = "1.2.61"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43c5703da9466b66a946814e1adf53ea2c90f10063b86290cc9eb67ce3478a20"
+checksum = "d16d90359e986641506914ba71350897565610e87ce0ad9e6f28569db3dd5c6d"
 dependencies = [
  "find-msvc-tools",
  "jobserver",
@@ -2373,7 +2373,7 @@ checksum = "136d3e02915a2cea4d74caa8681e2d44b1c3254bdbf17d11d41d587ff858832c"
 
 [[package]]
 name = "converge-analytics"
-version = "3.7.3"
+version = "3.7.4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2401,7 +2401,7 @@ dependencies = [
 
 [[package]]
 name = "converge-client"
-version = "3.7.3"
+version = "3.7.4"
 dependencies = [
  "converge-protocol",
  "thiserror 2.0.18",
@@ -2410,7 +2410,7 @@ dependencies = [
 
 [[package]]
 name = "converge-core"
-version = "3.7.3"
+version = "3.7.4"
 dependencies = [
  "async-trait",
  "converge-pack",
@@ -2435,7 +2435,7 @@ dependencies = [
 
 [[package]]
 name = "converge-domain"
-version = "3.7.3"
+version = "3.7.4"
 dependencies = [
  "async-trait",
  "converge-core",
@@ -2453,7 +2453,7 @@ dependencies = [
 
 [[package]]
 name = "converge-experience"
-version = "3.7.3"
+version = "3.7.4"
 dependencies = [
  "arrow-array",
  "arrow-schema",
@@ -2470,7 +2470,7 @@ dependencies = [
 
 [[package]]
 name = "converge-kernel"
-version = "3.7.3"
+version = "3.7.4"
 dependencies = [
  "converge-core",
  "converge-model",
@@ -2483,7 +2483,7 @@ dependencies = [
 
 [[package]]
 name = "converge-knowledge"
-version = "3.7.3"
+version = "3.7.4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2517,7 +2517,7 @@ dependencies = [
 
 [[package]]
 name = "converge-model"
-version = "3.7.3"
+version = "3.7.4"
 dependencies = [
  "converge-core",
  "converge-pack",
@@ -2530,7 +2530,7 @@ dependencies = [
 
 [[package]]
 name = "converge-optimization"
-version = "3.7.3"
+version = "3.7.4"
 dependencies = [
  "approx",
  "async-trait",
@@ -2559,7 +2559,7 @@ dependencies = [
 
 [[package]]
 name = "converge-pack"
-version = "3.7.3"
+version = "3.7.4"
 dependencies = [
  "async-trait",
  "hex",
@@ -2573,7 +2573,7 @@ dependencies = [
 
 [[package]]
 name = "converge-policy"
-version = "3.7.3"
+version = "3.7.4"
 dependencies = [
  "async-trait",
  "axum 0.8.9",
@@ -2596,7 +2596,7 @@ dependencies = [
 
 [[package]]
 name = "converge-protocol"
-version = "3.7.3"
+version = "3.7.4"
 dependencies = [
  "prost 0.13.5",
  "prost-types 0.13.5",
@@ -2606,7 +2606,7 @@ dependencies = [
 
 [[package]]
 name = "converge-provider"
-version = "3.7.3"
+version = "3.7.4"
 dependencies = [
  "arrow-array",
  "arrow-schema",
@@ -2640,7 +2640,7 @@ dependencies = [
 
 [[package]]
 name = "converge-provider-api"
-version = "3.7.3"
+version = "3.7.4"
 dependencies = [
  "serde",
  "serde_json",
@@ -2650,7 +2650,7 @@ dependencies = [
 
 [[package]]
 name = "converge-runtime"
-version = "3.7.3"
+version = "3.7.4"
 dependencies = [
  "anyhow",
  "async-nats",
@@ -2710,7 +2710,7 @@ dependencies = [
 
 [[package]]
 name = "converge-storage"
-version = "3.7.3"
+version = "3.7.4"
 dependencies = [
  "futures",
  "object_store 0.13.2",
@@ -9079,7 +9079,7 @@ dependencies = [
 
 [[package]]
 name = "ortools-sys"
-version = "3.7.3"
+version = "3.7.4"
 dependencies = [
  "cc",
  "pkg-config",
