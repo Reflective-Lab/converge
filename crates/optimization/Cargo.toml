@@ -39,9 +39,6 @@ rayon.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 
-# Optional: FFI to C++ OR-Tools
-ortools-sys = { workspace = true, optional = true, features = ["link"] }
-
 # SAT solver for native CP
 varisat = { workspace = true, optional = true }
 
@@ -55,9 +52,8 @@ tokio = { workspace = true, features = ["macros", "rt"] }
 
 [features]
 default = []
-ffi = ["dep:ortools-sys"]
 sat = ["dep:varisat"]
-full = ["ffi", "sat"]
+full = ["sat"]
 
 [[bench]]
 name = "assignment"
