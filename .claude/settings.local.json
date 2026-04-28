@@ -91,7 +91,15 @@
       "Bash(just fmt:*)",
       "Bash(just example-cp:*)",
       "Bash(just example-mip:*)",
-      "Bash(wait)"
+      "Bash(wait)",
+      "Bash(cargo deny *)",
+      "Bash(rustc *)",
+      "Bash(TRYBUILD=overwrite cargo test -p converge-core --test compile_fail)",
+      "Bash(cargo outdated *)",
+      "Bash(git merge *)",
+      "WebFetch(domain:deps.rs)",
+      "Bash(cargo search *)",
+      "Bash(cargo info *)"
     ]
   }
 }
