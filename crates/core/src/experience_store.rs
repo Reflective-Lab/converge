@@ -679,4 +679,384 @@ mod tests {
             assert_eq!(back, kind);
         }
     }
+
+    // ── Envelope serialization (pack) ────────────────────────────────────────
+
+    #[test]
+    fn envelope_pack_with_all_fields() {
+        let event = ExperienceEvent::BudgetExceeded {
+            chain_id: "c-1".into(),
+            resource: BudgetResource::Tokens,
+            limit: "1024".to_string(),
+            observed: Some("2048".to_string()),
+        };
+        let env = ExperienceEventEnvelope::new("evt-abc123", event)
+            .with_tenant("tenant-prod")
+            .with_correlation("corr-xyz789")
+            .with_timestamp("2026-04-28T15:30:45Z");
+
+        let json = serde_json::to_string(&env).unwrap();
+        assert!(json.contains("evt-abc123"));
+        assert!(json.contains("tenant-prod"));
+        assert!(json.contains("corr-xyz789"));
+        assert!(json.contains("2026-04-28T15:30:45Z"));
+    }
+
+    #[test]
+    fn envelope_pack_minimal() {
+        let event = ExperienceEvent::BudgetExceeded {
+            chain_id: "c".into(),
+            resource: BudgetResource::Cycles,
+            limit: "5".to_string(),
+            observed: None,
+        };
+        let env = ExperienceEventEnvelope::new("e1", event);
+
+        let json = serde_json::to_string(&env).unwrap();
+        assert!(json.contains("e1"));
+        assert!(json.contains("1970-01-01T00:00:00Z"));
+        // Optional fields should still serialize as null
+        assert!(json.contains("tenant_id"));
+        assert!(json.contains("correlation_id"));
+    }
+
+    // ── Envelope deserialization (unpack) ────────────────────────────────────
+
+    #[test]
+    fn envelope_unpack_with_all_fields() {
+        let json = r#"{
+            "event_id": "evt-1",
+            "occurred_at": "2026-04-28T12:00:00Z",
+            "tenant_id": "tenant-x",
+            "correlation_id": "corr-1",
+            "event": {
+                "type": "BudgetExceeded",
+                "data": {
+                    "chain_id": "c-1",
+                    "resource": "Tokens",
+                    "limit": "999",
+                    "observed": "500"
+                }
+            }
+        }"#;
+
+        let env: ExperienceEventEnvelope = serde_json::from_str(json).unwrap();
+        assert_eq!(env.event_id, "evt-1");
+        assert_eq!(env.occurred_at, "2026-04-28T12:00:00Z");
+        assert_eq!(env.tenant_id.as_deref(), Some("tenant-x"));
+        assert_eq!(env.correlation_id.as_deref(), Some("corr-1"));
+    }
+
+    #[test]
+    fn envelope_unpack_missing_optional_fields() {
+        let json = r#"{
+            "event_id": "evt-minimal",
+            "occurred_at": "2026-01-01T00:00:00Z",
+            "tenant_id": null,
+            "correlation_id": null,
+            "event": {
+                "type": "BudgetExceeded",
+                "data": {
+                    "chain_id": "c",
+                    "resource": "Cycles",
+                    "limit": "1",
+                    "observed": null
+                }
+            }
+        }"#;
+
+        let env: ExperienceEventEnvelope = serde_json::from_str(json).unwrap();
+        assert!(env.tenant_id.is_none());
+        assert!(env.correlation_id.is_none());
+    }
+
+    #[test]
+    fn envelope_unpack_missing_optional_keys_entirely() {
+        let json = r#"{
+            "event_id": "evt-sparse",
+            "occurred_at": "2026-01-01T00:00:00Z",
+            "event": {
+                "type": "BudgetExceeded",
+                "data": {
+                    "chain_id": "c",
+                    "resource": "Facts",
+                    "limit": "10",
+                    "observed": null
+                }
+            }
+        }"#;
+
+        let env: ExperienceEventEnvelope = serde_json::from_str(json).unwrap();
+        assert_eq!(env.event_id, "evt-sparse");
+        assert!(env.tenant_id.is_none());
+        assert!(env.correlation_id.is_none());
+    }
+
+    // ── Roundtrip: pack then unpack ──────────────────────────────────────────
+
+    #[test]
+    fn envelope_roundtrip_complete() {
+        let event = ExperienceEvent::BudgetExceeded {
+            chain_id: "chain-rt".into(),
+            resource: BudgetResource::Tokens,
+            limit: "777".to_string(),
+            observed: Some("333".to_string()),
+        };
+        let original = ExperienceEventEnvelope::new("evt-rt", event)
+            .with_tenant("tenant-rt")
+            .with_correlation("corr-rt")
+            .with_timestamp("2026-04-28T10:15:30Z");
+
+        let json = serde_json::to_string(&original).unwrap();
+        let restored: ExperienceEventEnvelope = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(restored.event_id, original.event_id);
+        assert_eq!(restored.occurred_at, original.occurred_at);
+        assert_eq!(restored.tenant_id, original.tenant_id);
+        assert_eq!(restored.correlation_id, original.correlation_id);
+    }
+
+    #[test]
+    fn envelope_roundtrip_minimal() {
+        let event = ExperienceEvent::BudgetExceeded {
+            chain_id: "c".into(),
+            resource: BudgetResource::Cycles,
+            limit: "2".to_string(),
+            observed: None,
+        };
+        let original = ExperienceEventEnvelope::new("evt-min", event);
+
+        let json = serde_json::to_string(&original).unwrap();
+        let restored: ExperienceEventEnvelope = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(restored.event_id, original.event_id);
+        assert!(restored.tenant_id.is_none());
+        assert!(restored.correlation_id.is_none());
+    }
+
+    // ── Edge cases: empty/special/long strings ───────────────────────────────
+
+    #[test]
+    fn envelope_edge_case_empty_event_id() {
+        let event = ExperienceEvent::BudgetExceeded {
+            chain_id: "c".into(),
+            resource: BudgetResource::Cycles,
+            limit: "1".to_string(),
+            observed: None,
+        };
+        let env = ExperienceEventEnvelope::new("", event);
+        assert_eq!(env.event_id, "");
+
+        let json = serde_json::to_string(&env).unwrap();
+        let restored: ExperienceEventEnvelope = serde_json::from_str(&json).unwrap();
+        assert_eq!(restored.event_id, "");
+    }
+
+    #[test]
+    fn envelope_edge_case_special_chars_in_ids() {
+        let event = ExperienceEvent::BudgetExceeded {
+            chain_id: "c".into(),
+            resource: BudgetResource::Cycles,
+            limit: "1".to_string(),
+            observed: None,
+        };
+        let special_id = "evt-🚀-/\\\"'";
+        let env = ExperienceEventEnvelope::new(special_id, event)
+            .with_tenant("tenant-@#$%^&*()")
+            .with_correlation("corr-\n\t\r");
+
+        let json = serde_json::to_string(&env).unwrap();
+        let restored: ExperienceEventEnvelope = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(restored.event_id, special_id);
+        assert_eq!(restored.tenant_id.as_deref(), Some("tenant-@#$%^&*()"));
+        assert_eq!(restored.correlation_id.as_deref(), Some("corr-\n\t\r"));
+    }
+
+    #[test]
+    fn envelope_edge_case_very_long_strings() {
+        let long_id = "x".repeat(10_000);
+        let event = ExperienceEvent::BudgetExceeded {
+            chain_id: "c".into(),
+            resource: BudgetResource::Cycles,
+            limit: "1".to_string(),
+            observed: None,
+        };
+        let env = ExperienceEventEnvelope::new(long_id.clone(), event)
+            .with_tenant("y".repeat(5_000))
+            .with_correlation("z".repeat(3_000));
+
+        let json = serde_json::to_string(&env).unwrap();
+        let restored: ExperienceEventEnvelope = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(restored.event_id, long_id);
+        assert_eq!(restored.tenant_id.as_ref().map(|s| s.len()), Some(5_000));
+        assert_eq!(
+            restored.correlation_id.as_ref().map(|s| s.len()),
+            Some(3_000)
+        );
+    }
+
+    #[test]
+    fn envelope_edge_case_unicode_in_ids() {
+        let event = ExperienceEvent::BudgetExceeded {
+            chain_id: "c".into(),
+            resource: BudgetResource::Cycles,
+            limit: "1".to_string(),
+            observed: None,
+        };
+        let env = ExperienceEventEnvelope::new("evt-中文-العربية-русский", event)
+            .with_tenant("テナント-यन्त्र")
+            .with_correlation("相関-συσχέτιση");
+
+        let json = serde_json::to_string(&env).unwrap();
+        let restored: ExperienceEventEnvelope = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(restored.event_id, "evt-中文-العربية-русский");
+        assert_eq!(restored.tenant_id.as_deref(), Some("テナント-यन्त्र"));
+        assert_eq!(restored.correlation_id.as_deref(), Some("相関-συσχέτιση"));
+    }
+
+    // ── Malformed JSON / deserialization errors ──────────────────────────────
+
+    #[test]
+    fn envelope_unpack_missing_required_event_id() {
+        let json = r#"{
+            "occurred_at": "2026-01-01T00:00:00Z",
+            "tenant_id": null,
+            "correlation_id": null,
+            "event": {"type": "BudgetExceeded", "data": {"chain_id": "c", "resource": "Cycles", "limit": "1", "observed": null}}
+        }"#;
+
+        let result: Result<ExperienceEventEnvelope, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn envelope_unpack_missing_required_occurred_at() {
+        let json = r#"{
+            "event_id": "evt-1",
+            "tenant_id": null,
+            "correlation_id": null,
+            "event": {"type": "BudgetExceeded", "data": {"chain_id": "c", "resource": "Cycles", "limit": "1", "observed": null}}
+        }"#;
+
+        let result: Result<ExperienceEventEnvelope, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn envelope_unpack_missing_required_event() {
+        let json = r#"{
+            "event_id": "evt-1",
+            "occurred_at": "2026-01-01T00:00:00Z",
+            "tenant_id": null,
+            "correlation_id": null
+        }"#;
+
+        let result: Result<ExperienceEventEnvelope, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn envelope_unpack_wrong_type_for_field() {
+        let json = r#"{
+            "event_id": 12345,
+            "occurred_at": "2026-01-01T00:00:00Z",
+            "tenant_id": null,
+            "correlation_id": null,
+            "event": {"type": "BudgetExceeded", "data": {"chain_id": "c", "resource": "Cycles", "limit": "1", "observed": null}}
+        }"#;
+
+        let result: Result<ExperienceEventEnvelope, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn envelope_unpack_invalid_json_syntax() {
+        let invalid = r#"{"event_id": "evt-1", "occurred_at": "2026-01-01"#;
+        let result: Result<ExperienceEventEnvelope, _> = serde_json::from_str(invalid);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn envelope_unpack_extra_unknown_fields_ignored() {
+        let json = r#"{
+            "event_id": "evt-1",
+            "occurred_at": "2026-01-01T00:00:00Z",
+            "tenant_id": null,
+            "correlation_id": null,
+            "event": {"type": "BudgetExceeded", "data": {"chain_id": "c", "resource": "Cycles", "limit": "1", "observed": null}},
+            "unknown_field": "ignored",
+            "another_extra": 42
+        }"#;
+
+        let result: Result<ExperienceEventEnvelope, _> = serde_json::from_str(json);
+        // Extra fields are ignored by default serde behavior
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().event_id, "evt-1");
+    }
+
+    #[test]
+    fn envelope_unpack_null_for_event_id_invalid() {
+        let json = r#"{
+            "event_id": null,
+            "occurred_at": "2026-01-01T00:00:00Z",
+            "tenant_id": null,
+            "correlation_id": null,
+            "event": {"type": "BudgetExceeded", "data": {"chain_id": "c", "resource": "Cycles", "limit": "1", "observed": null}}
+        }"#;
+
+        let result: Result<ExperienceEventEnvelope, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    // ── Builder chaining and override behavior ────────────────────────────────
+
+    #[test]
+    fn envelope_builder_chaining_consistency() {
+        let event = ExperienceEvent::BudgetExceeded {
+            chain_id: "c".into(),
+            resource: BudgetResource::Cycles,
+            limit: "1".to_string(),
+            observed: None,
+        };
+        let env = ExperienceEventEnvelope::new("evt-1", event)
+            .with_tenant("t1")
+            .with_tenant("t2")
+            .with_correlation("corr1")
+            .with_correlation("corr2")
+            .with_timestamp("2026-01-01T00:00:00Z")
+            .with_timestamp("2026-12-31T23:59:59Z");
+
+        assert_eq!(env.tenant_id.as_deref(), Some("t2"));
+        assert_eq!(env.correlation_id.as_deref(), Some("corr2"));
+        assert_eq!(env.occurred_at, "2026-12-31T23:59:59Z");
+    }
+
+    #[test]
+    fn envelope_builder_override_to_last_value() {
+        let event = ExperienceEvent::BudgetExceeded {
+            chain_id: "c".into(),
+            resource: BudgetResource::Cycles,
+            limit: "1".to_string(),
+            observed: None,
+        };
+        let final_tenant = "final-tenant";
+        let final_corr = "final-corr";
+        let final_ts = "2099-01-01T00:00:00Z";
+
+        let env = ExperienceEventEnvelope::new("evt", event)
+            .with_tenant("ignored1")
+            .with_tenant("ignored2")
+            .with_tenant(final_tenant)
+            .with_correlation("ignored1")
+            .with_correlation(final_corr)
+            .with_timestamp("ignored1")
+            .with_timestamp(final_ts);
+
+        assert_eq!(env.tenant_id.as_deref(), Some(final_tenant));
+        assert_eq!(env.correlation_id.as_deref(), Some(final_corr));
+        assert_eq!(env.occurred_at, final_ts);
+    }
 }

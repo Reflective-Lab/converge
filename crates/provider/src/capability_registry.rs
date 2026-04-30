@@ -28,6 +28,8 @@
 
 #[cfg(feature = "brave")]
 use crate::brave::BraveSearchProvider;
+#[cfg(feature = "feed")]
+use crate::feed::{FeedFetchBackend, HttpFeedProvider};
 #[cfg(feature = "_http")]
 use crate::fetch::HttpFetchProvider;
 use crate::search::{WebFetchBackend, WebSearchBackend};
@@ -300,6 +302,9 @@ pub struct CapabilityRegistry {
     tavily_provider: Option<Arc<TavilySearchProvider>>,
     /// Web fetch backend (URL → content).
     fetch_backend: Option<Arc<dyn WebFetchBackend>>,
+    /// Feed fetch backend (RSS/Atom/JSON Feed → normalized observations).
+    #[cfg(feature = "feed")]
+    feed_backend: Option<Arc<dyn FeedFetchBackend>>,
 }
 
 impl Default for CapabilityRegistry {
@@ -323,6 +328,8 @@ impl CapabilityRegistry {
             #[cfg(feature = "tavily")]
             tavily_provider: None,
             fetch_backend: None,
+            #[cfg(feature = "feed")]
+            feed_backend: None,
         }
     }
 
@@ -354,6 +361,10 @@ impl CapabilityRegistry {
         #[cfg(feature = "_http")]
         {
             registry.fetch_backend = Some(Arc::new(HttpFetchProvider::new()));
+        }
+        #[cfg(feature = "feed")]
+        {
+            registry.feed_backend = Some(Arc::new(HttpFeedProvider::new()));
         }
 
         registry
@@ -484,6 +495,26 @@ impl CapabilityRegistry {
     #[must_use]
     pub fn has_web_fetch(&self) -> bool {
         self.fetch_backend.is_some()
+    }
+
+    /// Gets the feed fetch backend if available.
+    #[cfg(feature = "feed")]
+    #[must_use]
+    pub fn feed_backend(&self) -> Option<Arc<dyn FeedFetchBackend>> {
+        self.feed_backend.clone()
+    }
+
+    /// Sets a custom feed fetch backend.
+    #[cfg(feature = "feed")]
+    pub fn set_feed_backend(&mut self, backend: Arc<dyn FeedFetchBackend>) {
+        self.feed_backend = Some(backend);
+    }
+
+    /// Checks if feed fetch capability is available.
+    #[cfg(feature = "feed")]
+    #[must_use]
+    pub fn has_feed_fetch(&self) -> bool {
+        self.feed_backend.is_some()
     }
 
     /// Checks if web search capability is available.

@@ -66,7 +66,7 @@ harness = false
 [[bench]]
 name = "cp_comparison"
 harness = false
-required-features = ["sat", "ffi"]
+required-features = ["sat"]
 
 [lints]
 workspace = true

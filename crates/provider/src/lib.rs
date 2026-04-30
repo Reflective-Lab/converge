@@ -78,6 +78,8 @@ mod model_selection;
 // Search providers
 #[cfg(feature = "brave")]
 pub mod brave;
+#[cfg(feature = "feed")]
+pub mod feed;
 #[cfg(feature = "_http")]
 pub mod fetch;
 pub mod search;
@@ -138,6 +140,11 @@ pub use llm::{
 pub use brave::{
     BraveCapability, BraveSearchError, BraveSearchProvider, BraveSearchRequest,
     BraveSearchResponse, BraveSearchResult,
+};
+#[cfg(feature = "feed")]
+pub use feed::{
+    FeedDiscoverySource, FeedEndpointCandidate, FeedError, FeedFetchBackend, FeedFetchRequest,
+    FeedFetchResponse, FeedFormat, FeedItem, FeedProbeRequest, FeedProbeResponse, HttpFeedProvider,
 };
 #[cfg(feature = "_http")]
 pub use fetch::HttpFetchProvider;
