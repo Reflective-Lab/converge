@@ -188,6 +188,13 @@ The workspace currently ships these example crates:
 - `reconciliation-loop`
 - `analytics-packs`
 
+Business-shaped examples such as `expense-approval`, `vendor-selection`, and
+`loan-application` are Converge fixtures for kernel behavior: convergence,
+policy gates, HITL pauses, and proposal promotion. They are not the canonical
+organizational workflow implementations. Reusable approval, procurement, vendor,
+and planning logic belongs downstream in Organism/domain packs or application
+layers that consume Converge.
+
 ```bash
 just examples
 just example hello-convergence

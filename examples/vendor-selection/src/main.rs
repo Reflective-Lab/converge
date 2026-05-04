@@ -5,6 +5,10 @@
 //!
 //! Demonstrates: swarms, consensus/aggregation, multi-criteria scoring, and
 //! Cedar-backed procurement gating.
+//!
+//! This is a Converge kernel fixture, not the canonical vendor-selection
+//! workflow. Reusable vendor decision semantics live downstream in Organism
+//! domain packs.
 
 use converge_kernel::{
     AgentEffect, AuthorityLevel, Context, ContextKey, ContextState, Engine, EngineHitlPolicy,

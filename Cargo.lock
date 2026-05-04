@@ -9079,14 +9079,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ortools-sys"
-version = "3.7.5"
-dependencies = [
- "cc",
- "pkg-config",
-]
-
-[[package]]
 name = "ownedbytes"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

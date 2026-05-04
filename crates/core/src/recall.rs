@@ -25,7 +25,12 @@
 //! - PII redaction utilities
 //! - `MockRecallProvider`
 
+use crate::experience_store::{
+    EventQuery, ExperienceEvent, ExperienceRecord, ExperienceStore, ExperienceStoreResult,
+    UserExperienceEvent,
+};
 use crate::kernel_boundary::DecisionStep;
+use crate::types::TenantId;
 use serde::{Deserialize, Serialize};
 
 // ============================================================================
@@ -97,6 +102,17 @@ pub struct RecallPolicy {
     /// explicitly enabled. This preserves "Recall ≠ Training" boundary.
     #[serde(default = "default_allowed_uses")]
     pub allowed_uses: Vec<RecallUse>,
+
+    /// How strongly recall results weight planning priors when consumed by
+    /// `PlanningPriorAgent`. `1.0` means full weight; `0.0` disables prior
+    /// adjustment without disabling recall itself. Capped to `[0.0, 1.0]` by
+    /// consumers.
+    #[serde(default = "default_prior_weight")]
+    pub prior_weight: f64,
+}
+
+fn default_prior_weight() -> f64 {
+    1.0
 }
 
 fn default_allowed_uses() -> Vec<RecallUse> {
@@ -112,6 +128,7 @@ impl Default for RecallPolicy {
             min_score_threshold: 0.5,
             budgets: RecallBudgets::default(),
             allowed_uses: default_allowed_uses(),
+            prior_weight: default_prior_weight(),
         }
     }
 }
@@ -161,6 +178,7 @@ impl RecallPolicy {
         for use_type in &self.allowed_uses {
             (*use_type as u8).hash(&mut hasher);
         }
+        (self.prior_weight as u64).hash(&mut hasher);
         format!("{:016x}", hasher.finish())
     }
 }
@@ -274,6 +292,16 @@ pub struct RecallCandidate {
     pub source_type: CandidateSourceType,
     /// Provenance information
     pub provenance: CandidateProvenance,
+    /// Per-candidate confidence in `[0.0, 1.0]`. Reflects how much weight a
+    /// downstream consumer (e.g. `PlanningPriorAgent`) should give this entry
+    /// when adjusting priors. Defaults to `0.5` for backends that do not yet
+    /// emit calibrated confidence.
+    #[serde(default = "default_candidate_confidence")]
+    pub confidence: f64,
+}
+
+fn default_candidate_confidence() -> f64 {
+    0.5
 }
 
 /// Relevance level for a recall candidate.
@@ -536,6 +564,116 @@ pub enum StopReason {
     /// The corpus has `TenantPolicy::Required` but the query did not
     /// include a tenant scope. No results returned.
     TenantScopeMissing,
+}
+
+// ============================================================================
+// Recall Executor — turns ExperienceRecords into RecallCandidates
+// ============================================================================
+
+/// Pull recall candidates from an [`ExperienceStore`].
+///
+/// First implementation: scans the ledger for recall-relevant records (user
+/// overrides, user approvals, failed engine outcomes), maps each to a
+/// `RecallCandidate`, applies `policy.min_score_threshold` and `prior_weight`,
+/// then trims to the smaller of `query.top_k` and `policy.max_k_total`.
+///
+/// Semantic ranking by embedding similarity is intentionally deferred — the
+/// goal here is to wire planning to history end-to-end. Ranking by recency is
+/// a placeholder that will be replaced once a recall provider is in place.
+pub fn recall_from_store(
+    store: &dyn ExperienceStore,
+    query: &RecallQuery,
+    policy: &RecallPolicy,
+) -> ExperienceStoreResult<Vec<RecallCandidate>> {
+    if !policy.enabled {
+        return Ok(Vec::new());
+    }
+
+    let event_query = EventQuery {
+        tenant_id: query.tenant_scope.as_deref().map(TenantId::new),
+        ..Default::default()
+    };
+
+    let records = store.query_records(&event_query)?;
+    let limit = query.top_k.min(policy.max_k_total);
+
+    let candidates = records
+        .iter()
+        .rev()
+        .filter_map(record_to_candidate)
+        .filter(|c| c.confidence >= policy.min_score_threshold)
+        .take(limit)
+        .map(|mut c| {
+            c.confidence = (c.confidence * policy.prior_weight).clamp(0.0, 1.0);
+            c
+        })
+        .collect();
+
+    Ok(candidates)
+}
+
+fn record_to_candidate(record: &ExperienceRecord) -> Option<RecallCandidate> {
+    match record {
+        ExperienceRecord::User(env) => match &env.event {
+            UserExperienceEvent::UserOverrideIssued { reason, .. } => Some(make_candidate(
+                env.event_id.as_str(),
+                env.occurred_at.as_str(),
+                format!("user override: {reason}"),
+                0.9,
+                CandidateSourceType::AntiPattern,
+            )),
+            UserExperienceEvent::UserApprovalGranted { reason, .. } => Some(make_candidate(
+                env.event_id.as_str(),
+                env.occurred_at.as_str(),
+                format!("user approval: {}", reason.as_deref().unwrap_or("granted")),
+                0.7,
+                CandidateSourceType::SimilarSuccess,
+            )),
+        },
+        ExperienceRecord::Engine(env) => match &env.event {
+            ExperienceEvent::OutcomeRecorded {
+                passed: false,
+                stop_reason,
+                ..
+            } => Some(make_candidate(
+                env.event_id.as_str(),
+                env.occurred_at.as_str(),
+                format!(
+                    "outcome failed: {}",
+                    stop_reason
+                        .as_ref()
+                        .map_or_else(|| "unspecified".to_string(), ToString::to_string)
+                ),
+                0.6,
+                CandidateSourceType::SimilarFailure,
+            )),
+            _ => None,
+        },
+    }
+}
+
+fn make_candidate(
+    id: &str,
+    occurred_at: &str,
+    summary: String,
+    confidence: f64,
+    source_type: CandidateSourceType,
+) -> RecallCandidate {
+    RecallCandidate {
+        id: id.to_string(),
+        summary,
+        raw_score: confidence,
+        final_score: confidence,
+        relevance: RelevanceLevel::from_score(confidence),
+        source_type,
+        provenance: CandidateProvenance {
+            created_at: occurred_at.to_string(),
+            source_chain_id: None,
+            source_step: None,
+            corpus_version: "experience-store-v0".to_string(),
+        },
+        confidence,
+    }
 }
 
 #[cfg(test)]

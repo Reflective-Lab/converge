@@ -99,7 +99,11 @@
       "Bash(git merge *)",
       "WebFetch(domain:deps.rs)",
       "Bash(cargo search *)",
-      "Bash(cargo info *)"
+      "Bash(cargo info *)",
+      "Bash(wait 17915)",
+      "Bash(git tag -a v3.7.5 -m 'Release v3.7.5 *)",
+      "Read(//Users/kpernyer/dev/work/ferrox/**)",
+      "Read(//Users/kpernyer/dev/work/ferrox/crates/**)"
     ]
   }
 }

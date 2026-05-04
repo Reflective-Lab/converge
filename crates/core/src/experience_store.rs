@@ -36,7 +36,7 @@ use crate::kernel_boundary::{
 use crate::recall::{RecallPolicy, RecallProvenanceEnvelope, RecallQuery};
 use crate::types::{
     ActorId, ArtifactId, BackendId, ChainId, ContentHash, CorrelationId, DomainId, EventId, FactId,
-    PolicyId, ProposalId, TenantId, TensionId, Timestamp, TraceLinkId,
+    GateId, PolicyId, ProposalId, TenantId, TensionId, Timestamp, TraceLinkId,
 };
 
 // ============================================================================
@@ -399,6 +399,29 @@ pub trait ExperienceStore: Send + Sync {
         &self,
         trace_link_id: &TraceLinkId,
     ) -> ExperienceStoreResult<Option<ReplayTrace>>;
+
+    /// Append a single user-side experience event.
+    ///
+    /// Default implementation returns `Unsupported`. In-process backends
+    /// override this to record the event in the same ledger as engine events.
+    fn append_user_event(&self, _event: UserExperienceEventEnvelope) -> ExperienceStoreResult<()> {
+        Err(ExperienceStoreError::StorageError {
+            message: "user-side events are not supported by this backend".to_string(),
+        })
+    }
+
+    /// Query both engine-side and user-side records, ordered by occurrence.
+    ///
+    /// Default implementation lifts engine events through the
+    /// [`ExperienceRecord::Engine`] variant. Backends that store user events
+    /// override this to interleave both record kinds.
+    fn query_records(&self, query: &EventQuery) -> ExperienceStoreResult<Vec<ExperienceRecord>> {
+        Ok(self
+            .query_events(query)?
+            .into_iter()
+            .map(ExperienceRecord::Engine)
+            .collect())
+    }
 }
 
 /// Experience store error type.
@@ -426,6 +449,129 @@ impl std::error::Error for ExperienceStoreError {}
 
 /// Result type for experience store operations.
 pub type ExperienceStoreResult<T> = Result<T, ExperienceStoreError>;
+
+// ============================================================================
+// User-side Experience Events (sibling type to ExperienceEvent)
+// ============================================================================
+
+/// What a user override applies to.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "id")]
+pub enum OverrideTarget {
+    Fact(FactId),
+    Proposal(ProposalId),
+    Constraint(String),
+}
+
+/// User-side experience event.
+///
+/// This is the trust-transfer counterpart to [`ExperienceEvent`]: every variant
+/// records a deliberate human act that adjusts engine state — approval,
+/// rejection, override, correction, or boundary change. Operator surfaces such
+/// as Helms emit these events; planning consumes them through recall to weight
+/// future priors.
+///
+/// Kept as a sibling enum (not a variant of `ExperienceEvent`) so additions on
+/// either side stay non-breaking for downstream crates.io consumers.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", content = "data")]
+pub enum UserExperienceEvent {
+    /// A human approved a paused gate request.
+    UserApprovalGranted {
+        gate_request_id: GateId,
+        actor: ActorId,
+        policy_snapshot_hash: Option<ContentHash>,
+        reason: Option<String>,
+    },
+    /// A human issued an override against a fact, proposal, or constraint.
+    UserOverrideIssued {
+        target: OverrideTarget,
+        actor: ActorId,
+        policy_snapshot_hash: Option<ContentHash>,
+        reason: String,
+    },
+}
+
+/// Envelope for a [`UserExperienceEvent`] — mirrors [`ExperienceEventEnvelope`]
+/// for the user-side ledger.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserExperienceEventEnvelope {
+    pub event_id: EventId,
+    pub occurred_at: Timestamp,
+    pub tenant_id: Option<TenantId>,
+    pub correlation_id: Option<CorrelationId>,
+    pub event: UserExperienceEvent,
+}
+
+impl UserExperienceEventEnvelope {
+    #[must_use]
+    pub fn new(event_id: impl Into<EventId>, event: UserExperienceEvent) -> Self {
+        Self {
+            event_id: event_id.into(),
+            occurred_at: Timestamp::epoch(),
+            tenant_id: None,
+            correlation_id: None,
+            event,
+        }
+    }
+
+    #[must_use]
+    pub fn with_tenant(mut self, tenant_id: impl Into<TenantId>) -> Self {
+        self.tenant_id = Some(tenant_id.into());
+        self
+    }
+
+    #[must_use]
+    pub fn with_correlation(mut self, correlation_id: impl Into<CorrelationId>) -> Self {
+        self.correlation_id = Some(correlation_id.into());
+        self
+    }
+
+    #[must_use]
+    pub fn with_timestamp(mut self, occurred_at: impl Into<Timestamp>) -> Self {
+        self.occurred_at = occurred_at.into();
+        self
+    }
+}
+
+/// Unified query result spanning both ledger sides.
+///
+/// Recall and audit consumers iterate `ExperienceRecord` rather than the two
+/// envelope types directly, so a UserOverrideIssued and an OutcomeRecorded can
+/// both feed the same prior calibration without the consumer needing to call
+/// two stores.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "value")]
+pub enum ExperienceRecord {
+    Engine(ExperienceEventEnvelope),
+    User(UserExperienceEventEnvelope),
+}
+
+impl ExperienceRecord {
+    #[must_use]
+    pub fn correlation_id(&self) -> Option<&CorrelationId> {
+        match self {
+            Self::Engine(env) => env.correlation_id.as_ref(),
+            Self::User(env) => env.correlation_id.as_ref(),
+        }
+    }
+
+    #[must_use]
+    pub fn tenant_id(&self) -> Option<&TenantId> {
+        match self {
+            Self::Engine(env) => env.tenant_id.as_ref(),
+            Self::User(env) => env.tenant_id.as_ref(),
+        }
+    }
+
+    #[must_use]
+    pub fn occurred_at(&self) -> &Timestamp {
+        match self {
+            Self::Engine(env) => &env.occurred_at,
+            Self::User(env) => &env.occurred_at,
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {

@@ -27,8 +27,9 @@ use std::sync::{Arc, RwLock};
 
 use converge_core::{
     ArtifactId, ArtifactKind, EventId, EventQuery, ExperienceEvent, ExperienceEventEnvelope,
-    ExperienceEventKind, ExperienceStore, ExperienceStoreError, ExperienceStoreResult,
-    LifecycleEvent, ReplayTrace, TimeRange, TraceLinkId,
+    ExperienceEventKind, ExperienceRecord, ExperienceStore, ExperienceStoreError,
+    ExperienceStoreResult, LifecycleEvent, ReplayTrace, TimeRange, TraceLinkId,
+    UserExperienceEventEnvelope,
 };
 use serde::{Deserialize, Serialize};
 
@@ -36,6 +37,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Default)]
 pub struct InMemoryExperienceStore {
     events: RwLock<Vec<ExperienceEventEnvelope>>,
+    user_events: RwLock<Vec<UserExperienceEventEnvelope>>,
     trace_links: RwLock<HashMap<TraceLinkId, ReplayTrace>>,
     next_event_id: AtomicU64,
 }
@@ -129,6 +131,68 @@ impl ExperienceStore for InMemoryExperienceStore {
             })?;
         Ok(map.get(trace_link_id).cloned())
     }
+
+    fn append_user_event(&self, event: UserExperienceEventEnvelope) -> ExperienceStoreResult<()> {
+        let mut events =
+            self.user_events
+                .write()
+                .map_err(|_| ExperienceStoreError::StorageError {
+                    message: "user events lock poisoned".to_string(),
+                })?;
+        events.push(event);
+        Ok(())
+    }
+
+    fn query_records(&self, query: &EventQuery) -> ExperienceStoreResult<Vec<ExperienceRecord>> {
+        let engine = self.query_events(query)?;
+        let user_envelopes =
+            self.user_events
+                .read()
+                .map_err(|_| ExperienceStoreError::StorageError {
+                    message: "user events lock poisoned".to_string(),
+                })?;
+
+        let user = user_envelopes
+            .iter()
+            .filter(|env| user_event_matches_query(env, query))
+            .cloned()
+            .collect::<Vec<_>>();
+
+        let mut records: Vec<ExperienceRecord> = engine
+            .into_iter()
+            .map(ExperienceRecord::Engine)
+            .chain(user.into_iter().map(ExperienceRecord::User))
+            .collect();
+
+        records.sort_by(|a: &ExperienceRecord, b: &ExperienceRecord| {
+            a.occurred_at().as_str().cmp(b.occurred_at().as_str())
+        });
+
+        if let Some(limit) = query.limit {
+            records.truncate(limit);
+        }
+
+        Ok(records)
+    }
+}
+
+fn user_event_matches_query(envelope: &UserExperienceEventEnvelope, query: &EventQuery) -> bool {
+    if let Some(ref tenant_id) = query.tenant_id
+        && envelope.tenant_id.as_deref() != Some(tenant_id.as_str())
+    {
+        return false;
+    }
+    if let Some(ref correlation_id) = query.correlation_id
+        && envelope.correlation_id.as_deref() != Some(correlation_id.as_str())
+    {
+        return false;
+    }
+    if let Some(ref range) = query.time_range
+        && !matches_time_range(envelope.occurred_at.as_str(), range)
+    {
+        return false;
+    }
+    true
 }
 
 // ============================================================================

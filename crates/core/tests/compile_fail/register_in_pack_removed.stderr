@@ -1,4 +1,4 @@
-error[E0599]: no method named `register_in_pack` found for struct `Engine` in the current scope
+error[E0599]: no method named `register_in_pack` found for struct `converge_core::Engine` in the current scope
  --> tests/compile_fail/register_in_pack_removed.rs:9:12
   |
 9 |     engine.register_in_pack("pack-a", ());

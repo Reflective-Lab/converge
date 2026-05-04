@@ -5,6 +5,9 @@
 //!
 //! Demonstrates: long-running workflows, humans in the loop, and Cedar-backed
 //! gate decisions projected from flow state.
+//!
+//! This is a Converge kernel fixture, not the canonical expense workflow.
+//! Reusable spend-approval semantics live downstream in Organism domain packs.
 
 use converge_kernel::{
     AgentEffect, AuthorityLevel, Context, ContextKey, ContextState, Engine, EngineHitlPolicy,

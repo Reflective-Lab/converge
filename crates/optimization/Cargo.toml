@@ -9,7 +9,7 @@ license.workspace = true
 description = "Optimization algorithms for converge.zone - Rust reimplementation of OR-Tools subset"
 keywords = ["optimization", "constraint", "graph", "scheduling", "assignment"]
 categories = ["algorithms", "mathematics", "science"]
-exclude = ["target/*", "target/", "ortools/*", "ortools/", "build/*", "build/"]
+exclude = ["target/*", "target/", "build/*", "build/"]
 
 [dependencies]
 # Core

@@ -38,15 +38,20 @@ pub use converge_core::gates::{
     AuthorityLevel, FlowAction, FlowGateAuthorizer, FlowGateContext, FlowGateInput,
     FlowGateOutcome, FlowGatePrincipal, FlowGateResource, FlowPhase, StopReason,
 };
+pub use converge_core::recall::{
+    CandidateProvenance, CandidateSourceType, RecallCandidate, RecallPolicy, RecallQuery,
+    RecallUse, RelevanceLevel, recall_from_store,
+};
 pub use converge_core::{
     ApprovalPointId, BackendId, Budget, BudgetResource, ChainId, ConstraintName, ConstraintValue,
     ContextState, ConvergeError, ConvergeResult, CorrelationId, Criterion, CriterionEvaluator,
     CriterionId, CriterionOutcome, CriterionResult, DecisionStep, Engine, EngineHitlPolicy,
     EventId, EventQuery, ExperienceEvent, ExperienceEventEnvelope, ExperienceEventKind,
-    ExperienceEventObserver, ExperienceStore, HitlPause, IntegrityProof, Invariant, InvariantClass,
-    InvariantResult, LamportClock, MerkleRoot, PackId, RunResult, StreamingCallback, SuggestorId,
+    ExperienceEventObserver, ExperienceRecord, ExperienceStore, ExperienceStoreError,
+    ExperienceStoreResult, HitlPause, IntegrityProof, Invariant, InvariantClass, InvariantResult,
+    LamportClock, MerkleRoot, OverrideTarget, PackId, RunResult, StreamingCallback, SuggestorId,
     TenantId, TraceLinkId, TruthId, TypesBudgets, TypesIntentId, TypesIntentKind, TypesRootIntent,
-    TypesRunHooks,
+    TypesRunHooks, UserExperienceEvent, UserExperienceEventEnvelope,
 };
 pub use converge_pack::{
     AgentEffect, Context, ContextKey, Fact, ProposedFact, Suggestor, ValidationError,

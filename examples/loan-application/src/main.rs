@@ -4,6 +4,10 @@
 //! Loan Application — parallel verification with conditional HITL.
 //!
 //! Demonstrates: parallel execution, conditional HITL (borderline cases), consensus.
+//!
+//! This is a Converge kernel fixture for execution and HITL behavior. Canonical
+//! lending workflow semantics belong downstream in an Organism or app-domain
+//! pack.
 
 use converge_kernel::{
     AgentEffect, Context, ContextKey, ContextState, Engine, EngineHitlPolicy, GateDecision,
