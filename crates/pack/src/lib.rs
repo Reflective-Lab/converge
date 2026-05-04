@@ -22,6 +22,7 @@ pub mod context;
 pub mod effect;
 pub mod fact;
 pub mod gate;
+pub mod governance;
 pub mod pack;
 pub mod pack_suggestor;
 pub mod types;
@@ -45,6 +46,7 @@ pub use gate::{
     ProposedPlan, ProvenanceEnvelope, ReplayEnvelope, SolveBudgets, SolverReport, StopReason,
     TieBreakStrategy, TraceMode, Violation,
 };
+pub use governance::{ConsensusOutcome, ConsensusRule, Disagreement, Vote, VoteDecision};
 pub use pack::{
     InvariantDef, InvariantResult, Pack, PackSchema, PackSolveResult, PackSolver,
     default_gate_evaluation,
@@ -52,8 +54,8 @@ pub use pack::{
 pub use pack_suggestor::PackSuggestor;
 pub use types::{
     ActorId, ApprovalId, ApprovalPointId, ArtifactId, BackendId, ChainId, ConstraintName,
-    ConstraintValue, ContentHash, CorrelationId, CriterionId, DomainId, EventId, FactId, GateId,
-    ObservationId, PackId, PolicyId, PolicyVersionId, PrincipalId, ProposalId, ResourceId,
-    ResourceKind, SpanId, TenantId, Timestamp, TraceId, TraceLinkId, TraceReference, TraceSystemId,
-    TruthId, ValidationCheckId,
+    ConstraintValue, ContentHash, CorrelationId, CriterionId, DisagreementId, DomainId, EventId,
+    FactId, GateId, ObservationId, PackId, PolicyId, PolicyVersionId, PrincipalId, ProposalId,
+    ResourceId, ResourceKind, SpanId, TenantId, Timestamp, TraceId, TraceLinkId, TraceReference,
+    TraceSystemId, TruthId, ValidationCheckId, VoteId, VoteTopicId,
 };

@@ -232,6 +232,18 @@ string_newtype!(
     ApprovalPointId
 );
 string_newtype!(
+    /// Identifier for an individual vote cast on a topic.
+    VoteId
+);
+string_newtype!(
+    /// Identifier for the topic a vote or disagreement is about.
+    VoteTopicId
+);
+string_newtype!(
+    /// Identifier for a recorded disagreement.
+    DisagreementId
+);
+string_newtype!(
     /// Identifier for a success criterion.
     CriterionId
 );
