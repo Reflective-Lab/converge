@@ -77,7 +77,7 @@ converge-storage = { path = "crates/storage", version = "3.7.6", default-feature
 
 # Shared dependencies
 anyhow = "1"
-arrow-array = "57"
+arrow-array = "58"
 arrow-schema = "57"
 async-nats = "0.47"
 async-stream = "0.3"
