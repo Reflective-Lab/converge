@@ -356,6 +356,23 @@ impl Fact {
     pub fn is_replay_eligible(&self) -> bool {
         self.promotion_record.is_replay_eligible()
     }
+
+    /// Parse the fact's JSON content into a typed value, or `None` if the
+    /// content is not valid JSON for `T`.
+    ///
+    /// Common pattern for filtering facts by payload type:
+    ///
+    /// ```rust,ignore
+    /// let votes: Vec<Vote> = ctx
+    ///     .get(ContextKey::Votes)
+    ///     .iter()
+    ///     .filter_map(Fact::parse_content::<Vote>)
+    ///     .collect();
+    /// ```
+    #[must_use]
+    pub fn parse_content<T: serde::de::DeserializeOwned>(&self) -> Option<T> {
+        serde_json::from_str(&self.content).ok()
+    }
 }
 
 /// Kernel-only construction helpers for authoritative facts.
@@ -462,6 +479,13 @@ impl ProposedFact {
             0.0
         };
         self
+    }
+
+    /// Parse the proposal's JSON content into a typed value, or `None` if
+    /// the content is not valid JSON for `T`.
+    #[must_use]
+    pub fn parse_content<T: serde::de::DeserializeOwned>(&self) -> Option<T> {
+        serde_json::from_str(&self.content).ok()
     }
 
     /// Adjust confidence by a named step, clamped to [0.0, 1.0].
@@ -644,6 +668,48 @@ mod tests {
     fn with_confidence_normalizes_infinity() {
         let pf = ProposedFact::new(ContextKey::Seeds, "p", "c", "x").with_confidence(f64::INFINITY);
         assert_eq!(pf.confidence(), 0.0);
+    }
+
+    #[test]
+    fn proposed_fact_parse_content_succeeds_for_valid_json() {
+        #[derive(serde::Deserialize, PartialEq, Debug)]
+        struct Payload {
+            kind: String,
+            score: f64,
+        }
+        let pf = ProposedFact::new(
+            ContextKey::Hypotheses,
+            "p",
+            r#"{"kind":"vote","score":0.7}"#,
+            "test",
+        );
+        let parsed: Option<Payload> = pf.parse_content();
+        assert_eq!(
+            parsed,
+            Some(Payload {
+                kind: "vote".into(),
+                score: 0.7,
+            })
+        );
+    }
+
+    #[test]
+    fn proposed_fact_parse_content_returns_none_for_invalid_json() {
+        let pf = ProposedFact::new(ContextKey::Hypotheses, "p", "not json", "test");
+        let parsed: Option<serde_json::Value> = pf.parse_content();
+        assert!(parsed.is_none());
+    }
+
+    #[cfg(feature = "kernel-authority")]
+    #[test]
+    fn fact_parse_content_succeeds_for_valid_json() {
+        #[derive(serde::Deserialize, PartialEq, Debug)]
+        struct Payload {
+            label: String,
+        }
+        let fact = kernel_authority::new_fact(ContextKey::Seeds, "f", r#"{"label":"x"}"#);
+        let parsed: Option<Payload> = fact.parse_content();
+        assert_eq!(parsed, Some(Payload { label: "x".into() }));
     }
 
     #[test]
