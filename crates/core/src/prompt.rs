@@ -222,6 +222,9 @@ fn context_key_to_keyword(key: ContextKey) -> &'static str {
         ContextKey::Evaluations => ":evaluations",
         ContextKey::Proposals => ":proposals",
         ContextKey::Diagnostic => ":diagnostic",
+        ContextKey::Votes => ":votes",
+        ContextKey::Disagreements => ":disagreements",
+        ContextKey::ConsensusOutcomes => ":consensus_outcomes",
     }
 }
 

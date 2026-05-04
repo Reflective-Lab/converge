@@ -32,6 +32,14 @@ pub enum ContextKey {
     Proposals,
     /// Error and debugging information. Never blocks convergence.
     Diagnostic,
+    /// Votes cast on topics — payload is `governance::Vote`.
+    Votes,
+    /// Substantive concerns recorded by participants — payload is
+    /// `governance::Disagreement`.
+    Disagreements,
+    /// Deterministic outcomes of evaluating votes against a `ConsensusRule` —
+    /// payload is `governance::ConsensusOutcome`.
+    ConsensusOutcomes,
 }
 
 /// Read-only view of the shared context.

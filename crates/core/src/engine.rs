@@ -799,15 +799,18 @@ impl Engine {
     fn proposal_kind_for(&self, key: ContextKey) -> ProposedContentKind {
         match key {
             ContextKey::Strategies => ProposedContentKind::Plan,
-            ContextKey::Evaluations => ProposedContentKind::Evaluation,
-            ContextKey::Competitors | ContextKey::Constraints => {
+            ContextKey::Evaluations | ContextKey::ConsensusOutcomes => {
+                ProposedContentKind::Evaluation
+            }
+            ContextKey::Competitors | ContextKey::Constraints | ContextKey::Votes => {
                 ProposedContentKind::Classification
             }
             ContextKey::Proposals => ProposedContentKind::Draft,
             ContextKey::Seeds
             | ContextKey::Hypotheses
             | ContextKey::Signals
-            | ContextKey::Diagnostic => ProposedContentKind::Claim,
+            | ContextKey::Diagnostic
+            | ContextKey::Disagreements => ProposedContentKind::Claim,
         }
     }
 
