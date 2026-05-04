@@ -40,6 +40,28 @@ impl AgentEffect {
         Self { proposals }
     }
 
+    /// Append a proposal in place.
+    ///
+    /// Lets suggestors accumulate proposals incrementally without an
+    /// intermediate `Vec`:
+    ///
+    /// ```rust,ignore
+    /// let mut effect = AgentEffect::default();
+    /// effect.push(admission_result);
+    /// if admission.feasible {
+    ///     effect.push(parsed_payload);
+    /// }
+    /// effect
+    /// ```
+    pub fn push(&mut self, proposal: ProposedFact) {
+        self.proposals.push(proposal);
+    }
+
+    /// Append every proposal in an iterator.
+    pub fn extend(&mut self, proposals: impl IntoIterator<Item = ProposedFact>) {
+        self.proposals.extend(proposals);
+    }
+
     /// Returns true if this effect contributes nothing.
     #[must_use]
     pub fn is_empty(&self) -> bool {
@@ -92,6 +114,26 @@ mod tests {
     fn is_empty_false_for_nonempty() {
         let e = AgentEffect::with_proposal(proposal(ContextKey::Signals, "x"));
         assert!(!e.is_empty());
+    }
+
+    #[test]
+    fn push_appends_proposal() {
+        let mut e = AgentEffect::default();
+        assert!(e.is_empty());
+        e.push(proposal(ContextKey::Seeds, "p1"));
+        e.push(proposal(ContextKey::Hypotheses, "p2"));
+        assert_eq!(e.proposals.len(), 2);
+        assert_eq!(e.proposals[1].id, "p2");
+    }
+
+    #[test]
+    fn extend_appends_iterator() {
+        let mut e = AgentEffect::with_proposal(proposal(ContextKey::Seeds, "p0"));
+        e.extend(vec![
+            proposal(ContextKey::Seeds, "p1"),
+            proposal(ContextKey::Hypotheses, "p2"),
+        ]);
+        assert_eq!(e.proposals.len(), 3);
     }
 
     #[test]
