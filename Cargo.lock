@@ -2373,7 +2373,7 @@ checksum = "136d3e02915a2cea4d74caa8681e2d44b1c3254bdbf17d11d41d587ff858832c"
 
 [[package]]
 name = "converge-analytics"
-version = "3.7.5"
+version = "3.7.6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2401,7 +2401,7 @@ dependencies = [
 
 [[package]]
 name = "converge-client"
-version = "3.7.5"
+version = "3.7.6"
 dependencies = [
  "converge-protocol",
  "thiserror 2.0.18",
@@ -2410,7 +2410,7 @@ dependencies = [
 
 [[package]]
 name = "converge-core"
-version = "3.7.5"
+version = "3.7.6"
 dependencies = [
  "async-trait",
  "converge-pack",
@@ -2435,7 +2435,7 @@ dependencies = [
 
 [[package]]
 name = "converge-domain"
-version = "3.7.5"
+version = "3.7.6"
 dependencies = [
  "async-trait",
  "converge-core",
@@ -2453,7 +2453,7 @@ dependencies = [
 
 [[package]]
 name = "converge-experience"
-version = "3.7.5"
+version = "3.7.6"
 dependencies = [
  "arrow-array",
  "arrow-schema",
@@ -2470,7 +2470,7 @@ dependencies = [
 
 [[package]]
 name = "converge-kernel"
-version = "3.7.5"
+version = "3.7.6"
 dependencies = [
  "converge-core",
  "converge-model",
@@ -2483,7 +2483,7 @@ dependencies = [
 
 [[package]]
 name = "converge-knowledge"
-version = "3.7.5"
+version = "3.7.6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2517,7 +2517,7 @@ dependencies = [
 
 [[package]]
 name = "converge-model"
-version = "3.7.5"
+version = "3.7.6"
 dependencies = [
  "converge-core",
  "converge-pack",
@@ -2530,7 +2530,7 @@ dependencies = [
 
 [[package]]
 name = "converge-optimization"
-version = "3.7.5"
+version = "3.7.6"
 dependencies = [
  "approx",
  "async-trait",
@@ -2558,7 +2558,7 @@ dependencies = [
 
 [[package]]
 name = "converge-pack"
-version = "3.7.5"
+version = "3.7.6"
 dependencies = [
  "async-trait",
  "hex",
@@ -2572,7 +2572,7 @@ dependencies = [
 
 [[package]]
 name = "converge-policy"
-version = "3.7.5"
+version = "3.7.6"
 dependencies = [
  "async-trait",
  "axum 0.8.9",
@@ -2595,7 +2595,7 @@ dependencies = [
 
 [[package]]
 name = "converge-protocol"
-version = "3.7.5"
+version = "3.7.6"
 dependencies = [
  "prost 0.13.5",
  "prost-types 0.13.5",
@@ -2605,7 +2605,7 @@ dependencies = [
 
 [[package]]
 name = "converge-provider"
-version = "3.7.5"
+version = "3.7.6"
 dependencies = [
  "arrow-array",
  "arrow-schema",
@@ -2641,7 +2641,7 @@ dependencies = [
 
 [[package]]
 name = "converge-provider-api"
-version = "3.7.5"
+version = "3.7.6"
 dependencies = [
  "serde",
  "serde_json",
@@ -2651,7 +2651,7 @@ dependencies = [
 
 [[package]]
 name = "converge-runtime"
-version = "3.7.5"
+version = "3.7.6"
 dependencies = [
  "anyhow",
  "async-nats",
@@ -2711,7 +2711,7 @@ dependencies = [
 
 [[package]]
 name = "converge-storage"
-version = "3.7.5"
+version = "3.7.6"
 dependencies = [
  "futures",
  "object_store 0.13.2",
