@@ -2,6 +2,7 @@
 fn compile_fail_tests() {
     let t = trybuild::TestCases::new();
     t.compile_fail("tests/compile_fail/context_key_exhaustive.rs");
+    t.compile_fail("tests/compile_fail/consensus_outcome_struct_literal.rs");
     t.compile_fail("tests/compile_fail/effect_no_facts_field.rs");
     t.compile_fail("tests/compile_fail/effect_with_fact_removed.rs");
     t.compile_fail("tests/compile_fail/effect_proposals_field_rejects_fact.rs");

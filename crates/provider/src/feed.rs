@@ -7,16 +7,171 @@
 //! feed transport and parsing generic: downstream packs decide source trust,
 //! rights, gates, and domain meaning.
 
+use std::num::{NonZeroU64, NonZeroUsize};
 use std::sync::Arc;
 
+use converge_pack::{BackendId, BasisPoints, ContentHash};
 use quick_xml::Reader;
 use quick_xml::events::{BytesStart, Event};
 use reqwest::Url;
+use serde::de;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::fetch::HttpFetchProvider;
 use crate::search::{WebFetchBackend, WebFetchError, WebFetchRequest, WebFetchResponse};
+
+/// Absolute URL used by feed discovery and fetch observations.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
+#[serde(transparent)]
+pub struct FeedUrl(String);
+
+impl FeedUrl {
+    pub fn new(value: impl Into<String>) -> Result<Self, FeedError> {
+        let value = value.into();
+        Url::parse(&value).map_err(|error| FeedError::InvalidUrl(error.to_string()))?;
+        Ok(Self(value))
+    }
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    pub fn parse(&self) -> Result<Url, FeedError> {
+        Url::parse(self.as_str()).map_err(|error| FeedError::InvalidUrl(error.to_string()))
+    }
+}
+
+impl std::fmt::Display for FeedUrl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for FeedUrl {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        Self::new(value).map_err(de::Error::custom)
+    }
+}
+
+/// Positive byte limit for feed fetches.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(transparent)]
+pub struct FeedByteLimit(NonZeroUsize);
+
+impl FeedByteLimit {
+    pub fn new(value: usize) -> Result<Self, FeedError> {
+        NonZeroUsize::new(value)
+            .map(Self)
+            .ok_or_else(|| FeedError::InvalidLimit("max_bytes must be greater than zero".into()))
+    }
+
+    #[must_use]
+    pub fn get(self) -> usize {
+        self.0.get()
+    }
+}
+
+impl<'de> Deserialize<'de> for FeedByteLimit {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = usize::deserialize(deserializer)?;
+        Self::new(value).map_err(de::Error::custom)
+    }
+}
+
+/// Positive candidate limit for feed discovery.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(transparent)]
+pub struct FeedCandidateLimit(NonZeroUsize);
+
+impl FeedCandidateLimit {
+    pub fn new(value: usize) -> Result<Self, FeedError> {
+        NonZeroUsize::new(value).map(Self).ok_or_else(|| {
+            FeedError::InvalidLimit("max_candidates must be greater than zero".into())
+        })
+    }
+
+    #[must_use]
+    pub fn get(self) -> usize {
+        self.0.get()
+    }
+}
+
+impl<'de> Deserialize<'de> for FeedCandidateLimit {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = usize::deserialize(deserializer)?;
+        Self::new(value).map_err(de::Error::custom)
+    }
+}
+
+/// Positive timeout in milliseconds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(transparent)]
+pub struct FeedTimeoutMs(NonZeroU64);
+
+impl FeedTimeoutMs {
+    pub fn new(value: u64) -> Result<Self, FeedError> {
+        NonZeroU64::new(value)
+            .map(Self)
+            .ok_or_else(|| FeedError::InvalidLimit("timeout_ms must be greater than zero".into()))
+    }
+
+    #[must_use]
+    pub fn get(self) -> u64 {
+        self.0.get()
+    }
+}
+
+impl<'de> Deserialize<'de> for FeedTimeoutMs {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = u64::deserialize(deserializer)?;
+        Self::new(value).map_err(de::Error::custom)
+    }
+}
+
+/// Valid HTTP status code.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(transparent)]
+pub struct HttpStatusCode(u16);
+
+impl HttpStatusCode {
+    pub fn new(value: u16) -> Result<Self, FeedError> {
+        if (100..=599).contains(&value) {
+            Ok(Self(value))
+        } else {
+            Err(FeedError::InvalidStatus(value))
+        }
+    }
+
+    #[must_use]
+    pub fn get(self) -> u16 {
+        self.0
+    }
+}
+
+impl<'de> Deserialize<'de> for HttpStatusCode {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = u16::deserialize(deserializer)?;
+        Self::new(value).map_err(de::Error::custom)
+    }
+}
 
 /// Feed format identified by probe hints or parser detection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -40,85 +195,83 @@ pub enum FeedDiscoverySource {
 /// Request to discover likely feed endpoints for a site or direct feed URL.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeedProbeRequest {
-    pub url: String,
+    pub url: FeedUrl,
     #[serde(default = "default_probe_common_paths")]
     pub probe_common_paths: bool,
     #[serde(default = "default_max_candidates")]
-    pub max_candidates: usize,
+    pub max_candidates: FeedCandidateLimit,
     #[serde(default = "default_max_bytes")]
-    pub max_bytes: usize,
+    pub max_bytes: FeedByteLimit,
     #[serde(default = "default_timeout_ms")]
-    pub timeout_ms: u64,
+    pub timeout_ms: FeedTimeoutMs,
 }
 
 fn default_probe_common_paths() -> bool {
     true
 }
 
-fn default_max_candidates() -> usize {
-    16
+fn default_max_candidates() -> FeedCandidateLimit {
+    FeedCandidateLimit::new(16).expect("default candidate limit is non-zero")
 }
 
-fn default_max_bytes() -> usize {
-    1_048_576
+fn default_max_bytes() -> FeedByteLimit {
+    FeedByteLimit::new(1_048_576).expect("default byte limit is non-zero")
 }
 
-fn default_timeout_ms() -> u64 {
-    30_000
+fn default_timeout_ms() -> FeedTimeoutMs {
+    FeedTimeoutMs::new(30_000).expect("default timeout is non-zero")
 }
 
 impl FeedProbeRequest {
-    #[must_use]
-    pub fn new(url: impl Into<String>) -> Self {
-        Self {
-            url: url.into(),
+    pub fn new(url: impl Into<String>) -> Result<Self, FeedError> {
+        Ok(Self {
+            url: FeedUrl::new(url)?,
             probe_common_paths: default_probe_common_paths(),
             max_candidates: default_max_candidates(),
             max_bytes: default_max_bytes(),
             timeout_ms: default_timeout_ms(),
-        }
+        })
     }
 }
 
 /// Candidate feed endpoint discovered during probing.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FeedEndpointCandidate {
-    pub url: String,
+    pub url: FeedUrl,
     pub format_hint: FeedFormat,
     pub discovery_source: FeedDiscoverySource,
-    pub confidence_bps: u16,
+    pub confidence_bps: BasisPoints,
 }
 
 /// Feed probe response. Candidates are observations and require downstream
 /// promotion before use.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeedProbeResponse {
-    pub provider: String,
-    pub input_url: String,
+    pub provider: BackendId,
+    pub input_url: FeedUrl,
     pub candidates: Vec<FeedEndpointCandidate>,
 }
 
 /// Request to fetch and parse one feed endpoint.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeedFetchRequest {
-    pub url: String,
+    pub url: FeedUrl,
     #[serde(default)]
     pub headers: Vec<(String, String)>,
     #[serde(default = "default_max_bytes")]
-    pub max_bytes: usize,
+    pub max_bytes: FeedByteLimit,
     #[serde(default = "default_timeout_ms")]
-    pub timeout_ms: u64,
+    pub timeout_ms: FeedTimeoutMs,
 }
 
 impl FeedFetchRequest {
-    #[must_use]
-    pub fn new(url: impl Into<String>) -> Self {
-        Self {
-            url: url.into(),
+    pub fn new(url: impl Into<String>) -> Result<Self, FeedError> {
+        Ok(Self {
+            url: FeedUrl::new(url)?,
             headers: Vec::new(),
             max_bytes: default_max_bytes(),
             timeout_ms: default_timeout_ms(),
-        }
+        })
     }
 
     #[must_use]
@@ -130,9 +283,9 @@ impl FeedFetchRequest {
 
 impl From<&FeedFetchRequest> for WebFetchRequest {
     fn from(request: &FeedFetchRequest) -> Self {
-        let mut fetch = WebFetchRequest::new(&request.url)
-            .with_max_bytes(request.max_bytes)
-            .with_timeout_ms(request.timeout_ms);
+        let mut fetch = WebFetchRequest::new(request.url.as_str())
+            .with_max_bytes(request.max_bytes.get())
+            .with_timeout_ms(request.timeout_ms.get());
         for (name, value) in &request.headers {
             fetch = fetch.with_header(name, value);
         }
@@ -145,29 +298,29 @@ impl From<&FeedFetchRequest> for WebFetchRequest {
 pub struct FeedItem {
     pub id: Option<String>,
     pub title: Option<String>,
-    pub link: Option<String>,
+    pub link: Option<FeedUrl>,
     pub summary: Option<String>,
     pub published_at: Option<String>,
     pub updated_at: Option<String>,
     pub authors: Vec<String>,
     pub categories: Vec<String>,
-    pub item_hash: String,
+    pub item_hash: ContentHash,
 }
 
 /// Feed fetch response. Raw body is retained so callers can store the exact
 /// representation used to derive normalized items.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeedFetchResponse {
-    pub provider: String,
-    pub url: String,
-    pub status: u16,
+    pub provider: BackendId,
+    pub url: FeedUrl,
+    pub status: HttpStatusCode,
     pub content_type: Option<String>,
     pub format: FeedFormat,
-    pub raw_hash: String,
+    pub raw_hash: ContentHash,
     pub raw_body: String,
     pub truncated: bool,
     pub feed_title: Option<String>,
-    pub feed_link: Option<String>,
+    pub feed_link: Option<FeedUrl>,
     pub feed_updated_at: Option<String>,
     pub items: Vec<FeedItem>,
 }
@@ -179,6 +332,10 @@ pub enum FeedError {
     Fetch(String),
     #[error("invalid url: {0}")]
     InvalidUrl(String),
+    #[error("invalid limit: {0}")]
+    InvalidLimit(String),
+    #[error("invalid HTTP status: {0}")]
+    InvalidStatus(u16),
     #[error("parse error: {0}")]
     Parse(String),
     #[error("unsupported feed format")]
@@ -238,22 +395,21 @@ impl FeedFetchBackend for HttpFeedProvider {
     }
 
     fn probe(&self, request: &FeedProbeRequest) -> Result<FeedProbeResponse, FeedError> {
-        let input_url =
-            Url::parse(&request.url).map_err(|error| FeedError::InvalidUrl(error.to_string()))?;
+        let input_url = request.url.parse()?;
         let mut candidates = Vec::new();
 
         if looks_like_feed_url(input_url.path()) {
             candidates.push(FeedEndpointCandidate {
-                url: input_url.to_string(),
+                url: FeedUrl::new(input_url.to_string())?,
                 format_hint: format_hint_from_url(input_url.path()),
                 discovery_source: FeedDiscoverySource::DirectUrl,
-                confidence_bps: 9_000,
+                confidence_bps: BasisPoints::new(9_000).expect("static basis points are valid"),
             });
         }
 
         let fetch = WebFetchRequest::new(input_url.as_str())
-            .with_max_bytes(request.max_bytes)
-            .with_timeout_ms(request.timeout_ms);
+            .with_max_bytes(request.max_bytes.get())
+            .with_timeout_ms(request.timeout_ms.get());
         if let Ok(response) = self.fetch_backend.fetch(&fetch) {
             candidates.extend(discover_alternate_links(&response.body, &response.url)?);
         }
@@ -263,10 +419,10 @@ impl FeedFetchBackend for HttpFeedProvider {
         }
 
         dedup_candidates(&mut candidates);
-        candidates.truncate(request.max_candidates);
+        candidates.truncate(request.max_candidates.get());
 
         Ok(FeedProbeResponse {
-            provider: self.provider_name().into(),
+            provider: BackendId::new(self.provider_name()),
             input_url: request.url.clone(),
             candidates,
         })
@@ -287,9 +443,9 @@ fn parse_feed_response(
     let parsed = parse_feed(&response.body)?;
 
     Ok(FeedFetchResponse {
-        provider: provider_name.into(),
-        url: response.url,
-        status: response.status,
+        provider: BackendId::new(provider_name),
+        url: FeedUrl::new(response.url)?,
+        status: HttpStatusCode::new(response.status)?,
         content_type: response.content_type,
         format: parsed.format,
         raw_hash,
@@ -306,7 +462,7 @@ fn parse_feed_response(
 struct ParsedFeed {
     format: FeedFormat,
     feed_title: Option<String>,
-    feed_link: Option<String>,
+    feed_link: Option<FeedUrl>,
     feed_updated_at: Option<String>,
     items: Vec<FeedItem>,
 }
@@ -356,7 +512,10 @@ struct JsonFeedAuthor {
 fn parse_json_feed(body: &str) -> Result<ParsedFeed, FeedError> {
     let json: JsonFeed =
         serde_json::from_str(body).map_err(|error| FeedError::Parse(error.to_string()))?;
-    let feed_link = json.home_page_url.or(json.feed_url);
+    let feed_link = json
+        .home_page_url
+        .or(json.feed_url)
+        .and_then(parse_optional_url);
     let items = json
         .items
         .into_iter()
@@ -373,7 +532,7 @@ fn parse_json_feed(body: &str) -> Result<ParsedFeed, FeedError> {
             authors.sort();
             authors.dedup();
             let summary = item.summary.or(item.content_text);
-            let link = item.url.or(item.external_url);
+            let link = item.url.or(item.external_url).and_then(parse_optional_url);
             let item_hash = item_hash(&item.id, &item.title, &link, &summary);
 
             FeedItem {
@@ -403,7 +562,7 @@ fn parse_json_feed(body: &str) -> Result<ParsedFeed, FeedError> {
 struct FeedItemBuilder {
     id: Option<String>,
     title: Option<String>,
-    link: Option<String>,
+    link: Option<FeedUrl>,
     summary: Option<String>,
     published_at: Option<String>,
     updated_at: Option<String>,
@@ -448,9 +607,11 @@ fn parse_xml_feed(body: &str) -> Result<ParsedFeed, FeedError> {
                     "title" => feed.feed_title = read_text(&mut reader, &start)?,
                     "link" => {
                         if feed.format == FeedFormat::Atom {
-                            feed.feed_link = attr_value(&reader, &start, b"href");
+                            feed.feed_link =
+                                attr_value(&reader, &start, b"href").and_then(parse_optional_url);
                         } else {
-                            feed.feed_link = read_text(&mut reader, &start)?;
+                            feed.feed_link =
+                                read_text(&mut reader, &start)?.and_then(parse_optional_url);
                         }
                     }
                     "updated" | "lastbuilddate" => {
@@ -463,15 +624,13 @@ fn parse_xml_feed(body: &str) -> Result<ParsedFeed, FeedError> {
                 let name = local_name(empty.name().as_ref());
                 if name == "link" {
                     if let Some(item) = current_item.as_mut() {
-                        item.link = item
-                            .link
-                            .take()
-                            .or_else(|| attr_value(&reader, &empty, b"href"));
+                        item.link = item.link.take().or_else(|| {
+                            attr_value(&reader, &empty, b"href").and_then(parse_optional_url)
+                        });
                     } else if feed.format == FeedFormat::Atom {
-                        feed.feed_link = feed
-                            .feed_link
-                            .take()
-                            .or_else(|| attr_value(&reader, &empty, b"href"));
+                        feed.feed_link = feed.feed_link.take().or_else(|| {
+                            attr_value(&reader, &empty, b"href").and_then(parse_optional_url)
+                        });
                     }
                 }
             }
@@ -510,7 +669,8 @@ fn read_item_start(
         "title" => item.title = read_text(reader, start).ok().flatten(),
         "link" => {
             item.link = attr_value(reader, start, b"href")
-                .or_else(|| read_text(reader, start).ok().flatten());
+                .or_else(|| read_text(reader, start).ok().flatten())
+                .and_then(parse_optional_url);
         }
         "guid" | "id" => item.id = read_text(reader, start).ok().flatten(),
         "description" | "summary" | "content" | "encoded" => {
@@ -614,10 +774,10 @@ fn discover_alternate_links(
             .join(&href)
             .map_err(|error| FeedError::InvalidUrl(error.to_string()))?;
         candidates.push(FeedEndpointCandidate {
-            url: url.to_string(),
+            url: FeedUrl::new(url.to_string())?,
             format_hint,
             discovery_source: FeedDiscoverySource::AlternateLink,
-            confidence_bps: 8_500,
+            confidence_bps: BasisPoints::new(8_500).expect("static basis points are valid"),
         });
     }
 
@@ -639,10 +799,10 @@ fn common_feed_candidates(base_url: &Url) -> Vec<FeedEndpointCandidate> {
         .into_iter()
         .filter_map(|(path, format_hint)| {
             base_url.join(path).ok().map(|url| FeedEndpointCandidate {
-                url: url.to_string(),
+                url: FeedUrl::new(url.to_string()).expect("joined feed URL is valid"),
                 format_hint,
                 discovery_source: FeedDiscoverySource::CommonPath,
-                confidence_bps: 4_000,
+                confidence_bps: BasisPoints::new(4_000).expect("static basis points are valid"),
             })
         })
         .collect()
@@ -652,7 +812,7 @@ fn dedup_candidates(candidates: &mut Vec<FeedEndpointCandidate>) {
     candidates.sort_by(|a, b| {
         b.confidence_bps
             .cmp(&a.confidence_bps)
-            .then_with(|| a.url.cmp(&b.url))
+            .then_with(|| a.url.as_str().cmp(b.url.as_str()))
     });
     candidates.dedup_by(|a, b| a.url == b.url);
 }
@@ -698,16 +858,23 @@ fn format_hint_from_content_type(content_type: &str) -> FeedFormat {
 fn item_hash(
     id: &Option<String>,
     title: &Option<String>,
-    link: &Option<String>,
+    link: &Option<FeedUrl>,
     summary: &Option<String>,
-) -> String {
+) -> ContentHash {
     sha256(&format!("{id:?}\n{title:?}\n{link:?}\n{summary:?}"))
 }
 
-fn sha256(value: &str) -> String {
+fn parse_optional_url(value: String) -> Option<FeedUrl> {
+    FeedUrl::new(value).ok()
+}
+
+fn sha256(value: &str) -> ContentHash {
     let mut hasher = Sha256::new();
     hasher.update(value.as_bytes());
-    format!("sha256:{}", hex::encode(hasher.finalize()))
+    let digest = hasher.finalize();
+    let mut bytes = [0u8; 32];
+    bytes.copy_from_slice(&digest);
+    ContentHash::new(bytes)
 }
 
 #[cfg(test)]
@@ -757,7 +924,7 @@ mod tests {
         let provider =
             HttpFeedProvider::with_fetch_backend(Arc::new(StaticFetchBackend { response }));
         let parsed = provider
-            .fetch_feed(&FeedFetchRequest::new("https://example.test/feed.xml"))
+            .fetch_feed(&FeedFetchRequest::new("https://example.test/feed.xml").unwrap())
             .unwrap();
 
         assert_eq!(parsed.format, FeedFormat::Rss);
@@ -765,8 +932,8 @@ mod tests {
         assert_eq!(parsed.items.len(), 1);
         assert_eq!(parsed.items[0].title.as_deref(), Some("Council update"));
         assert_eq!(parsed.items[0].id.as_deref(), Some("abc"));
-        assert!(parsed.raw_hash.starts_with("sha256:"));
-        assert!(parsed.items[0].item_hash.starts_with("sha256:"));
+        assert_eq!(parsed.raw_hash.to_hex().len(), 64);
+        assert_eq!(parsed.items[0].item_hash.to_hex().len(), 64);
     }
 
     #[test]
@@ -794,12 +961,12 @@ mod tests {
         let provider =
             HttpFeedProvider::with_fetch_backend(Arc::new(StaticFetchBackend { response }));
         let parsed = provider
-            .fetch_feed(&FeedFetchRequest::new("https://example.test/atom.xml"))
+            .fetch_feed(&FeedFetchRequest::new("https://example.test/atom.xml").unwrap())
             .unwrap();
 
         assert_eq!(parsed.format, FeedFormat::Atom);
         assert_eq!(
-            parsed.items[0].link.as_deref(),
+            parsed.items[0].link.as_ref().map(FeedUrl::as_str),
             Some("https://example.test/match")
         );
         assert_eq!(
@@ -837,7 +1004,7 @@ mod tests {
         let provider =
             HttpFeedProvider::with_fetch_backend(Arc::new(StaticFetchBackend { response }));
         let parsed = provider
-            .fetch_feed(&FeedFetchRequest::new("https://example.test/feed.json"))
+            .fetch_feed(&FeedFetchRequest::new("https://example.test/feed.json").unwrap())
             .unwrap();
 
         assert_eq!(parsed.format, FeedFormat::JsonFeed);
@@ -865,16 +1032,36 @@ mod tests {
         let provider =
             HttpFeedProvider::with_fetch_backend(Arc::new(StaticFetchBackend { response }));
         let probe = provider
-            .probe(&FeedProbeRequest::new("https://example.test/"))
+            .probe(&FeedProbeRequest::new("https://example.test/").unwrap())
             .unwrap();
 
         assert!(probe.candidates.iter().any(|candidate| {
             candidate.discovery_source == FeedDiscoverySource::AlternateLink
-                && candidate.url == "https://example.test/rss.xml"
+                && candidate.url.as_str() == "https://example.test/rss.xml"
         }));
         assert!(probe.candidates.iter().any(|candidate| {
             candidate.discovery_source == FeedDiscoverySource::CommonPath
-                && candidate.url == "https://example.test/feed"
+                && candidate.url.as_str() == "https://example.test/feed"
         }));
+    }
+
+    #[test]
+    fn request_deserialization_rejects_zero_limits_and_invalid_urls() {
+        let zero_limit = r#"{"url":"https://example.test/feed.xml","max_bytes":0}"#;
+        assert!(serde_json::from_str::<FeedFetchRequest>(zero_limit).is_err());
+
+        let invalid_url = r#"{"url":"not a url"}"#;
+        assert!(serde_json::from_str::<FeedFetchRequest>(invalid_url).is_err());
+    }
+
+    #[test]
+    fn candidate_deserialization_rejects_invalid_basis_points() {
+        let json = r#"{
+            "url":"https://example.test/feed.xml",
+            "format_hint":"rss",
+            "discovery_source":"direct_url",
+            "confidence_bps":12000
+        }"#;
+        assert!(serde_json::from_str::<FeedEndpointCandidate>(json).is_err());
     }
 }

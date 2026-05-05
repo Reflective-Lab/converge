@@ -35,8 +35,8 @@ use crate::kernel_boundary::{
 };
 use crate::recall::{RecallPolicy, RecallProvenanceEnvelope, RecallQuery};
 use crate::types::{
-    ActorId, ArtifactId, BackendId, ChainId, ContentHash, CorrelationId, DomainId, EventId, FactId,
-    GateId, PolicyId, ProposalId, TenantId, TensionId, Timestamp, TraceLinkId,
+    ActorId, ArtifactId, BackendId, ChainId, ConstraintName, ContentHash, CorrelationId, DomainId,
+    EventId, FactId, GateId, PolicyId, ProposalId, TenantId, TensionId, Timestamp, TraceLinkId,
 };
 
 // ============================================================================
@@ -226,7 +226,7 @@ pub enum ExperienceEvent {
         fact_id: FactId,
         domain: DomainId,
         claim: String,
-        confidence: f64,
+        confidence: converge_pack::UnitInterval,
         outcome: HypothesisOutcome,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         contradiction_id: Option<TensionId>,
@@ -460,7 +460,7 @@ pub type ExperienceStoreResult<T> = Result<T, ExperienceStoreError>;
 pub enum OverrideTarget {
     Fact(FactId),
     Proposal(ProposalId),
-    Constraint(String),
+    Constraint(ConstraintName),
 }
 
 /// User-side experience event.
@@ -667,7 +667,7 @@ mod tests {
             fact_id: "f-1".into(),
             domain: "market".into(),
             claim: "price will increase".into(),
-            confidence: 0.85,
+            confidence: converge_pack::UnitInterval::clamped(0.85),
             outcome: HypothesisOutcome::Confirmed,
             contradiction_id: None,
             formed_cycle: 1,

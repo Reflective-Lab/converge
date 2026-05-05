@@ -46,16 +46,20 @@ pub use gate::{
     ProposedPlan, ProvenanceEnvelope, ReplayEnvelope, SolveBudgets, SolverReport, StopReason,
     TieBreakStrategy, TraceMode, Violation,
 };
-pub use governance::{ConsensusOutcome, ConsensusRule, Disagreement, Vote, VoteDecision};
+pub use governance::{
+    ConsensusOutcome, ConsensusRule, Disagreement, EligibleVoters, GovernanceError, Vote,
+    VoteDecision, VoteTally,
+};
 pub use pack::{
     InvariantDef, InvariantResult, Pack, PackSchema, PackSolveResult, PackSolver,
     default_gate_evaluation,
 };
 pub use pack_suggestor::PackSuggestor;
 pub use types::{
-    ActorId, ApprovalId, ApprovalPointId, ArtifactId, BackendId, ChainId, ConstraintName,
-    ConstraintValue, ContentHash, CorrelationId, CriterionId, DisagreementId, DomainId, EventId,
-    FactId, GateId, ObservationId, PackId, PolicyId, PolicyVersionId, PrincipalId, ProposalId,
-    ResourceId, ResourceKind, SpanId, TenantId, Timestamp, TraceId, TraceLinkId, TraceReference,
-    TraceSystemId, TruthId, ValidationCheckId, VoteId, VoteTopicId,
+    ActorId, ApprovalId, ApprovalPointId, ArtifactId, BackendId, BasisPoints, ChainId,
+    ConstraintName, ConstraintValue, ContentHash, CorrelationId, CriterionId, DisagreementId,
+    DomainId, EventId, FactId, GateId, ObservationId, PackId, PolicyId, PolicyVersionId,
+    PrincipalId, ProposalId, ResourceId, ResourceKind, SpanId, TenantId, Timestamp, TraceId,
+    TraceLinkId, TraceReference, TraceSystemId, TruthId, UnitInterval, ValidationCheckId, VoteId,
+    VoteTopicId,
 };

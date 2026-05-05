@@ -31,6 +31,7 @@ use crate::experience_store::{
 };
 use crate::kernel_boundary::DecisionStep;
 use crate::types::TenantId;
+use converge_pack::UnitInterval;
 use serde::{Deserialize, Serialize};
 
 // ============================================================================
@@ -93,7 +94,7 @@ pub struct RecallPolicy {
     /// Maximum tokens to inject from recall context
     pub max_tokens_injection: usize,
     /// Minimum similarity score threshold
-    pub min_score_threshold: f64,
+    pub min_score_threshold: UnitInterval,
     /// Budget constraints
     pub budgets: RecallBudgets,
     /// Allowed recall uses (runtime, training, etc.)
@@ -108,11 +109,11 @@ pub struct RecallPolicy {
     /// adjustment without disabling recall itself. Capped to `[0.0, 1.0]` by
     /// consumers.
     #[serde(default = "default_prior_weight")]
-    pub prior_weight: f64,
+    pub prior_weight: UnitInterval,
 }
 
-fn default_prior_weight() -> f64 {
-    1.0
+fn default_prior_weight() -> UnitInterval {
+    UnitInterval::ONE
 }
 
 fn default_allowed_uses() -> Vec<RecallUse> {
@@ -125,7 +126,7 @@ impl Default for RecallPolicy {
             enabled: false,
             max_k_total: 5,
             max_tokens_injection: 500,
-            min_score_threshold: 0.5,
+            min_score_threshold: UnitInterval::clamped(0.5),
             budgets: RecallBudgets::default(),
             allowed_uses: default_allowed_uses(),
             prior_weight: default_prior_weight(),
@@ -171,14 +172,14 @@ impl RecallPolicy {
         self.enabled.hash(&mut hasher);
         self.max_k_total.hash(&mut hasher);
         self.max_tokens_injection.hash(&mut hasher);
-        (self.min_score_threshold as u64).hash(&mut hasher);
+        self.min_score_threshold.to_basis_points().hash(&mut hasher);
         self.budgets.max_latency_ms.hash(&mut hasher);
         self.budgets.max_embedding_calls.hash(&mut hasher);
         self.budgets.max_tokens_per_candidate.hash(&mut hasher);
         for use_type in &self.allowed_uses {
             (*use_type as u8).hash(&mut hasher);
         }
-        (self.prior_weight as u64).hash(&mut hasher);
+        self.prior_weight.to_basis_points().hash(&mut hasher);
         format!("{:016x}", hasher.finish())
     }
 }
@@ -283,9 +284,9 @@ pub struct RecallCandidate {
     /// Summary text of the candidate
     pub summary: String,
     /// Raw similarity score from vector search
-    pub raw_score: f64,
+    pub raw_score: UnitInterval,
     /// Final normalized score
-    pub final_score: f64,
+    pub final_score: UnitInterval,
     /// Relevance level
     pub relevance: RelevanceLevel,
     /// Source type (failure, success, runbook, etc.)
@@ -297,11 +298,11 @@ pub struct RecallCandidate {
     /// when adjusting priors. Defaults to `0.5` for backends that do not yet
     /// emit calibrated confidence.
     #[serde(default = "default_candidate_confidence")]
-    pub confidence: f64,
+    pub confidence: UnitInterval,
 }
 
-fn default_candidate_confidence() -> f64 {
-    0.5
+fn default_candidate_confidence() -> UnitInterval {
+    UnitInterval::clamped(0.5)
 }
 
 /// Relevance level for a recall candidate.
@@ -315,7 +316,8 @@ pub enum RelevanceLevel {
 impl RelevanceLevel {
     /// Create from a score (0.0-1.0).
     #[must_use]
-    pub fn from_score(score: f64) -> Self {
+    pub fn from_score(score: UnitInterval) -> Self {
+        let score = score.as_f64();
         if score >= 0.8 {
             Self::High
         } else if score >= 0.5 {
@@ -386,7 +388,7 @@ pub struct CandidateScore {
     /// Candidate ID
     pub id: String,
     /// Final normalized score
-    pub score: f64,
+    pub score: UnitInterval,
 }
 
 /// Complete provenance envelope for recall operations.
@@ -494,7 +496,7 @@ impl RecallProvenanceEnvelope {
         }
         for cs in &self.candidate_scores {
             cs.id.hash(&mut hasher);
-            (cs.score as u64).hash(&mut hasher);
+            cs.score.to_basis_points().hash(&mut hasher);
         }
         self.candidates_searched.hash(&mut hasher);
         self.candidates_returned.hash(&mut hasher);
@@ -604,7 +606,7 @@ pub fn recall_from_store(
         .filter(|c| c.confidence >= policy.min_score_threshold)
         .take(limit)
         .map(|mut c| {
-            c.confidence = (c.confidence * policy.prior_weight).clamp(0.0, 1.0);
+            c.confidence = c.confidence.scale_by(policy.prior_weight);
             c
         })
         .collect();
@@ -619,14 +621,14 @@ fn record_to_candidate(record: &ExperienceRecord) -> Option<RecallCandidate> {
                 env.event_id.as_str(),
                 env.occurred_at.as_str(),
                 format!("user override: {reason}"),
-                0.9,
+                UnitInterval::clamped(0.9),
                 CandidateSourceType::AntiPattern,
             )),
             UserExperienceEvent::UserApprovalGranted { reason, .. } => Some(make_candidate(
                 env.event_id.as_str(),
                 env.occurred_at.as_str(),
                 format!("user approval: {}", reason.as_deref().unwrap_or("granted")),
-                0.7,
+                UnitInterval::clamped(0.7),
                 CandidateSourceType::SimilarSuccess,
             )),
         },
@@ -644,7 +646,7 @@ fn record_to_candidate(record: &ExperienceRecord) -> Option<RecallCandidate> {
                         .as_ref()
                         .map_or_else(|| "unspecified".to_string(), ToString::to_string)
                 ),
-                0.6,
+                UnitInterval::clamped(0.6),
                 CandidateSourceType::SimilarFailure,
             )),
             _ => None,
@@ -656,7 +658,7 @@ fn make_candidate(
     id: &str,
     occurred_at: &str,
     summary: String,
-    confidence: f64,
+    confidence: UnitInterval,
     source_type: CandidateSourceType,
 ) -> RecallCandidate {
     RecallCandidate {
@@ -694,9 +696,18 @@ mod tests {
 
     #[test]
     fn test_relevance_from_score() {
-        assert_eq!(RelevanceLevel::from_score(0.9), RelevanceLevel::High);
-        assert_eq!(RelevanceLevel::from_score(0.6), RelevanceLevel::Medium);
-        assert_eq!(RelevanceLevel::from_score(0.3), RelevanceLevel::Low);
+        assert_eq!(
+            RelevanceLevel::from_score(UnitInterval::clamped(0.9)),
+            RelevanceLevel::High
+        );
+        assert_eq!(
+            RelevanceLevel::from_score(UnitInterval::clamped(0.6)),
+            RelevanceLevel::Medium
+        );
+        assert_eq!(
+            RelevanceLevel::from_score(UnitInterval::clamped(0.3)),
+            RelevanceLevel::Low
+        );
     }
 
     #[test]
@@ -760,6 +771,25 @@ mod tests {
             &policy,
             RecallUse::TrainingCandidateSelection
         ));
+    }
+
+    #[test]
+    fn recall_policy_deserialization_rejects_out_of_range_threshold() {
+        let json = r#"{
+            "enabled": true,
+            "max_k_total": 5,
+            "max_tokens_injection": 500,
+            "min_score_threshold": 1.2,
+            "budgets": {
+                "max_latency_ms": 100,
+                "max_embedding_calls": 3,
+                "max_tokens_per_candidate": 100
+            },
+            "allowed_uses": ["RuntimeAugmentation"],
+            "prior_weight": 1.0
+        }"#;
+        let result = serde_json::from_str::<RecallPolicy>(json);
+        assert!(result.is_err());
     }
 
     #[test]

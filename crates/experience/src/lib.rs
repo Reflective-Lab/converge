@@ -18,7 +18,7 @@ mod lancedb_store;
 pub use lancedb_store::{LanceDbConfig, LanceDbExperienceStore, SimilarEvent, VectorEvent};
 #[cfg(feature = "surrealdb")]
 pub use surrealdb_store::{SurrealDbConfig, SurrealDbExperienceStore};
-pub use validate::validate_envelope;
+pub use validate::{validate_envelope, validate_user_envelope};
 
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -133,6 +133,7 @@ impl ExperienceStore for InMemoryExperienceStore {
     }
 
     fn append_user_event(&self, event: UserExperienceEventEnvelope) -> ExperienceStoreResult<()> {
+        validate_user_envelope(&event)?;
         let mut events =
             self.user_events
                 .write()
@@ -535,6 +536,22 @@ mod tests {
         let envelope = ExperienceEventEnvelope::new("evt-1", event)
             .with_tenant("tenant'; DROP TABLE event;--");
         let result = store.append_event(envelope);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn store_rejects_malformed_user_event_id() {
+        let store = InMemoryExperienceStore::new();
+        let envelope = converge_core::UserExperienceEventEnvelope::new(
+            "../../admin:hack",
+            converge_core::UserExperienceEvent::UserOverrideIssued {
+                target: converge_core::OverrideTarget::Constraint("budget".into()),
+                actor: "operator-1".into(),
+                policy_snapshot_hash: None,
+                reason: "tighten budget".into(),
+            },
+        );
+        let result = store.append_user_event(envelope);
         assert!(result.is_err());
     }
 

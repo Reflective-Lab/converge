@@ -181,7 +181,6 @@ contracts:
 - `converge-experience`
 - `converge-runtime`
 - `converge-storage`
-- `ortools-sys`
 
 Some of these crates are publishable. That does not make them part of the
 stable API promise.

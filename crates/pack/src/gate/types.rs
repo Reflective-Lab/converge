@@ -7,6 +7,7 @@ use super::{
     ConstraintSpec, DeterminismSpec, KernelTraceLink, ObjectiveSpec, ProvenanceEnvelope,
     SolveBudgets,
 };
+use crate::types::UnitInterval;
 
 /// Complete problem specification for the solver gate
 ///
@@ -186,7 +187,7 @@ pub struct ProposedPlan {
     /// Typed plan payload (pack-specific)
     pub plan: serde_json::Value,
     /// Calibrated confidence score (0.0 - 1.0). Always clamped at construction.
-    confidence: f64,
+    confidence: UnitInterval,
     /// Link to kernel trace for replay/audit
     pub trace_link: KernelTraceLink,
 }
@@ -206,7 +207,7 @@ impl ProposedPlan {
             pack: pack.into(),
             summary: summary.into(),
             plan,
-            confidence: confidence.clamp(0.0, 1.0),
+            confidence: UnitInterval::clamped(confidence),
             trace_link,
         }
     }
@@ -230,7 +231,7 @@ impl ProposedPlan {
     /// Returns the confidence score, always in [0.0, 1.0].
     #[must_use]
     pub fn confidence(&self) -> f64 {
-        self.confidence
+        self.confidence.as_f64()
     }
 
     /// Deserialize plan payload to typed struct
@@ -241,12 +242,12 @@ impl ProposedPlan {
 
     /// Check if plan has high confidence (>= 0.8)
     pub fn is_high_confidence(&self) -> bool {
-        self.confidence >= 0.8
+        self.confidence.as_f64() >= 0.8
     }
 
     /// Check if plan has low confidence (< 0.5)
     pub fn is_low_confidence(&self) -> bool {
-        self.confidence < 0.5
+        self.confidence.as_f64() < 0.5
     }
 }
 
@@ -325,6 +326,20 @@ mod tests {
         let trace = KernelTraceLink::default();
         let plan = ProposedPlan::new("p", "pack", "s", serde_json::Value::Null, -0.5, trace);
         assert_eq!(plan.confidence(), 0.0);
+    }
+
+    #[test]
+    fn proposed_plan_deserialization_rejects_out_of_range_confidence() {
+        let json = r#"{
+            "plan_id":"p",
+            "pack":"pack",
+            "summary":"s",
+            "plan":null,
+            "confidence":1.5,
+            "trace_link":{"trace_id":"trace","mode":"audit_only","location":""}
+        }"#;
+        let result = serde_json::from_str::<ProposedPlan>(json);
+        assert!(result.is_err());
     }
 
     #[test]

@@ -32,7 +32,6 @@ versions, dependency versions, lints, and build profiles.
 | `converge-experience` | Experience event storage |
 | `converge-runtime` | HTTP and gRPC runtime |
 | `converge-storage` | Object storage abstraction |
-| `ortools-sys` | Optional OR-Tools FFI bindings |
 
 ## Ownership
 

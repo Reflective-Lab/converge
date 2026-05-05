@@ -34,7 +34,6 @@ surfaces.
 | `converge-experience` | Experience event storage |
 | `converge-runtime` | HTTP and gRPC runtime |
 | `converge-storage` | Object storage abstraction |
-| `ortools-sys` | Optional OR-Tools FFI bindings |
 
 Some internal crates are publishable for controlled reuse. That still does not
 make them part of the stable public contract.

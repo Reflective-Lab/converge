@@ -49,10 +49,4 @@ Core still sources wall-clock time internally through both `SystemTime::now()` a
 
 **Resolution:** Move to `converge-provider` or `converge-provider-api`.
 
-### Low: ortools-sys unsafe (Axiom 5)
-
-29 `unsafe` blocks for FFI behind the `link` feature.
-
-**Resolution:** Per-crate lint override with explanation.
-
 See also: [[Philosophy/Nine Axioms]], [[Architecture/API Surfaces]]

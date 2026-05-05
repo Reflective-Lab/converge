@@ -1,0 +1,15 @@
+error[E0451]: fields `topic`, `rule`, `tally`, `total_voters` and `passes` of struct `ConsensusOutcome` are private
+  --> tests/compile_fail/consensus_outcome_struct_literal.rs:9:9
+   |
+ 8 |     let _outcome = ConsensusOutcome {
+   |                    ---------------- in this type
+ 9 |         topic: VoteTopicId::new("admission"),
+   |         ^^^^^ private field
+10 |         rule: ConsensusRule::Majority,
+   |         ^^^^ private field
+11 |         tally: VoteTally::new(0, 1, 0),
+   |         ^^^^^ private field
+12 |         total_voters: EligibleVoters::new(1).unwrap(),
+   |         ^^^^^^^^^^^^ private field
+13 |         passes: true,
+   |         ^^^^^^ private field

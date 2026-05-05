@@ -3,6 +3,7 @@
 
 //! Shared semantic value types for the public Converge contract.
 
+use serde::de;
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::fmt;
@@ -137,6 +138,190 @@ macro_rules! string_newtype {
             }
         }
     };
+}
+
+/// Error returned when a unit interval value is outside `[0.0, 1.0]`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct UnitIntervalError;
+
+impl fmt::Display for UnitIntervalError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("value must be finite and in the inclusive range 0.0..=1.0")
+    }
+}
+
+impl std::error::Error for UnitIntervalError {}
+
+/// A finite value in the inclusive `[0.0, 1.0]` range.
+///
+/// Use this for confidence, normalized scores, prior weights, and thresholds.
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize)]
+#[serde(transparent)]
+pub struct UnitInterval(f64);
+
+impl UnitInterval {
+    /// The minimum unit interval value.
+    pub const ZERO: Self = Self(0.0);
+    /// The maximum unit interval value.
+    pub const ONE: Self = Self(1.0);
+
+    /// Create a validated unit interval.
+    ///
+    /// Returns an error for NaN, infinity, or values outside `[0.0, 1.0]`.
+    pub fn new(value: f64) -> Result<Self, UnitIntervalError> {
+        if value.is_finite() && (0.0..=1.0).contains(&value) {
+            Ok(Self(value))
+        } else {
+            Err(UnitIntervalError)
+        }
+    }
+
+    /// Create a unit interval by clamping finite input.
+    ///
+    /// Non-finite values become `0.0`.
+    #[must_use]
+    pub fn clamped(value: f64) -> Self {
+        if value.is_finite() {
+            Self(value.clamp(0.0, 1.0))
+        } else {
+            Self::ZERO
+        }
+    }
+
+    /// Return the underlying `f64`.
+    #[must_use]
+    pub fn as_f64(self) -> f64 {
+        self.0
+    }
+
+    /// Add a delta and clamp the result back into the valid range.
+    #[must_use]
+    pub fn saturating_add(self, delta: f64) -> Self {
+        Self::clamped(self.0 + delta)
+    }
+
+    /// Multiply two unit interval values.
+    #[must_use]
+    pub fn scale_by(self, factor: Self) -> Self {
+        Self(self.0 * factor.0)
+    }
+
+    /// Convert to basis points, rounded to the nearest basis point.
+    #[must_use]
+    pub fn to_basis_points(self) -> u16 {
+        (self.0 * 10_000.0).round() as u16
+    }
+}
+
+impl Default for UnitInterval {
+    fn default() -> Self {
+        Self::ZERO
+    }
+}
+
+impl TryFrom<f64> for UnitInterval {
+    type Error = UnitIntervalError;
+
+    fn try_from(value: f64) -> Result<Self, Self::Error> {
+        Self::new(value)
+    }
+}
+
+impl From<UnitInterval> for f64 {
+    fn from(value: UnitInterval) -> Self {
+        value.as_f64()
+    }
+}
+
+impl<'de> Deserialize<'de> for UnitInterval {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = f64::deserialize(deserializer)?;
+        Self::new(value).map_err(de::Error::custom)
+    }
+}
+
+/// Error returned when a basis-point value is outside `0..=10_000`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BasisPointsError;
+
+impl fmt::Display for BasisPointsError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("basis points must be in the inclusive range 0..=10000")
+    }
+}
+
+impl std::error::Error for BasisPointsError {}
+
+/// A unit-range value represented as basis points (`0..=10_000`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(transparent)]
+pub struct BasisPoints(u16);
+
+impl BasisPoints {
+    /// Zero basis points.
+    pub const ZERO: Self = Self(0);
+    /// Ten thousand basis points, equivalent to `1.0`.
+    pub const FULL: Self = Self(10_000);
+
+    /// Create a validated basis-point value.
+    pub fn new(value: u16) -> Result<Self, BasisPointsError> {
+        if value <= 10_000 {
+            Ok(Self(value))
+        } else {
+            Err(BasisPointsError)
+        }
+    }
+
+    /// Create a basis-point value by clamping input to `0..=10_000`.
+    #[must_use]
+    pub fn clamped(value: u16) -> Self {
+        Self(value.min(10_000))
+    }
+
+    /// Return the raw basis-point value.
+    #[must_use]
+    pub fn get(self) -> u16 {
+        self.0
+    }
+
+    /// Convert to a unit interval.
+    #[must_use]
+    pub fn as_unit_interval(self) -> UnitInterval {
+        UnitInterval::clamped(f64::from(self.0) / 10_000.0)
+    }
+}
+
+impl Default for BasisPoints {
+    fn default() -> Self {
+        Self::ZERO
+    }
+}
+
+impl TryFrom<u16> for BasisPoints {
+    type Error = BasisPointsError;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        Self::new(value)
+    }
+}
+
+impl From<BasisPoints> for u16 {
+    fn from(value: BasisPoints) -> Self {
+        value.get()
+    }
+}
+
+impl<'de> Deserialize<'de> for BasisPoints {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = u16::deserialize(deserializer)?;
+        Self::new(value).map_err(de::Error::custom)
+    }
 }
 
 string_newtype!(
@@ -489,6 +674,29 @@ mod tests {
             hash.to_hex(),
             "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
         );
+    }
+
+    #[test]
+    fn unit_interval_accepts_only_finite_closed_range_values() {
+        assert_eq!(UnitInterval::new(0.0).unwrap().as_f64(), 0.0);
+        assert_eq!(UnitInterval::new(1.0).unwrap().as_f64(), 1.0);
+        assert!(UnitInterval::new(-0.1).is_err());
+        assert!(UnitInterval::new(1.1).is_err());
+        assert!(UnitInterval::new(f64::NAN).is_err());
+    }
+
+    #[test]
+    fn unit_interval_deserialization_rejects_out_of_range_values() {
+        assert!(serde_json::from_str::<UnitInterval>("0.75").is_ok());
+        assert!(serde_json::from_str::<UnitInterval>("1.75").is_err());
+    }
+
+    #[test]
+    fn basis_points_accepts_only_unit_range_basis_points() {
+        assert_eq!(BasisPoints::new(0).unwrap().get(), 0);
+        assert_eq!(BasisPoints::new(10_000).unwrap().get(), 10_000);
+        assert!(BasisPoints::new(10_001).is_err());
+        assert_eq!(BasisPoints::clamped(20_000).get(), 10_000);
     }
 
     #[test]

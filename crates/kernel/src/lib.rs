@@ -51,7 +51,7 @@ pub use converge_core::{
     ExperienceStoreResult, HitlPause, IntegrityProof, Invariant, InvariantClass, InvariantResult,
     LamportClock, MerkleRoot, OverrideTarget, PackId, RunResult, StreamingCallback, SuggestorId,
     TenantId, TraceLinkId, TruthId, TypesBudgets, TypesIntentId, TypesIntentKind, TypesRootIntent,
-    TypesRunHooks, UserExperienceEvent, UserExperienceEventEnvelope,
+    TypesRunHooks, UnitInterval, UserExperienceEvent, UserExperienceEventEnvelope,
 };
 pub use converge_pack::{
     AgentEffect, Context, ContextKey, Fact, ProposedFact, Suggestor, ValidationError,

@@ -7,7 +7,10 @@
 //! This prevents malformed identifiers from reaching storage backends
 //! (SurrealDB record IDs, index keys, etc.).
 
-use converge_core::{ExperienceEventEnvelope, ExperienceStoreError, ExperienceStoreResult};
+use converge_core::{
+    ExperienceEventEnvelope, ExperienceStoreError, ExperienceStoreResult,
+    UserExperienceEventEnvelope,
+};
 
 /// Maximum length for identifier fields (event_id, tenant_id, correlation_id).
 const MAX_ID_LEN: usize = 256;
@@ -23,6 +26,33 @@ const MAX_TIMESTAMP_LEN: usize = 64;
 /// - `tenant_id` (if present) contains only safe identifier characters
 /// - `correlation_id` (if present) contains only safe identifier characters
 pub fn validate_envelope(envelope: &ExperienceEventEnvelope) -> ExperienceStoreResult<()> {
+    validate_id("event_id", &envelope.event_id)?;
+
+    if envelope.occurred_at.is_empty() {
+        return Err(ExperienceStoreError::InvalidQuery {
+            message: "occurred_at must not be empty".to_string(),
+        });
+    }
+    if envelope.occurred_at.len() > MAX_TIMESTAMP_LEN {
+        return Err(ExperienceStoreError::InvalidQuery {
+            message: format!(
+                "occurred_at exceeds maximum length of {MAX_TIMESTAMP_LEN} characters"
+            ),
+        });
+    }
+
+    if let Some(ref tenant_id) = envelope.tenant_id {
+        validate_id("tenant_id", tenant_id)?;
+    }
+    if let Some(ref correlation_id) = envelope.correlation_id {
+        validate_id("correlation_id", correlation_id)?;
+    }
+
+    Ok(())
+}
+
+/// Validate a user-side event envelope before writing to any store.
+pub fn validate_user_envelope(envelope: &UserExperienceEventEnvelope) -> ExperienceStoreResult<()> {
     validate_id("event_id", &envelope.event_id)?;
 
     if envelope.occurred_at.is_empty() {
@@ -79,7 +109,11 @@ fn validate_id(field: &str, value: &str) -> ExperienceStoreResult<()> {
 
 #[cfg(test)]
 mod tests {
-    use converge_core::{DecisionStep, ExperienceEvent, ExperienceEventEnvelope};
+    use converge_core::types::ActorId;
+    use converge_core::{
+        DecisionStep, ExperienceEvent, ExperienceEventEnvelope, FactId, OverrideTarget,
+        UserExperienceEvent, UserExperienceEventEnvelope,
+    };
 
     use super::*;
 
@@ -169,5 +203,20 @@ mod tests {
             .with_tenant("tenant-abc")
             .with_correlation("corr-xyz-123");
         assert!(validate_envelope(&envelope).is_ok());
+    }
+
+    #[test]
+    fn user_envelope_rejects_malformed_event_id() {
+        let envelope = UserExperienceEventEnvelope::new(
+            "../../admin:hack",
+            UserExperienceEvent::UserOverrideIssued {
+                target: OverrideTarget::Fact(FactId::new("fact-1")),
+                actor: ActorId::new("actor-1"),
+                policy_snapshot_hash: None,
+                reason: "operator correction".into(),
+            },
+        );
+        let err = validate_user_envelope(&envelope).unwrap_err();
+        assert!(err.to_string().contains("invalid characters"));
     }
 }

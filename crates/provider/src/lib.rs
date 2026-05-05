@@ -143,8 +143,9 @@ pub use brave::{
 };
 #[cfg(feature = "feed")]
 pub use feed::{
-    FeedDiscoverySource, FeedEndpointCandidate, FeedError, FeedFetchBackend, FeedFetchRequest,
-    FeedFetchResponse, FeedFormat, FeedItem, FeedProbeRequest, FeedProbeResponse, HttpFeedProvider,
+    FeedByteLimit, FeedCandidateLimit, FeedDiscoverySource, FeedEndpointCandidate, FeedError,
+    FeedFetchBackend, FeedFetchRequest, FeedFetchResponse, FeedFormat, FeedItem, FeedProbeRequest,
+    FeedProbeResponse, FeedTimeoutMs, FeedUrl, HttpFeedProvider, HttpStatusCode,
 };
 #[cfg(feature = "_http")]
 pub use fetch::HttpFetchProvider;

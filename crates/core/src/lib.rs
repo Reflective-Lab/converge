@@ -225,8 +225,8 @@ pub use formation::{
     OpenClawFormation, ScoredFormation, ScoringWeights, StaticFormation,
 };
 
-/// Re-export the Context trait from converge-pack as its canonical name.
-pub use converge_pack::Context;
+/// Re-export canonical pack value types used by core public structs.
+pub use converge_pack::{Context, UnitInterval};
 pub use engine::{
     Budget, ConvergeResult, Engine, EngineHitlPolicy, ExperienceEventObserver, HitlPause,
     RunResult, StreamingCallback, TypesRunHooks,

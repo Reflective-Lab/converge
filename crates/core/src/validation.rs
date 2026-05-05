@@ -12,13 +12,14 @@
 use crate::agent::Suggestor;
 use crate::context::{ContextKey, ProposedFact};
 use crate::effect::AgentEffect;
+use converge_pack::UnitInterval;
 use strum::IntoEnumIterator;
 
 /// Configuration for the validation agent.
 #[derive(Debug, Clone)]
 pub struct ValidationConfig {
     /// Minimum confidence threshold (0.0 - 1.0).
-    pub min_confidence: f64,
+    pub min_confidence: UnitInterval,
     /// Maximum content length allowed.
     pub max_content_length: usize,
     /// Forbidden terms that cause rejection.
@@ -30,7 +31,7 @@ pub struct ValidationConfig {
 impl Default for ValidationConfig {
     fn default() -> Self {
         Self {
-            min_confidence: 0.5,
+            min_confidence: UnitInterval::clamped(0.5),
             max_content_length: 10_000,
             forbidden_terms: vec![],
             require_provenance: true,
@@ -67,13 +68,13 @@ impl ValidationAgent {
 
     /// Validates a single proposal against the config.
     pub fn validate_proposal(&self, proposal: &ProposedFact) -> ValidationResult {
-        if proposal.confidence() < self.config.min_confidence {
+        if proposal.confidence() < self.config.min_confidence.as_f64() {
             return ValidationResult::Rejected {
                 proposal_id: proposal.id.to_string(),
                 reason: format!(
                     "confidence {} below threshold {}",
                     proposal.confidence(),
-                    self.config.min_confidence
+                    self.config.min_confidence.as_f64()
                 ),
             };
         }
@@ -192,7 +193,7 @@ mod tests {
     #[test]
     fn validation_rejects_low_confidence() {
         let agent = ValidationAgent::new(ValidationConfig {
-            min_confidence: 0.7,
+            min_confidence: UnitInterval::clamped(0.7),
             ..Default::default()
         });
         let proposal =

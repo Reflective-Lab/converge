@@ -4,5 +4,5 @@ error[E0451]: field `confidence` of struct `ProposedFact` is private
  8 |     let _pf = ProposedFact {
    |               ------------ in this type
 ...
-12 |         confidence: 0.99,
+12 |         confidence: UnitInterval::ONE,
    |         ^^^^^^^^^^ private field

@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use crate::context::ContextKey;
 use crate::types::{
     ActorId, ApprovalId, ArtifactId, ContentHash, FactId, GateId, ObservationId, ProposalId,
-    SpanId, Timestamp, TraceId, TraceReference, TraceSystemId, ValidationCheckId,
+    SpanId, Timestamp, TraceId, TraceReference, TraceSystemId, UnitInterval, ValidationCheckId,
 };
 
 /// Actor kind recorded on a promoted fact.
@@ -357,21 +357,13 @@ impl Fact {
         self.promotion_record.is_replay_eligible()
     }
 
-    /// Parse the fact's JSON content into a typed value, or `None` if the
-    /// content is not valid JSON for `T`.
+    /// Parse the fact's content as JSON into a typed value.
     ///
-    /// Common pattern for filtering facts by payload type:
-    ///
-    /// ```rust,ignore
-    /// let votes: Vec<Vote> = ctx
-    ///     .get(ContextKey::Votes)
-    ///     .iter()
-    ///     .filter_map(Fact::parse_content::<Vote>)
-    ///     .collect();
-    /// ```
-    #[must_use]
-    pub fn parse_content<T: serde::de::DeserializeOwned>(&self) -> Option<T> {
-        serde_json::from_str(&self.content).ok()
+    /// This helper is deliberately named for JSON and preserves parse errors.
+    /// Callers that use another representation should parse `content` with
+    /// that representation's decoder.
+    pub fn parse_json_content<T: serde::de::DeserializeOwned>(&self) -> serde_json::Result<T> {
+        serde_json::from_str(&self.content)
     }
 }
 
@@ -418,6 +410,17 @@ pub mod kernel_authority {
             created_at: created_at.into(),
         }
     }
+
+    /// Creates a kernel-authoritative fact whose content is `payload` serialized to JSON.
+    ///
+    /// Symmetric with [`Fact::parse_json_content`][super::Fact::parse_json_content].
+    pub fn new_fact_from_json_payload<T: serde::Serialize>(
+        key: ContextKey,
+        id: impl Into<FactId>,
+        payload: &T,
+    ) -> serde_json::Result<Fact> {
+        Ok(new_fact(key, id, serde_json::to_string(payload)?))
+    }
 }
 
 /// An unvalidated suggestion from a non-authoritative source.
@@ -433,7 +436,7 @@ pub struct ProposedFact {
     /// The proposed content.
     pub content: String,
     /// Confidence hint from the source. Always in [0.0, 1.0].
-    confidence: f64,
+    confidence: UnitInterval,
     /// Provenance information (e.g., model ID, prompt hash).
     pub provenance: String,
 }
@@ -453,7 +456,7 @@ impl ProposedFact {
             key,
             id: id.into(),
             content: content.into(),
-            confidence: 1.0,
+            confidence: UnitInterval::ONE,
             provenance: provenance.into(),
         }
     }
@@ -461,7 +464,7 @@ impl ProposedFact {
     /// Returns the confidence value, always in [0.0, 1.0].
     #[must_use]
     pub fn confidence(&self) -> f64 {
-        self.confidence
+        self.confidence.as_f64()
     }
 
     /// Set an explicit confidence baseline for this proposal.
@@ -473,19 +476,40 @@ impl ProposedFact {
     /// For computed confidence (e.g. from a solver), pass the result directly.
     #[must_use]
     pub fn with_confidence(mut self, confidence: f64) -> Self {
-        self.confidence = if confidence.is_finite() {
-            confidence.clamp(0.0, 1.0)
-        } else {
-            0.0
-        };
+        self.confidence = UnitInterval::clamped(confidence);
         self
     }
 
-    /// Parse the proposal's JSON content into a typed value, or `None` if
-    /// the content is not valid JSON for `T`.
-    #[must_use]
-    pub fn parse_content<T: serde::de::DeserializeOwned>(&self) -> Option<T> {
-        serde_json::from_str(&self.content).ok()
+    /// Parse the proposal's content as JSON into a typed value.
+    ///
+    /// This helper is deliberately named for JSON and preserves parse errors.
+    /// Callers that use another representation should parse `content` with
+    /// that representation's decoder.
+    pub fn parse_json_content<T: serde::de::DeserializeOwned>(&self) -> serde_json::Result<T> {
+        serde_json::from_str(&self.content)
+    }
+
+    /// Construct a proposal whose content is `payload` serialized to JSON.
+    ///
+    /// Symmetric with [`parse_json_content`][Self::parse_json_content] and named
+    /// for the same reason: callers using another representation should serialize
+    /// `content` themselves and pass it to [`new`][Self::new].
+    ///
+    /// Returns a `serde_json::Error` only if `T` is non-representable as JSON
+    /// (e.g. floats with NaN, maps with non-string keys). For payload types that
+    /// are always representable, callers can `.expect("payload always serializable")`.
+    pub fn from_json_payload<T: serde::Serialize>(
+        key: ContextKey,
+        id: impl Into<ProposalId>,
+        payload: &T,
+        provenance: impl Into<String>,
+    ) -> serde_json::Result<Self> {
+        Ok(Self::new(
+            key,
+            id,
+            serde_json::to_string(payload)?,
+            provenance,
+        ))
     }
 
     /// Adjust confidence by a named step, clamped to [0.0, 1.0].
@@ -507,7 +531,7 @@ impl ProposedFact {
     /// at the end — the clamping is automatic and the intent is explicit at each step.
     #[must_use]
     pub fn adjust_confidence(mut self, delta: f64) -> Self {
-        self.confidence = (self.confidence + delta).clamp(0.0, 1.0);
+        self.confidence = self.confidence.saturating_add(delta);
         self
     }
 }
@@ -671,7 +695,20 @@ mod tests {
     }
 
     #[test]
-    fn proposed_fact_parse_content_succeeds_for_valid_json() {
+    fn proposed_fact_deserialization_rejects_out_of_range_confidence() {
+        let json = r#"{
+            "key":"Seeds",
+            "id":"p",
+            "content":"c",
+            "confidence":1.5,
+            "provenance":"test"
+        }"#;
+        let result = serde_json::from_str::<ProposedFact>(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn proposed_fact_parse_json_content_succeeds_for_valid_json() {
         #[derive(serde::Deserialize, PartialEq, Debug)]
         struct Payload {
             kind: String,
@@ -683,33 +720,76 @@ mod tests {
             r#"{"kind":"vote","score":0.7}"#,
             "test",
         );
-        let parsed: Option<Payload> = pf.parse_content();
+        let parsed: Payload = pf.parse_json_content().unwrap();
         assert_eq!(
             parsed,
-            Some(Payload {
+            Payload {
                 kind: "vote".into(),
                 score: 0.7,
-            })
+            }
         );
     }
 
     #[test]
-    fn proposed_fact_parse_content_returns_none_for_invalid_json() {
+    fn proposed_fact_parse_json_content_returns_error_for_invalid_json() {
         let pf = ProposedFact::new(ContextKey::Hypotheses, "p", "not json", "test");
-        let parsed: Option<serde_json::Value> = pf.parse_content();
-        assert!(parsed.is_none());
+        let parsed = pf.parse_json_content::<serde_json::Value>();
+        assert!(parsed.is_err());
     }
 
     #[cfg(feature = "kernel-authority")]
     #[test]
-    fn fact_parse_content_succeeds_for_valid_json() {
+    fn fact_parse_json_content_succeeds_for_valid_json() {
         #[derive(serde::Deserialize, PartialEq, Debug)]
         struct Payload {
             label: String,
         }
         let fact = kernel_authority::new_fact(ContextKey::Seeds, "f", r#"{"label":"x"}"#);
-        let parsed: Option<Payload> = fact.parse_content();
-        assert_eq!(parsed, Some(Payload { label: "x".into() }));
+        let parsed: Payload = fact.parse_json_content().unwrap();
+        assert_eq!(parsed, Payload { label: "x".into() });
+    }
+
+    #[test]
+    fn proposed_fact_from_json_payload_round_trips() {
+        #[derive(serde::Serialize, serde::Deserialize, PartialEq, Debug)]
+        struct Payload {
+            kind: String,
+            score: f64,
+        }
+        let payload = Payload {
+            kind: "vote".into(),
+            score: 0.7,
+        };
+        let pf =
+            ProposedFact::from_json_payload(ContextKey::Hypotheses, "p", &payload, "test").unwrap();
+        assert_eq!(pf.key, ContextKey::Hypotheses);
+        assert_eq!(pf.id, "p");
+        assert_eq!(pf.provenance, "test");
+        let parsed: Payload = pf.parse_json_content().unwrap();
+        assert_eq!(parsed, payload);
+    }
+
+    #[test]
+    fn proposed_fact_from_json_payload_propagates_serialization_error() {
+        use std::collections::HashMap;
+        let mut map: HashMap<Vec<u8>, &str> = HashMap::new();
+        map.insert(vec![1, 2, 3], "value");
+        let result = ProposedFact::from_json_payload(ContextKey::Hypotheses, "p", &map, "test");
+        assert!(result.is_err());
+    }
+
+    #[cfg(feature = "kernel-authority")]
+    #[test]
+    fn fact_new_from_json_payload_round_trips() {
+        #[derive(serde::Serialize, serde::Deserialize, PartialEq, Debug)]
+        struct Payload {
+            label: String,
+        }
+        let payload = Payload { label: "x".into() };
+        let fact =
+            kernel_authority::new_fact_from_json_payload(ContextKey::Seeds, "f", &payload).unwrap();
+        let parsed: Payload = fact.parse_json_content().unwrap();
+        assert_eq!(parsed, payload);
     }
 
     #[test]
@@ -795,6 +875,9 @@ mod tests {
                 Just(ContextKey::Evaluations),
                 Just(ContextKey::Proposals),
                 Just(ContextKey::Diagnostic),
+                Just(ContextKey::Votes),
+                Just(ContextKey::Disagreements),
+                Just(ContextKey::ConsensusOutcomes),
             ]
         }
 

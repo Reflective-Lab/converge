@@ -64,6 +64,11 @@ This means:
 - Proposal confidence fields are no longer casual public slots to mutate directly.
 - Confidence values are accessed through methods and normalized through constructors.
 - `with_confidence` and `adjust_confidence` make confidence updates explicit and clamp at the constructor boundary until a shared unit-interval type is propagated everywhere.
+- `UnitInterval` is now the shared public value type for normalized confidence,
+  recall scores, thresholds, and weights. Deserialization rejects NaN, infinity,
+  and values outside `[0.0, 1.0]`.
+- `BasisPoints` is the shared public value type for basis-point confidence and
+  probability-like integer ranges (`0..=10_000`).
 
 ## Confidence API Change
 
@@ -122,6 +127,22 @@ Replace with stronger types when the test is mostly proving:
 - a config validator is cleaning up after permissive deserialization
 - an invalid numeric range should have been rejected at construction time
 - internal misuse is possible only because fields are too public
+
+## Content Parsing Helpers
+
+Do not add ambiguous helpers named as if fact content had one canonical wire
+format. If a helper parses JSON, the name must say JSON and return a parse
+error, not discard diagnostics as `Option`.
+
+Current rule:
+
+```rust
+let value: MyPayload = fact.parse_json_content()?;
+```
+
+For CBOR, protobuf, MessagePack, or domain-specific payloads, callers should
+use that decoder directly against `content` until there is a deliberately named
+typed payload contract.
 
 ## Test Layout Rule
 

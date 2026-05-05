@@ -8,9 +8,133 @@
 //! against a rule. They carry no scheduling, round, or pipeline semantics —
 //! consumers (huddles, approval flows, multi-agent panels) compose them.
 
+use serde::de;
 use serde::{Deserialize, Serialize};
+use std::num::NonZeroUsize;
 
 use crate::types::{ActorId, VoteTopicId};
+
+/// Error returned when governance payloads violate their typed invariants.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GovernanceError {
+    /// A consensus rule needs at least one eligible voter.
+    ZeroEligibleVoters,
+    /// Tallied votes cannot exceed the eligible voter count.
+    TalliesExceedEligibleVoters {
+        tallied_votes: usize,
+        eligible_voters: usize,
+    },
+    /// A serialized outcome carried a `passes` flag that does not match the rule.
+    PassFlagMismatch { expected: bool, actual: bool },
+}
+
+impl std::fmt::Display for GovernanceError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ZeroEligibleVoters => f.write_str("eligible voters must be greater than zero"),
+            Self::TalliesExceedEligibleVoters {
+                tallied_votes,
+                eligible_voters,
+            } => write!(
+                f,
+                "tallied votes ({tallied_votes}) exceed eligible voters ({eligible_voters})"
+            ),
+            Self::PassFlagMismatch { expected, actual } => write!(
+                f,
+                "serialized consensus outcome pass flag mismatch: expected {expected}, got {actual}"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for GovernanceError {}
+
+/// Number of actors eligible to vote on a topic.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(transparent)]
+pub struct EligibleVoters(NonZeroUsize);
+
+impl EligibleVoters {
+    /// Create a non-zero eligible voter count.
+    pub fn new(value: usize) -> Result<Self, GovernanceError> {
+        NonZeroUsize::new(value)
+            .map(Self)
+            .ok_or(GovernanceError::ZeroEligibleVoters)
+    }
+
+    /// Return the eligible voter count.
+    #[must_use]
+    pub fn get(self) -> usize {
+        self.0.get()
+    }
+}
+
+impl TryFrom<usize> for EligibleVoters {
+    type Error = GovernanceError;
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        Self::new(value)
+    }
+}
+
+impl From<EligibleVoters> for usize {
+    fn from(value: EligibleVoters) -> Self {
+        value.get()
+    }
+}
+
+impl<'de> Deserialize<'de> for EligibleVoters {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = usize::deserialize(deserializer)?;
+        Self::new(value).map_err(de::Error::custom)
+    }
+}
+
+/// Tally of latest votes for a topic.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VoteTally {
+    yes_votes: usize,
+    no_votes: usize,
+    abstain_votes: usize,
+}
+
+impl VoteTally {
+    /// Create a tally from counted decisions.
+    #[must_use]
+    pub const fn new(yes_votes: usize, no_votes: usize, abstain_votes: usize) -> Self {
+        Self {
+            yes_votes,
+            no_votes,
+            abstain_votes,
+        }
+    }
+
+    #[must_use]
+    pub const fn yes_votes(self) -> usize {
+        self.yes_votes
+    }
+
+    #[must_use]
+    pub const fn no_votes(self) -> usize {
+        self.no_votes
+    }
+
+    #[must_use]
+    pub const fn abstain_votes(self) -> usize {
+        self.abstain_votes
+    }
+
+    #[must_use]
+    pub const fn total_cast(self) -> usize {
+        self.yes_votes
+            .saturating_add(self.no_votes)
+            .saturating_add(self.abstain_votes)
+    }
+}
 
 /// Decision rule used to tally votes on a topic.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -31,7 +155,12 @@ pub enum ConsensusRule {
 impl ConsensusRule {
     /// Whether the given tally satisfies the rule.
     #[must_use]
-    pub fn passes(self, yes_votes: usize, total_voters: usize) -> bool {
+    pub fn passes(self, tally: VoteTally, total_voters: EligibleVoters) -> bool {
+        if tally.total_cast() > total_voters.get() {
+            return false;
+        }
+        let yes_votes = tally.yes_votes() as u128;
+        let total_voters = total_voters.get() as u128;
         match self {
             Self::Majority => yes_votes * 2 > total_voters,
             Self::Supermajority => yes_votes * 3 >= total_voters * 2,
@@ -101,16 +230,13 @@ pub struct Disagreement {
 }
 
 /// Deterministic result of evaluating votes against a rule.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConsensusOutcome {
-    pub topic: VoteTopicId,
-    pub rule: ConsensusRule,
-    pub yes_votes: usize,
-    pub no_votes: usize,
-    pub abstain_votes: usize,
-    pub total_voters: usize,
-    pub passes: bool,
+    topic: VoteTopicId,
+    rule: ConsensusRule,
+    tally: VoteTally,
+    total_voters: EligibleVoters,
+    passes: bool,
 }
 
 impl ConsensusOutcome {
@@ -119,13 +245,12 @@ impl ConsensusOutcome {
     /// Votes whose `topic` does not match are ignored. Each `voter` is counted
     /// at most once: when an actor appears multiple times, the latest entry
     /// wins (callers control ordering).
-    #[must_use]
     pub fn evaluate(
         topic: VoteTopicId,
         rule: ConsensusRule,
         votes: &[Vote],
-        total_voters: usize,
-    ) -> Self {
+        total_voters: EligibleVoters,
+    ) -> Result<Self, GovernanceError> {
         let mut latest: Vec<(&ActorId, VoteDecision)> = Vec::new();
         for vote in votes.iter().filter(|v| v.topic == topic) {
             if let Some(slot) = latest.iter_mut().find(|(voter, _)| *voter == &vote.voter) {
@@ -146,15 +271,124 @@ impl ConsensusOutcome {
             }
         }
 
-        Self {
+        Self::from_tally(
             topic,
             rule,
-            yes_votes,
-            no_votes,
-            abstain_votes,
+            VoteTally::new(yes_votes, no_votes, abstain_votes),
             total_voters,
-            passes: rule.passes(yes_votes, total_voters),
+        )
+    }
+
+    /// Build an outcome from an already-counted tally.
+    pub fn from_tally(
+        topic: VoteTopicId,
+        rule: ConsensusRule,
+        tally: VoteTally,
+        total_voters: EligibleVoters,
+    ) -> Result<Self, GovernanceError> {
+        if tally.total_cast() > total_voters.get() {
+            return Err(GovernanceError::TalliesExceedEligibleVoters {
+                tallied_votes: tally.total_cast(),
+                eligible_voters: total_voters.get(),
+            });
         }
+        Ok(Self {
+            topic,
+            rule,
+            tally,
+            total_voters,
+            passes: rule.passes(tally, total_voters),
+        })
+    }
+
+    #[must_use]
+    pub fn topic(&self) -> &VoteTopicId {
+        &self.topic
+    }
+
+    #[must_use]
+    pub const fn rule(&self) -> ConsensusRule {
+        self.rule
+    }
+
+    #[must_use]
+    pub const fn tally(&self) -> VoteTally {
+        self.tally
+    }
+
+    #[must_use]
+    pub const fn total_voters(&self) -> EligibleVoters {
+        self.total_voters
+    }
+
+    #[must_use]
+    pub const fn passes(&self) -> bool {
+        self.passes
+    }
+}
+
+impl Serialize for ConsensusOutcome {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        #[derive(Serialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Wire<'a> {
+            topic: &'a VoteTopicId,
+            rule: ConsensusRule,
+            yes_votes: usize,
+            no_votes: usize,
+            abstain_votes: usize,
+            total_voters: usize,
+            passes: bool,
+        }
+
+        Wire {
+            topic: &self.topic,
+            rule: self.rule,
+            yes_votes: self.tally.yes_votes(),
+            no_votes: self.tally.no_votes(),
+            abstain_votes: self.tally.abstain_votes(),
+            total_voters: self.total_voters.get(),
+            passes: self.passes,
+        }
+        .serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for ConsensusOutcome {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Wire {
+            topic: VoteTopicId,
+            rule: ConsensusRule,
+            yes_votes: usize,
+            no_votes: usize,
+            abstain_votes: usize,
+            total_voters: EligibleVoters,
+            passes: bool,
+        }
+
+        let wire = Wire::deserialize(deserializer)?;
+        let outcome = Self::from_tally(
+            wire.topic,
+            wire.rule,
+            VoteTally::new(wire.yes_votes, wire.no_votes, wire.abstain_votes),
+            wire.total_voters,
+        )
+        .map_err(de::Error::custom)?;
+        if outcome.passes != wire.passes {
+            return Err(de::Error::custom(GovernanceError::PassFlagMismatch {
+                expected: outcome.passes,
+                actual: wire.passes,
+            }));
+        }
+        Ok(outcome)
     }
 }
 
@@ -170,6 +404,10 @@ mod tests {
         ActorId::new(s)
     }
 
+    fn eligible(n: usize) -> EligibleVoters {
+        EligibleVoters::new(n).unwrap()
+    }
+
     fn vote(t: &str, v: &str, d: VoteDecision) -> Vote {
         Vote {
             topic: topic(t),
@@ -181,14 +419,14 @@ mod tests {
 
     #[test]
     fn rule_passes_thresholds_match_organism_baseline() {
-        assert!(ConsensusRule::Majority.passes(3, 4));
-        assert!(!ConsensusRule::Majority.passes(2, 4));
-        assert!(ConsensusRule::Supermajority.passes(2, 3));
-        assert!(!ConsensusRule::Supermajority.passes(1, 3));
-        assert!(ConsensusRule::Unanimous.passes(5, 5));
-        assert!(!ConsensusRule::Unanimous.passes(4, 5));
-        assert!(ConsensusRule::LeadDecides.passes(1, 9));
-        assert!(ConsensusRule::AdvisoryOnly.passes(0, 10));
+        assert!(ConsensusRule::Majority.passes(VoteTally::new(3, 1, 0), eligible(4)));
+        assert!(!ConsensusRule::Majority.passes(VoteTally::new(2, 2, 0), eligible(4)));
+        assert!(ConsensusRule::Supermajority.passes(VoteTally::new(2, 1, 0), eligible(3)));
+        assert!(!ConsensusRule::Supermajority.passes(VoteTally::new(1, 2, 0), eligible(3)));
+        assert!(ConsensusRule::Unanimous.passes(VoteTally::new(5, 0, 0), eligible(5)));
+        assert!(!ConsensusRule::Unanimous.passes(VoteTally::new(4, 1, 0), eligible(5)));
+        assert!(ConsensusRule::LeadDecides.passes(VoteTally::new(1, 0, 0), eligible(9)));
+        assert!(ConsensusRule::AdvisoryOnly.passes(VoteTally::new(0, 0, 0), eligible(10)));
     }
 
     #[test]
@@ -207,11 +445,13 @@ mod tests {
             vote("t1", "bob", VoteDecision::No),
             vote("t2", "carol", VoteDecision::Yes),
         ];
-        let outcome = ConsensusOutcome::evaluate(topic("t1"), ConsensusRule::Majority, &votes, 2);
-        assert_eq!(outcome.yes_votes, 1);
-        assert_eq!(outcome.no_votes, 1);
-        assert_eq!(outcome.total_voters, 2);
-        assert!(!outcome.passes);
+        let outcome =
+            ConsensusOutcome::evaluate(topic("t1"), ConsensusRule::Majority, &votes, eligible(2))
+                .unwrap();
+        assert_eq!(outcome.tally().yes_votes(), 1);
+        assert_eq!(outcome.tally().no_votes(), 1);
+        assert_eq!(outcome.total_voters().get(), 2);
+        assert!(!outcome.passes());
     }
 
     #[test]
@@ -221,10 +461,12 @@ mod tests {
             vote("t1", "alice", VoteDecision::Yes),
             vote("t1", "bob", VoteDecision::Yes),
         ];
-        let outcome = ConsensusOutcome::evaluate(topic("t1"), ConsensusRule::Unanimous, &votes, 2);
-        assert_eq!(outcome.yes_votes, 2);
-        assert_eq!(outcome.no_votes, 0);
-        assert!(outcome.passes);
+        let outcome =
+            ConsensusOutcome::evaluate(topic("t1"), ConsensusRule::Unanimous, &votes, eligible(2))
+                .unwrap();
+        assert_eq!(outcome.tally().yes_votes(), 2);
+        assert_eq!(outcome.tally().no_votes(), 0);
+        assert!(outcome.passes());
     }
 
     #[test]
@@ -234,10 +476,65 @@ mod tests {
             vote("t", "b", VoteDecision::Abstain),
             vote("t", "c", VoteDecision::Yes),
         ];
-        let outcome = ConsensusOutcome::evaluate(topic("t"), ConsensusRule::Majority, &votes, 3);
-        assert_eq!(outcome.yes_votes, 2);
-        assert_eq!(outcome.abstain_votes, 1);
-        assert!(outcome.passes);
+        let outcome =
+            ConsensusOutcome::evaluate(topic("t"), ConsensusRule::Majority, &votes, eligible(3))
+                .unwrap();
+        assert_eq!(outcome.tally().yes_votes(), 2);
+        assert_eq!(outcome.tally().abstain_votes(), 1);
+        assert!(outcome.passes());
+    }
+
+    #[test]
+    fn eligible_voters_rejects_zero() {
+        assert_eq!(
+            EligibleVoters::new(0).unwrap_err(),
+            GovernanceError::ZeroEligibleVoters
+        );
+    }
+
+    #[test]
+    fn outcome_rejects_more_votes_than_eligible_voters() {
+        let result = ConsensusOutcome::from_tally(
+            topic("t"),
+            ConsensusRule::Majority,
+            VoteTally::new(2, 1, 0),
+            eligible(2),
+        );
+        assert!(matches!(
+            result,
+            Err(GovernanceError::TalliesExceedEligibleVoters { .. })
+        ));
+    }
+
+    #[test]
+    fn outcome_deserialization_rejects_forged_pass_flag() {
+        let json = r#"{
+            "topic":"t",
+            "rule":"majority",
+            "yesVotes":1,
+            "noVotes":1,
+            "abstainVotes":0,
+            "totalVoters":2,
+            "passes":true
+        }"#;
+        let result = serde_json::from_str::<ConsensusOutcome>(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn outcome_serializes_flat_public_shape() {
+        let outcome = ConsensusOutcome::from_tally(
+            topic("t"),
+            ConsensusRule::Majority,
+            VoteTally::new(2, 1, 0),
+            eligible(3),
+        )
+        .unwrap();
+        let json = serde_json::to_string(&outcome).unwrap();
+        assert_eq!(
+            json,
+            r#"{"topic":"t","rule":"majority","yesVotes":2,"noVotes":1,"abstainVotes":0,"totalVoters":3,"passes":true}"#
+        );
     }
 
     #[test]
