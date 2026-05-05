@@ -332,17 +332,6 @@ dev-up mode="auto":
 dev-down mode="auto":
     bash scripts/dev-down.sh {{mode}}
 
-# ── Examples ───────────────────────────────────────────────────────────
-
-# Run an example (e.g., just example hello-convergence) — runs from atelier showcase
-example name:
-    cd ../../atelier && cargo run -p example-{{name}}
-
-# List all examples (now in atelier showcase repo)
-examples:
-    @echo "Examples have moved to atelier (~/dev/atelier)."
-    @echo "Run via: cargo run -p example-<name>  (from ~/dev/atelier)"
-
 # ── Git ────────────────────────────────────────────────────────────────
 
 # Create a worktree for parallel work (e.g., just git-worktree fix-auth)
