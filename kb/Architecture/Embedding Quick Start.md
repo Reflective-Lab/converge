@@ -45,7 +45,7 @@ For formations, the grouped embedder entrypoint is `converge_kernel::formation`.
 | `Context::new()` | `ContextState::new()` |
 | `register_in_pack(...)` | `register_suggestor_in_pack(...)` |
 | `Agent` trait | `Suggestor` |
-| public `Fact::new(...)` | not available outside kernel-authority code |
+| public `Fact::new(...)` | not available to normal authoring consumers |
 
 ## Implementing a Suggestor
 
@@ -244,8 +244,11 @@ println!("Merkle: {}", result.integrity.merkle_root.to_hex());
 ## Fact Authority Boundary
 
 - `ProposedFact` is constructible by consumers and suggestors.
-- `Fact` is readable by consumers.
-- Authoritative `Fact` construction is gated behind `kernel-authority`.
+- `ContextFact` is readable by consumers as a projection.
+- Authoritative fact construction is engine-owned; `kernel-authority` is no
+  longer a public feature/module.
+- Durable storage persists `ContextSnapshot` and rehydrates with
+  `ContextState::from_snapshot`.
 - The engine promotion path is the normal route from proposal to fact.
 
 See also: [[Architecture/API Surfaces]], [[Architecture/Suggestor Contract]]

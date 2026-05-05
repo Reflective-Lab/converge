@@ -3,7 +3,10 @@
 
 //! Generic web search request/response types for search-capable providers.
 
+use serde::de;
 use serde::{Deserialize, Serialize};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::num::{NonZeroU64, NonZeroUsize};
 
 /// Error type for web search operations.
 #[derive(Debug, thiserror::Error)]
@@ -222,38 +225,152 @@ pub trait WebSearchBackend: Send + Sync {
 // Web fetch (URL → content)
 // ---------------------------------------------------------------------------
 
+pub(crate) const DEFAULT_WEB_FETCH_MAX_BYTES: usize = 1_048_576;
+pub(crate) const MAX_WEB_FETCH_BYTES: usize = 8 * 1_048_576;
+pub(crate) const DEFAULT_WEB_FETCH_TIMEOUT_MS: u64 = 30_000;
+pub(crate) const MAX_WEB_FETCH_TIMEOUT_MS: u64 = 120_000;
+
+/// Absolute public HTTP(S) URL accepted by web fetch.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
+#[serde(transparent)]
+pub struct WebFetchUrl(String);
+
+impl WebFetchUrl {
+    pub fn new(value: impl Into<String>) -> Result<Self, WebFetchError> {
+        let value = value.into();
+        let url = reqwest::Url::parse(&value)
+            .map_err(|error| WebFetchError::InvalidUrl(error.to_string()))?;
+        validate_public_http_url(&url)?;
+        Ok(Self(value))
+    }
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    pub fn parse(&self) -> Result<reqwest::Url, WebFetchError> {
+        reqwest::Url::parse(self.as_str())
+            .map_err(|error| WebFetchError::InvalidUrl(error.to_string()))
+    }
+}
+
+impl std::fmt::Display for WebFetchUrl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for WebFetchUrl {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        Self::new(value).map_err(de::Error::custom)
+    }
+}
+
+/// Positive byte limit for web fetch responses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(transparent)]
+pub struct WebFetchByteLimit(NonZeroUsize);
+
+impl WebFetchByteLimit {
+    pub fn new(value: usize) -> Result<Self, WebFetchError> {
+        let value = NonZeroUsize::new(value).ok_or_else(|| {
+            WebFetchError::InvalidLimit("max_bytes must be greater than zero".into())
+        })?;
+        if value.get() > MAX_WEB_FETCH_BYTES {
+            return Err(WebFetchError::InvalidLimit(format!(
+                "max_bytes must be <= {MAX_WEB_FETCH_BYTES}"
+            )));
+        }
+        Ok(Self(value))
+    }
+
+    #[must_use]
+    pub fn get(self) -> usize {
+        self.0.get()
+    }
+}
+
+impl<'de> Deserialize<'de> for WebFetchByteLimit {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = usize::deserialize(deserializer)?;
+        Self::new(value).map_err(de::Error::custom)
+    }
+}
+
+/// Positive timeout in milliseconds for a single web fetch request.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(transparent)]
+pub struct WebFetchTimeoutMs(NonZeroU64);
+
+impl WebFetchTimeoutMs {
+    pub fn new(value: u64) -> Result<Self, WebFetchError> {
+        let value = NonZeroU64::new(value).ok_or_else(|| {
+            WebFetchError::InvalidLimit("timeout_ms must be greater than zero".into())
+        })?;
+        if value.get() > MAX_WEB_FETCH_TIMEOUT_MS {
+            return Err(WebFetchError::InvalidLimit(format!(
+                "timeout_ms must be <= {MAX_WEB_FETCH_TIMEOUT_MS}"
+            )));
+        }
+        Ok(Self(value))
+    }
+
+    #[must_use]
+    pub fn get(self) -> u64 {
+        self.0.get()
+    }
+}
+
+impl<'de> Deserialize<'de> for WebFetchTimeoutMs {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = u64::deserialize(deserializer)?;
+        Self::new(value).map_err(de::Error::custom)
+    }
+}
+
 /// Request to fetch a single URL.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebFetchRequest {
     /// URL to fetch.
-    pub url: String,
-    /// Optional HTTP headers to include.
+    pub url: WebFetchUrl,
+    /// Optional HTTP headers to include on the original origin.
     #[serde(default)]
     pub headers: Vec<(String, String)>,
     /// Maximum response body size in bytes (default: 1 MiB).
     #[serde(default = "default_max_bytes")]
-    pub max_bytes: usize,
+    pub max_bytes: WebFetchByteLimit,
     /// Request timeout in milliseconds (default: 30 000).
     #[serde(default = "default_timeout_ms")]
-    pub timeout_ms: u64,
+    pub timeout_ms: WebFetchTimeoutMs,
 }
 
-fn default_max_bytes() -> usize {
-    1_048_576
+fn default_max_bytes() -> WebFetchByteLimit {
+    WebFetchByteLimit::new(DEFAULT_WEB_FETCH_MAX_BYTES).expect("default byte limit is non-zero")
 }
-fn default_timeout_ms() -> u64 {
-    30_000
+
+fn default_timeout_ms() -> WebFetchTimeoutMs {
+    WebFetchTimeoutMs::new(DEFAULT_WEB_FETCH_TIMEOUT_MS).expect("default timeout is non-zero")
 }
 
 impl WebFetchRequest {
-    #[must_use]
-    pub fn new(url: impl Into<String>) -> Self {
-        Self {
-            url: url.into(),
+    pub fn new(url: impl Into<String>) -> Result<Self, WebFetchError> {
+        Ok(Self {
+            url: WebFetchUrl::new(url)?,
             headers: Vec::new(),
             max_bytes: default_max_bytes(),
             timeout_ms: default_timeout_ms(),
-        }
+        })
     }
 
     #[must_use]
@@ -262,16 +379,14 @@ impl WebFetchRequest {
         self
     }
 
-    #[must_use]
-    pub fn with_max_bytes(mut self, max_bytes: usize) -> Self {
-        self.max_bytes = max_bytes;
-        self
+    pub fn with_max_bytes(mut self, max_bytes: usize) -> Result<Self, WebFetchError> {
+        self.max_bytes = WebFetchByteLimit::new(max_bytes)?;
+        Ok(self)
     }
 
-    #[must_use]
-    pub fn with_timeout_ms(mut self, timeout_ms: u64) -> Self {
-        self.timeout_ms = timeout_ms;
-        self
+    pub fn with_timeout_ms(mut self, timeout_ms: u64) -> Result<Self, WebFetchError> {
+        self.timeout_ms = WebFetchTimeoutMs::new(timeout_ms)?;
+        Ok(self)
     }
 }
 
@@ -300,6 +415,8 @@ pub enum WebFetchError {
     Timeout(u64),
     #[error("response too large (>{0} bytes)")]
     TooLarge(usize),
+    #[error("invalid limit: {0}")]
+    InvalidLimit(String),
     #[error("invalid url: {0}")]
     InvalidUrl(String),
     #[error("http {0}: {1}")]
@@ -311,4 +428,89 @@ pub trait WebFetchBackend: Send + Sync {
     fn provider_name(&self) -> &'static str;
 
     fn fetch(&self, request: &WebFetchRequest) -> Result<WebFetchResponse, WebFetchError>;
+}
+
+pub(crate) fn validate_public_http_url(url: &reqwest::Url) -> Result<(), WebFetchError> {
+    match url.scheme() {
+        "http" | "https" => {}
+        scheme => {
+            return Err(WebFetchError::InvalidUrl(format!(
+                "unsupported URL scheme '{scheme}'"
+            )));
+        }
+    }
+
+    if !url.username().is_empty() || url.password().is_some() {
+        return Err(WebFetchError::InvalidUrl(
+            "URLs with embedded credentials are not allowed".into(),
+        ));
+    }
+
+    let host = url
+        .host_str()
+        .ok_or_else(|| WebFetchError::InvalidUrl("URL must include a host".into()))?;
+    let normalized_host = host.trim_end_matches('.');
+    if normalized_host.eq_ignore_ascii_case("localhost") || normalized_host.ends_with(".localhost")
+    {
+        return Err(WebFetchError::InvalidUrl(
+            "localhost targets are not allowed".into(),
+        ));
+    }
+
+    let host_for_ip = host.trim_start_matches('[').trim_end_matches(']');
+    if let Ok(ip) = host_for_ip.parse::<IpAddr>() {
+        reject_non_public_ip(ip)?;
+    }
+
+    Ok(())
+}
+
+pub(crate) fn reject_non_public_ip(ip: IpAddr) -> Result<(), WebFetchError> {
+    let blocked = match ip {
+        IpAddr::V4(ip) => is_non_public_ipv4(ip),
+        IpAddr::V6(ip) => {
+            let first = ip.segments()[0];
+            let second = ip.segments()[1];
+            let mapped_private = ipv4_mapped(ip).is_some_and(is_non_public_ipv4);
+            ip.is_loopback()
+                || ip.is_multicast()
+                || ip.is_unspecified()
+                || (first & 0xfe00) == 0xfc00
+                || (first & 0xffc0) == 0xfe80
+                || (first == 0x2001 && second == 0x0db8)
+                || mapped_private
+        }
+    };
+
+    if blocked {
+        Err(WebFetchError::InvalidUrl(format!(
+            "non-public IP targets are not allowed: {ip}"
+        )))
+    } else {
+        Ok(())
+    }
+}
+
+fn is_non_public_ipv4(ip: Ipv4Addr) -> bool {
+    let octets = ip.octets();
+    ip.is_private()
+        || ip.is_loopback()
+        || ip.is_link_local()
+        || ip.is_multicast()
+        || ip.is_unspecified()
+        || ip.is_broadcast()
+        || octets[0] == 0
+        || (octets[0] == 100 && (64..=127).contains(&octets[1]))
+        || (octets[0] == 192 && octets[1] == 0 && octets[2] == 0)
+        || (octets[0] == 192 && octets[1] == 0 && octets[2] == 2)
+        || (octets[0] == 198 && (18..=19).contains(&octets[1]))
+        || (octets[0] == 198 && octets[1] == 51 && octets[2] == 100)
+        || (octets[0] == 203 && octets[1] == 0 && octets[2] == 113)
+        || octets[0] >= 240
+}
+
+fn ipv4_mapped(ip: Ipv6Addr) -> Option<Ipv4Addr> {
+    let octets = ip.octets();
+    (octets[..10].iter().all(|byte| *byte == 0) && octets[10] == 0xff && octets[11] == 0xff)
+        .then(|| Ipv4Addr::new(octets[12], octets[13], octets[14], octets[15]))
 }

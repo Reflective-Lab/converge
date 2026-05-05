@@ -45,7 +45,7 @@ async fn seed_with_high_confidence_promoted() {
     let result = engine.run(ContextState::new()).await.expect("converges");
     assert!(result.converged);
     assert_eq!(
-        result.context.get(ContextKey::Seeds)[0].content,
+        result.context.get(ContextKey::Seeds)[0].content(),
         "high confidence fact"
     );
 }

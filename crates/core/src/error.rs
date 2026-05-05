@@ -44,6 +44,20 @@ pub enum ConvergeError {
         reason: String,
     },
 
+    /// Invalid external observation admission.
+    #[error("invalid admission: {reason}")]
+    InvalidAdmission {
+        /// What went wrong.
+        reason: String,
+    },
+
+    /// Invalid persisted context snapshot.
+    #[error("invalid context snapshot: {reason}")]
+    InvalidSnapshot {
+        /// What went wrong.
+        reason: String,
+    },
+
     /// Conflicting facts detected for the same ID.
     #[error(
         "conflict detected for fact '{id}': existing content '{existing}' vs new content '{new}'"
@@ -70,7 +84,9 @@ impl ConvergeError {
             }
             Self::BudgetExhausted { .. }
             | Self::AgentFailed { .. }
-            | Self::InvalidResume { .. } => None,
+            | Self::InvalidResume { .. }
+            | Self::InvalidAdmission { .. }
+            | Self::InvalidSnapshot { .. } => None,
         }
     }
 
@@ -96,12 +112,28 @@ impl ConvergeError {
                 message: format!("invalid gate resume: {reason}"),
                 category: crate::gates::ErrorCategory::Internal,
             },
+            Self::InvalidAdmission { reason } => StopReason::Error {
+                message: format!("invalid admission: {reason}"),
+                category: crate::gates::ErrorCategory::Configuration,
+            },
+            Self::InvalidSnapshot { reason } => StopReason::Error {
+                message: format!("invalid context snapshot: {reason}"),
+                category: crate::gates::ErrorCategory::Configuration,
+            },
             Self::Conflict {
                 id, existing, new, ..
             } => StopReason::Error {
                 message: format!("conflict for fact '{id}': existing '{existing}' vs new '{new}'"),
                 category: crate::gates::ErrorCategory::Internal,
             },
+        }
+    }
+}
+
+impl From<crate::AdmissionError> for ConvergeError {
+    fn from(value: crate::AdmissionError) -> Self {
+        Self::InvalidAdmission {
+            reason: value.to_string(),
         }
     }
 }

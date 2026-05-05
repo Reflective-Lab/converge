@@ -73,7 +73,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::context::{ContextKey, Fact, FactId};
+use crate::context::{ContextFact, ContextKey, FactId};
 
 /// The outcome of an eval execution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -169,7 +169,7 @@ impl EvalResult {
     /// The fact is stored in `ContextKey::Evaluations` with an ID
     /// that includes the eval name for traceability.
     #[must_use]
-    pub fn to_fact(&self, eval_id: Option<&str>) -> Fact {
+    pub fn to_fact(&self, eval_id: Option<&str>) -> ContextFact {
         let id = if let Some(eid) = eval_id {
             format!("eval:{}:{}", self.eval_name, eid)
         } else {
@@ -393,9 +393,9 @@ mod tests {
 
         let fact = result.to_fact(None);
         assert_eq!(fact.key(), ContextKey::Evaluations);
-        assert!(fact.id.starts_with("eval:test_eval"));
-        assert!(fact.content.contains("Pass"));
-        assert!(fact.content.contains("0.85"));
+        assert!(fact.id().starts_with("eval:test_eval"));
+        assert!(fact.content().contains("Pass"));
+        assert!(fact.content().contains("0.85"));
     }
 
     #[test]

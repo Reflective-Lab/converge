@@ -39,7 +39,7 @@
 //! assert!(intent.validate().is_ok());
 //! ```
 
-use crate::context::{ContextKey, ContextState, Fact};
+use crate::context::{ContextFact, ContextKey, ContextState};
 use crate::types::{ConstraintName, ConstraintValue, IntentId, Timestamp};
 use std::time::Duration;
 
@@ -214,7 +214,7 @@ impl Scope {
     /// Default implementation is permissive; domain-specific validation
     /// should be implemented via invariants.
     #[must_use]
-    pub fn allows(&self, _fact: &Fact) -> bool {
+    pub fn allows(&self, _fact: &ContextFact) -> bool {
         // MVP: All facts are allowed. In production, this would check
         // fact content against scope constraints (e.g., market mentions,
         // geographic references, etc.)
@@ -303,9 +303,9 @@ impl SuccessCriterion {
 
                 // Check if any evaluation is positive
                 evaluations.iter().any(|e| {
-                    e.content.to_lowercase().contains("viable")
-                        || e.content.to_lowercase().contains("positive")
-                        || e.content.to_lowercase().contains("recommended")
+                    e.content().to_lowercase().contains("viable")
+                        || e.content().to_lowercase().contains("positive")
+                        || e.content().to_lowercase().contains("recommended")
                 })
             }
             Self::ValidScheduleFound => ctx.has(ContextKey::Strategies),
@@ -313,15 +313,15 @@ impl SuccessCriterion {
                 // Check constraints are satisfied (no unallocated tasks)
                 !ctx.get(ContextKey::Constraints)
                     .iter()
-                    .any(|c| c.content.to_lowercase().contains("unallocated"))
+                    .any(|c| c.content().to_lowercase().contains("unallocated"))
             }
             Self::MinimumStrategies(n) => ctx.get(ContextKey::Strategies).len() >= *n,
             Self::AllEvaluationsPositive => {
                 let evaluations = ctx.get(ContextKey::Evaluations);
                 !evaluations.is_empty()
                     && evaluations.iter().all(|e| {
-                        !e.content.to_lowercase().contains("negative")
-                            && !e.content.to_lowercase().contains("rejected")
+                        !e.content().to_lowercase().contains("negative")
+                            && !e.content().to_lowercase().contains("rejected")
                     })
             }
             Self::Custom(_) => {
@@ -595,7 +595,7 @@ impl RootIntent {
     ///
     /// These facts are added to the context at the start of execution.
     #[must_use]
-    pub fn to_seed_facts(&self) -> Vec<Fact> {
+    pub fn to_seed_facts(&self) -> Vec<ContextFact> {
         let mut facts = Vec::new();
 
         // Intent metadata as seed
@@ -790,16 +790,19 @@ mod tests {
         assert_eq!(facts.len(), 4);
 
         // Check intent fact
-        let intent_fact = facts.iter().find(|f| f.id.starts_with("intent:")).unwrap();
-        assert!(intent_fact.content.contains("growth_strategy"));
-        assert!(intent_fact.content.contains("increase_demand"));
+        let intent_fact = facts
+            .iter()
+            .find(|f| f.id().as_str().starts_with("intent:"))
+            .unwrap();
+        assert!(intent_fact.content().contains("growth_strategy"));
+        assert!(intent_fact.content().contains("increase_demand"));
 
         // Check constraint fact
         let constraint_fact = facts
             .iter()
             .find(|f| f.key() == ContextKey::Constraints)
             .unwrap();
-        assert!(constraint_fact.content.contains("budget=1M"));
+        assert!(constraint_fact.content().contains("budget=1M"));
     }
 
     #[test]

@@ -84,10 +84,10 @@ impl Suggestor for PortfolioSuggestor {
 
     fn accepts(&self, ctx: &dyn Context) -> bool {
         ctx.get(ContextKey::Seeds).iter().any(|f| {
-            f.id.starts_with(REQUEST_PREFIX)
-                && match serde_json::from_str::<PortfolioRequest>(&f.content) {
-                    Ok(_) => !selection_exists(ctx, req_id(&f.id)),
-                    Err(_) => !error_exists(ctx, &f.id),
+            f.id().as_str().starts_with(REQUEST_PREFIX)
+                && match serde_json::from_str::<PortfolioRequest>(f.content()) {
+                    Ok(_) => !selection_exists(ctx, req_id(f.id().as_str())),
+                    Err(_) => !error_exists(ctx, f.id().as_str()),
                 }
         })
     }
@@ -98,11 +98,11 @@ impl Suggestor for PortfolioSuggestor {
         for fact in ctx
             .get(ContextKey::Seeds)
             .iter()
-            .filter(|f| f.id.starts_with(REQUEST_PREFIX))
+            .filter(|f| f.id().as_str().starts_with(REQUEST_PREFIX))
         {
-            match serde_json::from_str::<PortfolioRequest>(&fact.content) {
+            match serde_json::from_str::<PortfolioRequest>(fact.content()) {
                 Ok(req) => {
-                    if selection_exists(ctx, req_id(&fact.id)) {
+                    if selection_exists(ctx, req_id(fact.id().as_str())) {
                         continue;
                     }
                     let selection = solve(&req);
@@ -117,18 +117,18 @@ impl Suggestor for PortfolioSuggestor {
                     );
                 }
                 Err(e) => {
-                    if error_exists(ctx, &fact.id) {
+                    if error_exists(ctx, fact.id().as_str()) {
                         continue;
                     }
                     let diag = serde_json::json!({
-                        "request_fact_id": fact.id,
+                        "request_fact_id": fact.id(),
                         "message": "malformed portfolio request",
                         "error": e.to_string(),
                     });
                     proposals.push(
                         ProposedFact::new(
                             ContextKey::Diagnostic,
-                            format!("{}{}", ERROR_PREFIX, fact.id),
+                            format!("{}{}", ERROR_PREFIX, fact.id()),
                             diag.to_string(),
                             self.name(),
                         )
@@ -210,12 +210,16 @@ fn req_id(fact_id: &str) -> &str {
 
 fn selection_exists(ctx: &dyn Context, request_id: &str) -> bool {
     let id = format!("{}{}", SELECTION_PREFIX, request_id);
-    ctx.get(ContextKey::Strategies).iter().any(|f| f.id == id)
+    ctx.get(ContextKey::Strategies)
+        .iter()
+        .any(|f| f.id().as_str() == id)
 }
 
 fn error_exists(ctx: &dyn Context, fact_id: &str) -> bool {
     let id = format!("{}{}", ERROR_PREFIX, fact_id);
-    ctx.get(ContextKey::Diagnostic).iter().any(|f| f.id == id)
+    ctx.get(ContextKey::Diagnostic)
+        .iter()
+        .any(|f| f.id().as_str() == id)
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -268,7 +272,7 @@ mod tests {
         let result = engine.run(ctx).await.unwrap();
         let facts = result.context.get(ContextKey::Strategies);
         assert_eq!(facts.len(), 1);
-        let sel: PortfolioSelection = serde_json::from_str(&facts[0].content).unwrap();
+        let sel: PortfolioSelection = serde_json::from_str(facts[0].content()).unwrap();
         assert_eq!(sel.total_value, 26, "optimal portfolio value = 26");
         assert!(sel.total_weight <= 20);
     }

@@ -1,4 +1,4 @@
-// Contract: kernel-authority helpers are not available to normal consumers.
+// Contract: kernel-authority helpers do not exist in the public pack API.
 
 use converge_pack::{fact::kernel_authority, ContextKey};
 

@@ -61,4 +61,4 @@ A regression is detected when:
 
 - `EXP-001.md` — Hypothesis and acceptance criteria for `engine_single_cycle` p99 < 1ms
 - `.github/workflows/stability.yml` — Automated extraction on weekly schedule
-- Extraction script: moved to `runway` repo (`ops/scripts/extract-criterion-baseline.py`)
+- Extraction script: `scripts/extract-criterion-baseline.py`

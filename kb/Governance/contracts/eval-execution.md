@@ -273,8 +273,7 @@ for eval in "${EVALS[@]}"; do
   claude --print "$(cat evals/${eval}-eval.md)" > reports/${eval}-report.md
 done
 
-# Aggregate results
-./runway/ops/scripts/aggregate-eval-reports.sh reports/
+# Aggregate results with the eval runner configured for this repository.
 ```
 
 ### Method 4: CI/CD Integration (GitHub Actions example)
@@ -307,7 +306,7 @@ jobs:
 
       - name: Check Results
         run: |
-          ./runway/ops/scripts/check-eval-results.sh reports/
+          # Check reports with the eval runner configured for this repository.
           # Fails if any required eval is FAIL
 ```
 
@@ -326,10 +325,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run Weekly Suite
-        run: ./runway/ops/scripts/run-weekly-evals.sh
+        run: echo "run the repository eval suite"
 
       - name: Post to Slack
-        run: ./runway/ops/scripts/post-eval-summary.sh
+        run: echo "post the eval summary"
 ```
 
 ---

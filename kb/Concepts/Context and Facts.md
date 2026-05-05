@@ -11,7 +11,7 @@ The context is the shared, typed state visible to all suggestors. It is the only
 ```rust
 pub trait Context: Send + Sync {
     fn has(&self, key: ContextKey) -> bool;
-    fn get(&self, key: ContextKey) -> &[Fact];
+    fn get(&self, key: ContextKey) -> &[ContextFact];
     fn get_proposals(&self, key: ContextKey) -> &[ProposedFact];
     fn count(&self, key: ContextKey) -> usize;
 }
@@ -23,24 +23,24 @@ Properties:
 - **Read-only for suggestors** — suggestors receive `&dyn Context`, not a mutable reference
 - **Scoped to a run** — context exists for one convergence run, not across runs
 
-## Facts
+## Context Facts
 
-A `Fact` is a piece of evidence in the context.
+A `ContextFact` is the read-only public projection of a promoted fact in the context.
 
 ```rust
-pub struct Fact {
-    pub id: String,
-    pub content: String,
-}
-
-impl Fact {
+impl ContextFact {
     pub fn key(&self) -> ContextKey;
+    pub fn id(&self) -> &FactId;
+    pub fn content(&self) -> &str;
     pub fn promotion_record(&self) -> &FactPromotionRecord;
-    pub fn created_at(&self) -> &str;
+    pub fn created_at(&self) -> &Timestamp;
 }
 ```
 
-Facts are authoritative and read-only. External code cannot construct them directly. Suggestors emit `ProposedFact`, the engine validates through the promotion gate, and only then does a `Fact` enter context.
+Context facts are authoritative and read-only to consumers. Suggestors emit
+`ProposedFact`; the engine validates through the promotion gate, and only then
+does a projected `ContextFact` enter context. Durable storage uses
+`ContextSnapshot` for rehydration; it does not call fact constructors.
 
 ## Context Keys
 

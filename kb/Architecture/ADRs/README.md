@@ -17,5 +17,6 @@ Current sequence:
 - `ADR-003` Pack Authoring Contract
 - `ADR-004` Contract Stabilization
 - `ADR-005` Type Ownership Boundaries
-- `ADR-006` Clock Injection for Kernel Determinism
-- `ADR-007` Capability Contract Ownership
+- `ADR-006` Promotion Authority Boundary
+- `ADR-007` Provider and Tool Contract Names
+- `ADR-008` Extension Crate Boundaries

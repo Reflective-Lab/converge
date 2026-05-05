@@ -287,10 +287,10 @@ mod tests {
                 ContextKey::Evaluations,
             ] {
                 for fact in ctx.get(*key) {
-                    if fact.content.trim().is_empty() {
+                    if fact.content().trim().is_empty() {
                         return InvariantResult::Violated(Violation::with_facts(
                             "empty content not allowed",
-                            vec![fact.id.clone()],
+                            vec![fact.id().clone()],
                         ));
                     }
                 }

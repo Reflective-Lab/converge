@@ -26,7 +26,7 @@ pub trait Backend: Send + Sync {
 |---|---|
 | `Llm` | Claude, GPT, Qwen, Ollama |
 | `Policy` | Cedar, OPA |
-| `Optimization` | CP-SAT, OR-Tools |
+| `Optimization` | Native CP, SAT, graph optimization |
 | `Analytics` | Burn, Polars |
 | `Search` | Vector, full-text |
 | `Storage` | Firestore, PostgreSQL |

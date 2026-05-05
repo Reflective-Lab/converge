@@ -81,6 +81,8 @@ impl axum::response::IntoResponse for RuntimeError {
                         axum::http::StatusCode::INTERNAL_SERVER_ERROR
                     }
                     ConvergeError::InvalidResume { .. } => axum::http::StatusCode::BAD_REQUEST,
+                    ConvergeError::InvalidAdmission { .. } => axum::http::StatusCode::BAD_REQUEST,
+                    ConvergeError::InvalidSnapshot { .. } => axum::http::StatusCode::BAD_REQUEST,
                     ConvergeError::Conflict { .. } => axum::http::StatusCode::CONFLICT,
                 };
                 (status, format!("Converge error: {e}"))

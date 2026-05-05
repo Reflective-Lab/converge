@@ -1,8 +1,8 @@
-// Prove: converge-core re-exports a read-only Fact surface.
-// External converge-core consumers must not be able to construct authoritative facts.
+// Prove: converge-core re-exports a read-only ContextFact surface.
+// External converge-core consumers must not get an authority constructor.
 
-use converge_core::{ContextKey, Fact};
+use converge_core::{ContextKey, ContextFact};
 
 fn main() {
-    let _fact = Fact::construct(ContextKey::Seeds, "test-id", "test-content");
+    let _fact = ContextFact::construct(ContextKey::Seeds, "test-id", "test-content");
 }

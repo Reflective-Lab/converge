@@ -1,8 +1,8 @@
-// Contract: There is no TryFrom or From impl from ProposedFact to Fact.
-// A proposal can never self-promote. The only path to an authoritative Fact
+// Contract: There is no TryFrom or From impl from ProposedFact to ContextFact.
+// A proposal can never self-promote. The only path to an authoritative ContextFact
 // is through the PromotionGate inside converge-core.
 
-use converge_pack::{ContextKey, Fact, ProposedFact};
+use converge_pack::{ContextFact, ContextKey, ProposedFact};
 
 fn main() {
     let proposal = ProposedFact::new(
@@ -11,5 +11,5 @@ fn main() {
         "bypass-content",
         "attacker",
     );
-    let _fact: Fact = Fact::try_from(proposal).unwrap();
+    let _fact: ContextFact = ContextFact::try_from(proposal).unwrap();
 }

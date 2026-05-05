@@ -54,7 +54,7 @@ mod tests {
         fn accepts(&self, ctx: &dyn crate::Context) -> bool {
             !ctx.get(ContextKey::Seeds)
                 .iter()
-                .any(|f| f.id == self.fact_id)
+                .any(|f| f.id().as_str() == self.fact_id)
         }
 
         async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
@@ -82,11 +82,7 @@ mod tests {
             fact_id: "test-1".into(),
         };
         let mut ctx = crate::context::ContextState::new();
-        let fact = converge_pack::fact::kernel_authority::new_fact(
-            ContextKey::Seeds,
-            "test-1",
-            "already here",
-        );
+        let fact = crate::context::new_fact(ContextKey::Seeds, "test-1", "already here");
         let _ = ctx.add_fact(fact);
         assert!(!suggestor.accepts(&ctx));
     }
@@ -98,8 +94,8 @@ mod tests {
         };
         let ctx = crate::context::ContextState::new();
         let effect = suggestor.execute(&ctx).await;
-        assert_eq!(effect.proposals.len(), 1);
-        assert_eq!(effect.proposals[0].id, "test-1");
+        assert_eq!(effect.proposals().len(), 1);
+        assert_eq!(effect.proposals()[0].id, "test-1");
     }
 
     #[test]

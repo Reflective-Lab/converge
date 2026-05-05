@@ -51,7 +51,7 @@ async fn test_constraint_programming_formation() {
     let strategies = result.context.get(ContextKey::Strategies);
     assert_eq!(strategies.len(), 1);
 
-    let v: serde_json::Value = serde_json::from_str(&strategies[0].content).unwrap();
+    let v: serde_json::Value = serde_json::from_str(strategies[0].content()).unwrap();
     let plan = &v["plan"];
     assert!(plan["feasible"].as_bool().unwrap());
 
@@ -85,7 +85,7 @@ async fn test_job_shop_scheduling_formation() {
     let strategies = result.context.get(ContextKey::Strategies);
     assert_eq!(strategies.len(), 1);
 
-    let v: serde_json::Value = serde_json::from_str(&strategies[0].content).unwrap();
+    let v: serde_json::Value = serde_json::from_str(strategies[0].content()).unwrap();
     let payload = &v["plan"];
     let makespan = payload["makespan"].as_u64().unwrap();
     assert!(makespan > 0, "makespan must be positive");
@@ -115,7 +115,7 @@ async fn test_staff_rostering_formation() {
     let strategies = result.context.get(ContextKey::Strategies);
     assert_eq!(strategies.len(), 1);
 
-    let v: serde_json::Value = serde_json::from_str(&strategies[0].content).unwrap();
+    let v: serde_json::Value = serde_json::from_str(strategies[0].content()).unwrap();
     let payload = &v["plan"];
     let assignments = payload["assignments"].as_array().unwrap();
     let unassigned = payload["unassigned_shifts"].as_array().unwrap();
@@ -146,7 +146,7 @@ async fn test_traveling_salesman_formation() {
     let strategies = result.context.get(ContextKey::Strategies);
     assert_eq!(strategies.len(), 1);
 
-    let v: serde_json::Value = serde_json::from_str(&strategies[0].content).unwrap();
+    let v: serde_json::Value = serde_json::from_str(strategies[0].content()).unwrap();
     let payload = &v["plan"];
     let tour = payload["tour"].as_array().unwrap();
     let distance = payload["total_distance"].as_f64().unwrap();
@@ -181,7 +181,7 @@ async fn test_graph_partitioning_formation() {
     let strategies = result.context.get(ContextKey::Strategies);
     assert_eq!(strategies.len(), 1);
 
-    let v: serde_json::Value = serde_json::from_str(&strategies[0].content).unwrap();
+    let v: serde_json::Value = serde_json::from_str(strategies[0].content()).unwrap();
     let payload = &v["plan"];
     let partition = payload["partition"].as_array().unwrap();
     let cut_weight = payload["cut_weight"].as_f64().unwrap();

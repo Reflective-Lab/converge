@@ -36,8 +36,8 @@ impl Suggestor for SeedObserver {
         let seed = &ctx.get(ContextKey::Seeds)[0];
         AgentEffect::with_proposal(ProposedFact::new(
             ContextKey::Hypotheses,
-            format!("observed-{}", seed.id),
-            format!("observed {}", seed.content),
+            format!("observed-{}", seed.id()),
+            format!("observed {}", seed.content()),
             self.name(),
         ))
     }
@@ -67,13 +67,13 @@ async fn staged_input_is_promoted_before_downstream_suggestors_run() {
 
     let seeds = result.context.get(ContextKey::Seeds);
     assert_eq!(seeds.len(), 1);
-    assert_eq!(seeds[0].id, "seed-1");
-    assert_eq!(seeds[0].content, "seed content");
+    assert_eq!(seeds[0].id(), "seed-1");
+    assert_eq!(seeds[0].content(), "seed content");
 
     let hypotheses = result.context.get(ContextKey::Hypotheses);
     assert_eq!(hypotheses.len(), 1);
-    assert_eq!(hypotheses[0].id, "observed-seed-1");
-    assert_eq!(hypotheses[0].content, "observed seed content");
+    assert_eq!(hypotheses[0].id(), "observed-seed-1");
+    assert_eq!(hypotheses[0].content(), "observed seed content");
 }
 
 #[tokio::test]
@@ -121,10 +121,11 @@ proptest! {
         let hypotheses = result.context.get(ContextKey::Hypotheses);
 
         prop_assert_eq!(seeds.len(), 1);
-        prop_assert_eq!(&seeds[0].id, &id);
-        prop_assert_eq!(&seeds[0].content, &content);
+        prop_assert_eq!(seeds[0].id().as_str(), id.as_str());
+        prop_assert_eq!(seeds[0].content(), content.as_str());
         prop_assert_eq!(hypotheses.len(), 1);
-        prop_assert_eq!(&hypotheses[0].content, &format!("observed {content}"));
+        let expected_hypothesis = format!("observed {content}");
+        prop_assert_eq!(hypotheses[0].content(), expected_hypothesis.as_str());
         prop_assert!(!result.context.has_pending_proposals());
     }
 

@@ -30,12 +30,12 @@ impl Suggestor for ThresholdPolicyAgent {
         let strategies = ctx.get(ContextKey::Strategies);
         let mut proposals = Vec::new();
         for fact in strategies {
-            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&fact.content) {
+            if let Ok(v) = serde_json::from_str::<serde_json::Value>(fact.content()) {
                 if let Some(conf) = v.get("confidence").and_then(|c| c.as_f64()) {
                     if conf > self.max_confidence {
                         proposals.push(ProposedFact::new(
                             ContextKey::Constraints,
-                            format!("block-{}", fact.id),
+                            format!("block-{}", fact.id()),
                             format!("confidence {conf} exceeds max {}", self.max_confidence),
                             "threshold-policy",
                         ));
@@ -67,7 +67,7 @@ impl Suggestor for StrategyAgent {
             && !ctx
                 .get(ContextKey::Strategies)
                 .iter()
-                .any(|f| f.id == self.fact_id)
+                .any(|f| f.id() == self.fact_id)
     }
     async fn execute(&self, _ctx: &dyn Context) -> AgentEffect {
         AgentEffect::with_proposal(ProposedFact::new(
@@ -112,7 +112,7 @@ async fn formation_policy_blocks_high_confidence() {
     // Policy writes a constraint blocking the overconfident strategy
     assert!(result.context.has(ContextKey::Constraints));
     let constraints = result.context.get(ContextKey::Constraints);
-    assert!(constraints[0].content.contains("0.99"));
+    assert!(constraints[0].content().contains("0.99"));
 }
 
 #[tokio::test]
@@ -179,5 +179,5 @@ async fn formation_multiple_strategies_partial_block() {
     // Only the aggressive one is blocked
     let constraints = result.context.get(ContextKey::Constraints);
     assert_eq!(constraints.len(), 1);
-    assert!(constraints[0].id.contains("aggressive"));
+    assert!(constraints[0].id().contains("aggressive"));
 }

@@ -1,5 +1,11 @@
 error[E0599]: no function or associated item named `construct` found for struct `FactActor` in the current scope
- --> tests/compile_fail/fact_actor_new_without_feature.rs:7:24
+ --> tests/compile_fail/fact_actor_new_without_feature.rs:6:24
   |
-7 |     let _ = FactActor::construct("converge-engine", FactActorKind::System);
+6 |     let _ = FactActor::construct("converge-engine", FactActorKind::System);
   |                        ^^^^^^^^^ function or associated item not found in `FactActor`
+  |
+note: if you're trying to build a new `FactActor`, consider using `FactActor::new_projection` which returns `FactActor`
+ --> src/fact.rs
+  |
+  |     pub fn new_projection(id: impl Into<ActorId>, kind: FactActorKind) -> Self {
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

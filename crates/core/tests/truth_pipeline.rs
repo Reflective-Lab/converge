@@ -21,8 +21,8 @@ async fn single_suggestor_proposal_promoted_to_fact() {
     assert!(result.converged);
     let facts = result.context.get(ContextKey::Seeds);
     assert_eq!(facts.len(), 1);
-    assert_eq!(facts[0].id, "seed-1");
-    assert_eq!(facts[0].content, "initial observation");
+    assert_eq!(facts[0].id(), "seed-1");
+    assert_eq!(facts[0].content(), "initial observation");
 }
 
 #[tokio::test]
@@ -104,7 +104,7 @@ async fn seed_input_promoted_through_gate() {
     assert!(result.converged);
     let facts = result.context.get(ContextKey::Seeds);
     assert_eq!(facts.len(), 1);
-    assert_eq!(facts[0].id, "external-1");
+    assert_eq!(facts[0].id(), "external-1");
 }
 
 // ── Idempotency: same suggestor does not re-propose ──

@@ -35,7 +35,9 @@ Product apps wire the experience, artifacts, and writeback.
 - The deterministic engine loop and honest stop reasons.
 - HITL gates, policy snapshots, and governed promotion boundaries.
 - Experience events emitted from governed execution.
-- Public kernel/model/pack/provider-api contracts that upper layers can embed.
+- Public kernel/model/pack/provider contracts that upper layers can embed.
+  The current provider contract crate is still named `converge-provider-api`;
+  ADR-007 marks that as transitional naming drift.
 
 ## Converge Must Not Own
 

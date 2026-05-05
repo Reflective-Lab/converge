@@ -1,0 +1,13 @@
+error[E0624]: method `add_fact` is private
+ --> tests/compile_fail/tracked_context_add_fact_private.rs:8:21
+  |
+8 |       let _ = tracked.add_fact(fact);
+  |                       ^^^^^^^^ private method
+  |
+ ::: src/integrity.rs
+  |
+  | /     pub(crate) fn add_fact(
+  | |         &mut self,
+  | |         fact: ContextFact,
+  | |     ) -> Result<bool, crate::error::ConvergeError> {
+  | |__________________________________________________- private method defined here

@@ -4,30 +4,30 @@ source: mixed
 ---
 # OR-Tools
 
-Google OR-Tools provides constraint programming and optimization capabilities through `converge-optimization`.
+Google OR-Tools is not an active dependency in the current workspace.
+`converge-optimization` is currently pure Rust plus optional Varisat-backed
+constraint programming.
 
 ## Role in Converge
 
-Implements optimization [[Architecture/Ports|ports]] for agents that need constraint satisfaction, scheduling, or resource allocation.
+If OR-Tools returns, it should be an adapter implementation for agents that
+need external constraint solving. It should not be part of the kernel contract.
 
-## FFI Architecture
+## Current Architecture
 
 ```
 converge-optimization
-    └── ortools-sys (FFI bindings)
-            └── C++ wrapper
-                    └── Google OR-Tools native library
+    ├── native Rust optimization algorithms
+    └── optional Varisat-backed constraint programming
 ```
-
-`ortools-sys` compiles a custom C++ wrapper at build time and links against the OR-Tools native library.
 
 ## Capabilities
 
 | Solver | Use Case |
 |---|---|
-| CP-SAT | Constraint programming, scheduling |
-| Linear/Integer Programming | Resource allocation, budget optimization |
-| Multi-criteria optimization | Weighted scoring across dimensions |
+| Native CP | Constraint programming, scheduling |
+| Graph/assignment algorithms | Routing, matching, flow, resource allocation |
+| Pack solvers | Budget, capacity, scheduling, routing, triage |
 
 ## Agent Example
 

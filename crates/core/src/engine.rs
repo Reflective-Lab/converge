@@ -19,7 +19,7 @@ use strum::IntoEnumIterator;
 use tracing::{Instrument, debug, info, info_span, warn};
 
 use crate::agent::{Suggestor, SuggestorId};
-use crate::context::{ContextKey, ContextState, Fact, ProposedFact, ValidationError};
+use crate::context::{ContextFact, ContextKey, ContextState, ProposedFact, ValidationError};
 use crate::effect::AgentEffect;
 use crate::error::ConvergeError;
 use crate::experience_store::{BudgetResource, ExperienceEvent};
@@ -55,7 +55,7 @@ pub trait StreamingCallback: Send + Sync {
     fn on_cycle_start(&self, cycle: u32);
 
     /// Called when a fact is added to the context during merge.
-    fn on_fact(&self, cycle: u32, fact: &Fact);
+    fn on_fact(&self, cycle: u32, fact: &ContextFact);
 
     /// Called at the end of each convergence cycle.
     fn on_cycle_end(&self, cycle: u32, facts_added: usize);
@@ -286,7 +286,7 @@ impl Engine {
     ///         println!("[cycle:{}] started", cycle);
     ///     }
     ///     fn on_fact(&self, cycle: u32, fact: &Fact) {
-    ///         println!("[cycle:{}] fact:{} | {}", cycle, fact.id, fact.content);
+    ///         println!("[cycle:{}] fact:{} | {}", cycle, fact.id(), fact.content());
     ///     }
     ///     fn on_cycle_end(&self, cycle: u32, facts_added: usize) {
     ///         println!("[cycle:{}] ended with {} facts", cycle, facts_added);
@@ -833,11 +833,11 @@ impl Engine {
     }
 
     fn pack_actor(actor: &crate::types::Actor) -> FactActor {
-        FactActor::new(actor.id.clone(), Self::pack_actor_kind(actor.kind))
+        FactActor::new_projection(actor.id.clone(), Self::pack_actor_kind(actor.kind))
     }
 
     fn pack_validation_summary(summary: &crate::types::ValidationSummary) -> FactValidationSummary {
-        FactValidationSummary::new(
+        FactValidationSummary::new_projection(
             summary
                 .checks_passed
                 .iter()
@@ -866,23 +866,27 @@ impl Engine {
 
     fn pack_trace_link(trace_link: &crate::types::TraceLink) -> FactTraceLink {
         match trace_link {
-            crate::types::TraceLink::Local(local) => FactTraceLink::Local(FactLocalTrace::new(
-                local.trace_id.clone(),
-                local.span_id.clone(),
-                local.parent_span_id.clone().map(Into::into),
-                local.sampled,
-            )),
-            crate::types::TraceLink::Remote(remote) => FactTraceLink::Remote(FactRemoteTrace::new(
-                remote.system.clone(),
-                remote.reference.clone(),
-                remote.retrieval_auth.clone(),
-                remote.retention_hint.clone(),
-            )),
+            crate::types::TraceLink::Local(local) => {
+                FactTraceLink::Local(FactLocalTrace::new_projection(
+                    local.trace_id.clone(),
+                    local.span_id.clone(),
+                    local.parent_span_id.clone().map(Into::into),
+                    local.sampled,
+                ))
+            }
+            crate::types::TraceLink::Remote(remote) => {
+                FactTraceLink::Remote(FactRemoteTrace::new_projection(
+                    remote.system.clone(),
+                    remote.reference.clone(),
+                    remote.retrieval_auth.clone(),
+                    remote.retention_hint.clone(),
+                ))
+            }
         }
     }
 
     fn pack_promotion_record(record: &crate::types::PromotionRecord) -> FactPromotionRecord {
-        FactPromotionRecord::new(
+        FactPromotionRecord::new_projection(
             record.gate_id.clone(),
             record.policy_version_hash.clone(),
             Self::pack_actor(&record.approver),
@@ -902,7 +906,7 @@ impl Engine {
         proposal: &ProposedFact,
         cycle: u32,
         promoted_by: &str,
-    ) -> Result<Fact, ValidationError> {
+    ) -> Result<ContextFact, ValidationError> {
         self.validate_pack_proposal(proposal)?;
 
         let provenance = ObservationProvenance::new(
@@ -971,7 +975,7 @@ impl Engine {
                         event_observer,
                         ExperienceEvent::FactPromoted {
                             proposal_id: proposal.id.clone(),
-                            fact_id: fact.id.clone(),
+                            fact_id: fact.id().clone(),
                             promoted_by: "context-input".into(),
                             reason: "staged context input promoted".to_string(),
                             requires_human: false,
@@ -1013,18 +1017,18 @@ impl Engine {
 
         for (id, effect) in effects {
             let promoted_by = format!("agent-{}", id.0);
-            for proposal in effect.proposals {
+            for proposal in effect.into_proposals() {
                 let proposal_id = proposal.id.clone();
                 let _span =
                     info_span!("validate_proposal", agent = %id, proposal = %proposal_id).entered();
                 match self.promote_pack_proposal(&proposal, cycle, &promoted_by) {
                     Ok(fact) => {
-                        info!(agent = %id, fact = %fact.id, "Proposal promoted to fact");
+                        info!(agent = %id, fact = %fact.id(), "Proposal promoted to fact");
                         emit_experience_event(
                             event_observer,
                             ExperienceEvent::FactPromoted {
                                 proposal_id: proposal_id.clone(),
-                                fact_id: fact.id.clone(),
+                                fact_id: fact.id().clone(),
                                 promoted_by: promoted_by.clone().into(),
                                 reason: "proposal validated and promoted in engine merge"
                                     .to_string(),
@@ -1403,13 +1407,13 @@ impl Engine {
         effects.sort_by_key(|(id, _)| *id);
         tracked.context.clear_dirty();
         let mut facts_added = 0usize;
-        let mut idx = 0;
+        let idx = 0;
 
         while idx < effects.len() {
-            let (id, ref mut effect) = effects[idx];
+            let (id, effect) = effects.remove(idx);
 
-            let proposals = std::mem::take(&mut effect.proposals);
-            for proposal in proposals {
+            let mut proposals = effect.into_proposals().into_iter();
+            while let Some(proposal) = proposals.next() {
                 if self.rejected_proposals.contains(&proposal.id) {
                     warn!(
                         proposal_id = %proposal.id,
@@ -1449,7 +1453,13 @@ impl Engine {
 
                         let _ = tracked.context.add_proposal(proposal.clone());
 
-                        let remaining: Vec<(SuggestorId, AgentEffect)> = effects.split_off(idx + 1);
+                        let remaining_from_current: Vec<ProposedFact> = proposals.collect();
+                        let mut remaining: Vec<(SuggestorId, AgentEffect)> = Vec::new();
+                        if !remaining_from_current.is_empty() {
+                            remaining
+                                .push((id, AgentEffect::with_proposals(remaining_from_current)));
+                        }
+                        remaining.extend(effects.split_off(idx));
 
                         return MergeResult::HitlPause(Box::new(HitlPause {
                             request: gate_request,
@@ -1470,7 +1480,7 @@ impl Engine {
                 let promoted_by = format!("agent-{}", id.0);
                 match self.promote_pack_proposal(&proposal, cycle, &promoted_by) {
                     Ok(fact) => {
-                        info!(agent = %id, fact = %fact.id, "Proposal promoted to fact");
+                        info!(agent = %id, fact = %fact.id(), "Proposal promoted to fact");
                         if let Some(ref cb) = self.streaming_callback {
                             cb.on_fact(cycle, &fact);
                         }
@@ -1497,8 +1507,6 @@ impl Engine {
                     }
                 }
             }
-
-            idx += 1;
         }
 
         MergeResult::Complete(Ok((tracked.context.dirty_keys().to_vec(), facts_added)))
@@ -1515,7 +1523,7 @@ impl Engine {
         let mut facts_added = initial_facts;
 
         for (id, effect) in effects {
-            for proposal in effect.proposals {
+            for proposal in effect.into_proposals() {
                 let promoted_by = format!("agent-{}", id.0);
                 match self.promote_pack_proposal(&proposal, cycle, &promoted_by) {
                     Ok(fact) => {
@@ -2358,8 +2366,8 @@ mod tests {
 
         let seeds = tracked.context.get(ContextKey::Seeds);
         assert_eq!(seeds.len(), 2);
-        assert_eq!(seeds[0].id, "a");
-        assert_eq!(seeds[1].id, "b");
+        assert_eq!(seeds[0].id(), "a");
+        assert_eq!(seeds[1].id(), "b");
         assert_eq!(dirty, vec![ContextKey::Seeds, ContextKey::Seeds]);
         assert_eq!(facts_added, 2);
     }
@@ -2386,10 +2394,10 @@ mod tests {
 
         fn check(&self, ctx: &dyn crate::Context) -> InvariantResult {
             for fact in ctx.get(ContextKey::Seeds) {
-                if fact.content.contains(self.forbidden) {
+                if fact.content().contains(self.forbidden) {
                     return InvariantResult::Violated(Violation::with_facts(
                         format!("content contains '{}'", self.forbidden),
-                        vec![fact.id.clone()],
+                        vec![fact.id().clone()],
                     ));
                 }
             }
@@ -2565,13 +2573,13 @@ mod tests {
             fn check(&self, ctx: &dyn crate::Context) -> InvariantResult {
                 for key in ContextKey::iter() {
                     for fact in ctx.get(key) {
-                        if fact.content.contains("INJECTED") {
+                        if fact.content().contains("INJECTED") {
                             return InvariantResult::Violated(Violation::with_facts(
                                 format!(
                                     "fact contains injection marker: '{}'",
-                                    &fact.content[..40.min(fact.content.len())]
+                                    &fact.content()[..40.min(fact.content().len())]
                                 ),
-                                vec![fact.id.clone()],
+                                vec![fact.id().clone()],
                             ));
                         }
                     }
@@ -2698,7 +2706,7 @@ mod tests {
         assert!(result.context.has(ContextKey::Hypotheses));
         let hyps = result.context.get(ContextKey::Hypotheses);
         assert_eq!(hyps.len(), 1);
-        assert_eq!(hyps[0].content, "market analysis suggests growth");
+        assert_eq!(hyps[0].content(), "market analysis suggests growth");
     }
 
     #[tokio::test]
@@ -2831,6 +2839,48 @@ mod tests {
         }
     }
 
+    /// Suggestor that returns multiple proposals in one effect. The first
+    /// proposal is intentionally below the HITL threshold.
+    struct MultiProposalAgent;
+
+    #[async_trait::async_trait]
+    impl Suggestor for MultiProposalAgent {
+        fn name(&self) -> &'static str {
+            "MultiProposalAgent"
+        }
+
+        fn dependencies(&self) -> &[ContextKey] {
+            &[]
+        }
+
+        fn accepts(&self, ctx: &dyn crate::Context) -> bool {
+            !ctx.has(ContextKey::Hypotheses)
+        }
+
+        async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
+            AgentEffect::builder()
+                .proposal(
+                    ProposedFact::new(
+                        ContextKey::Hypotheses,
+                        "prop-gated",
+                        "low confidence hypothesis",
+                        "llm-agent:hash-low",
+                    )
+                    .with_confidence(0.7),
+                )
+                .proposal(
+                    ProposedFact::new(
+                        ContextKey::Hypotheses,
+                        "prop-safe",
+                        "high confidence hypothesis",
+                        "llm-agent:hash-high",
+                    )
+                    .with_confidence(0.95),
+                )
+                .build()
+        }
+    }
+
     #[tokio::test]
     async fn hitl_pauses_convergence_on_low_confidence() {
         let mut engine = Engine::new();
@@ -2926,7 +2976,7 @@ mod tests {
                 assert!(r.converged);
                 assert!(r.context.has(ContextKey::Hypotheses));
                 let hyps = r.context.get(ContextKey::Hypotheses);
-                assert_eq!(hyps[0].content, "market analysis suggests growth");
+                assert_eq!(hyps[0].content(), "market analysis suggests growth");
             }
             RunResult::Complete(Err(e)) => panic!("Unexpected error after resume: {e:?}"),
             RunResult::HitlPause(_) => panic!("Should not pause again"),
@@ -2941,6 +2991,43 @@ mod tests {
                         && decision.decided_by == "admin@example.com"
             )
         }));
+    }
+
+    #[tokio::test]
+    async fn hitl_pause_preserves_later_proposals_from_same_effect() {
+        let mut engine = Engine::new();
+        engine.register_suggestor(MultiProposalAgent);
+        engine.set_hitl_policy(EngineHitlPolicy {
+            confidence_threshold: Some(0.8),
+            gated_keys: Vec::new(),
+            timeout: TimeoutPolicy::default(),
+        });
+
+        let result = engine.run_with_hitl(ContextState::new()).await;
+        let pause = match result {
+            RunResult::HitlPause(p) => *p,
+            RunResult::Complete(_) => panic!("Expected HITL pause"),
+        };
+
+        assert_eq!(pause.proposal.id, "prop-gated");
+        assert_eq!(pause.remaining_effects.len(), 1);
+        assert_eq!(pause.remaining_effects[0].1.proposals().len(), 1);
+        assert_eq!(pause.remaining_effects[0].1.proposals()[0].id, "prop-safe");
+
+        let gate_id = pause.request.gate_id.clone();
+        let decision = GateDecision::approve(gate_id, "admin@example.com");
+        let resumed = engine.resume(pause, decision).await;
+
+        match resumed {
+            RunResult::Complete(Ok(r)) => {
+                let hypotheses = r.context.get(ContextKey::Hypotheses);
+                assert_eq!(hypotheses.len(), 2);
+                assert!(hypotheses.iter().any(|fact| fact.id() == "prop-gated"));
+                assert!(hypotheses.iter().any(|fact| fact.id() == "prop-safe"));
+            }
+            RunResult::Complete(Err(e)) => panic!("Unexpected error after resume: {e:?}"),
+            RunResult::HitlPause(_) => panic!("Should not pause again"),
+        }
     }
 
     #[tokio::test]

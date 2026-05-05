@@ -176,7 +176,7 @@ cargo bench -p converge-core
 
 **Regression Detection** (after benchmark):
 ```bash
-python3 runway/ops/scripts/extract-criterion-baseline.py
+python3 scripts/extract-criterion-baseline.py
 cat kb/Baselines/latest-summary.md
 ```
 

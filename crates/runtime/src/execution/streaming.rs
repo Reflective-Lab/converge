@@ -17,7 +17,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use converge_core::{Fact, StreamingCallback};
+use converge_core::{ContextFact, StreamingCallback};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
@@ -166,14 +166,14 @@ impl StreamingCallback for RuntimeStreamingCallback {
         let _ = self.sender.try_send(event);
     }
 
-    fn on_fact(&self, cycle: u32, fact: &Fact) {
+    fn on_fact(&self, cycle: u32, fact: &ContextFact) {
         self.fact_count.fetch_add(1, Ordering::SeqCst);
         let event = StreamingEvent::Fact {
             sequence: self.next_sequence(),
             cycle,
             key: format!("{:?}", fact.key()),
-            id: fact.id.to_string(),
-            content: fact.content.clone(),
+            id: fact.id().to_string(),
+            content: fact.content().to_string(),
             timestamp_ns: Self::now_ns(),
         };
         let _ = self.sender.try_send(event);
@@ -220,7 +220,7 @@ mod tests {
     use super::*;
     use converge_core::{ContextKey, ContextState, Engine};
 
-    async fn promoted_fact(key: ContextKey, id: &str, content: &str) -> Fact {
+    async fn promoted_fact(key: ContextKey, id: &str, content: &str) -> ContextFact {
         let mut ctx = ContextState::new();
         let _ = ctx.add_input(key, id, content);
         Engine::new()

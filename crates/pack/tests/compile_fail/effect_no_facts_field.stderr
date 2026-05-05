@@ -3,5 +3,3 @@ error[E0609]: no field `facts` on type `AgentEffect`
   |
 8 |     let _facts = effect.facts;
   |                         ^^^^^ unknown field
-  |
-  = note: available field is: `proposals`

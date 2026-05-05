@@ -1,0 +1,13 @@
+error[E0451]: fields `version`, `merkle_root`, `facts` and `proposals` of struct `ContextSnapshot` are private
+  --> tests/compile_fail/context_snapshot_struct_literal_private.rs:10:9
+   |
+ 9 |     let _snapshot = ContextSnapshot {
+   |                     --------------- in this type
+10 |         version: existing.version(),
+   |         ^^^^^^^ private field
+11 |         merkle_root: existing.merkle_root().clone(),
+   |         ^^^^^^^^^^^ private field
+12 |         facts: existing.facts().clone(),
+   |         ^^^^^ private field
+13 |         proposals: existing.proposals().clone(),
+   |         ^^^^^^^^^ private field

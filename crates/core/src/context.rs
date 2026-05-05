@@ -8,15 +8,171 @@
 //! concrete `Context` struct that the engine uses.
 
 use crate::error::ConvergeError;
-use std::collections::HashMap;
+use crate::{AdmissionReceipt, AdmissionRequest};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 // Re-export canonical types from converge-pack
 pub use converge_pack::{
-    ContextKey, Fact, FactId, ProposalId, ProposedFact, Timestamp, ValidationError,
+    ContextFact, ContextKey, FactId, ProposalId, ProposedFact, Timestamp, ValidationError,
 };
 
-pub(crate) fn new_fact(key: ContextKey, id: impl Into<FactId>, content: impl Into<String>) -> Fact {
-    converge_pack::fact::kernel_authority::new_fact(key, id, content)
+/// Durable, verified context snapshot for storage adapters.
+///
+/// This is the supported rehydration boundary for embedders such as Helms.
+/// Storage persists this value and later calls [`ContextState::from_snapshot`].
+/// It must not reconstruct facts through promotion constructors.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ContextSnapshot {
+    version: u64,
+    merkle_root: crate::integrity::MerkleRoot,
+    facts: BTreeMap<ContextKey, Vec<ContextFact>>,
+    proposals: BTreeMap<ContextKey, Vec<ProposedFact>>,
+}
+
+impl ContextSnapshot {
+    /// Build a storage snapshot from a live context.
+    #[must_use]
+    pub fn from_context(context: &ContextState) -> Self {
+        let facts = context
+            .facts
+            .iter()
+            .map(|(key, facts)| (*key, facts.clone()))
+            .collect();
+        let proposals = context
+            .proposals
+            .iter()
+            .map(|(key, proposals)| (*key, proposals.clone()))
+            .collect();
+
+        Self {
+            version: context.version,
+            merkle_root: crate::integrity::MerkleRoot::from_context(context),
+            facts,
+            proposals,
+        }
+    }
+
+    /// Returns the context version captured by the snapshot.
+    #[must_use]
+    pub fn version(&self) -> u64 {
+        self.version
+    }
+
+    /// Returns the snapshot Merkle root.
+    #[must_use]
+    pub fn merkle_root(&self) -> &crate::integrity::MerkleRoot {
+        &self.merkle_root
+    }
+
+    /// Returns fact projections grouped by context key.
+    #[must_use]
+    pub fn facts(&self) -> &BTreeMap<ContextKey, Vec<ContextFact>> {
+        &self.facts
+    }
+
+    /// Returns staged proposals grouped by context key.
+    #[must_use]
+    pub fn proposals(&self) -> &BTreeMap<ContextKey, Vec<ProposedFact>> {
+        &self.proposals
+    }
+
+    fn validate(&self) -> Result<(), ConvergeError> {
+        for (key, facts) in &self.facts {
+            let mut seen = BTreeSet::new();
+            for fact in facts {
+                if fact.key() != *key {
+                    return Err(ConvergeError::InvalidSnapshot {
+                        reason: format!(
+                            "fact '{}' stored under {:?} but declares {:?}",
+                            fact.id(),
+                            key,
+                            fact.key()
+                        ),
+                    });
+                }
+                if !seen.insert(fact.id().clone()) {
+                    return Err(ConvergeError::InvalidSnapshot {
+                        reason: format!("duplicate fact '{}' under {:?}", fact.id(), key),
+                    });
+                }
+            }
+        }
+
+        for (key, proposals) in &self.proposals {
+            let mut seen = BTreeSet::new();
+            for proposal in proposals {
+                if proposal.key() != *key {
+                    return Err(ConvergeError::InvalidSnapshot {
+                        reason: format!(
+                            "proposal '{}' stored under {:?} but declares {:?}",
+                            proposal.id(),
+                            key,
+                            proposal.key()
+                        ),
+                    });
+                }
+                if !seen.insert(proposal.id().clone()) {
+                    return Err(ConvergeError::InvalidSnapshot {
+                        reason: format!("duplicate proposal '{}' under {:?}", proposal.id(), key),
+                    });
+                }
+            }
+        }
+
+        let context = ContextState {
+            facts: self
+                .facts
+                .iter()
+                .map(|(key, facts)| (*key, facts.clone()))
+                .collect(),
+            proposals: self
+                .proposals
+                .iter()
+                .map(|(key, proposals)| (*key, proposals.clone()))
+                .collect(),
+            dirty_keys: Vec::new(),
+            version: self.version,
+        };
+        let computed_root = crate::integrity::MerkleRoot::from_context(&context);
+        if computed_root != self.merkle_root {
+            return Err(ConvergeError::InvalidSnapshot {
+                reason: "snapshot merkle root does not match restored facts".to_string(),
+            });
+        }
+
+        Ok(())
+    }
+}
+
+pub(crate) fn new_fact(
+    key: ContextKey,
+    id: impl Into<FactId>,
+    content: impl Into<String>,
+) -> ContextFact {
+    new_fact_with_promotion(
+        key,
+        id,
+        content,
+        converge_pack::FactPromotionRecord::new_projection(
+            "engine-projection",
+            converge_pack::ContentHash::zero(),
+            converge_pack::FactActor::new_projection(
+                "converge-engine",
+                converge_pack::FactActorKind::System,
+            ),
+            converge_pack::FactValidationSummary::default(),
+            Vec::new(),
+            converge_pack::FactTraceLink::Local(converge_pack::FactLocalTrace::new_projection(
+                "engine-projection",
+                "seed",
+                None,
+                true,
+            )),
+            Timestamp::epoch(),
+        ),
+        Timestamp::epoch(),
+    )
 }
 
 pub(crate) fn new_fact_with_promotion(
@@ -25,14 +181,8 @@ pub(crate) fn new_fact_with_promotion(
     content: impl Into<String>,
     promotion_record: converge_pack::FactPromotionRecord,
     created_at: impl Into<Timestamp>,
-) -> Fact {
-    converge_pack::fact::kernel_authority::new_fact_with_promotion(
-        key,
-        id,
-        content,
-        promotion_record,
-        created_at,
-    )
+) -> ContextFact {
+    ContextFact::new_projection(key, id, content, promotion_record, created_at)
 }
 
 /// The shared context for a Converge job.
@@ -42,7 +192,7 @@ pub(crate) fn new_fact_with_promotion(
 #[derive(Debug, Default, Clone, serde::Serialize)]
 pub struct ContextState {
     /// Facts stored by their key category.
-    facts: HashMap<ContextKey, Vec<Fact>>,
+    facts: HashMap<ContextKey, Vec<ContextFact>>,
     /// Pending proposals staged for engine validation/promotion.
     proposals: HashMap<ContextKey, Vec<ProposedFact>>,
     /// Tracks which keys changed in the last merge cycle.
@@ -58,7 +208,7 @@ impl converge_pack::Context for ContextState {
         self.facts.get(&key).is_some_and(|v| !v.is_empty())
     }
 
-    fn get(&self, key: ContextKey) -> &[Fact] {
+    fn get(&self, key: ContextKey) -> &[ContextFact] {
         self.facts.get(&key).map_or(&[], Vec::as_slice)
     }
 
@@ -74,9 +224,30 @@ impl ContextState {
         Self::default()
     }
 
+    /// Captures a durable storage snapshot for later rehydration.
+    #[must_use]
+    pub fn snapshot(&self) -> ContextSnapshot {
+        ContextSnapshot::from_context(self)
+    }
+
+    /// Rehydrates a context from a verified storage snapshot.
+    ///
+    /// This restores previously promoted context state. It is not a promotion
+    /// API: malformed snapshots, key mismatches, duplicate IDs, and Merkle
+    /// mismatches are rejected before the context is returned.
+    pub fn from_snapshot(snapshot: ContextSnapshot) -> Result<Self, ConvergeError> {
+        snapshot.validate()?;
+        Ok(Self {
+            facts: snapshot.facts.into_iter().collect(),
+            proposals: snapshot.proposals.into_iter().collect(),
+            dirty_keys: Vec::new(),
+            version: snapshot.version,
+        })
+    }
+
     /// Returns all facts for a given key.
     #[must_use]
-    pub fn get(&self, key: ContextKey) -> &[Fact] {
+    pub fn get(&self, key: ContextKey) -> &[ContextFact] {
         self.facts.get(&key).map_or(&[], Vec::as_slice)
     }
 
@@ -163,6 +334,18 @@ impl ContextState {
         self.add_proposal(ProposedFact::new(key, id, content, provenance))
     }
 
+    /// Stages a typed external observation as a proposal.
+    ///
+    /// This is the preferred boundary for systems such as Organism. It records
+    /// actor and source provenance, but it does not create authoritative facts.
+    pub fn submit_observation(
+        &mut self,
+        request: AdmissionRequest,
+    ) -> Result<AdmissionReceipt, ConvergeError> {
+        let staged = self.add_proposal(request.clone().into_proposal())?;
+        Ok(AdmissionReceipt::new(&request, staged))
+    }
+
     /// Drains all pending proposals from the context.
     pub(crate) fn drain_proposals(&mut self) -> Vec<ProposedFact> {
         let mut drained = Vec::new();
@@ -187,18 +370,18 @@ impl ContextState {
     ///
     /// Returns `Ok(true)` if the fact was new (context changed).
     /// Returns `Ok(false)` if the fact was already present and identical.
-    pub(crate) fn add_fact(&mut self, fact: Fact) -> Result<bool, ConvergeError> {
+    pub(crate) fn add_fact(&mut self, fact: ContextFact) -> Result<bool, ConvergeError> {
         let key = fact.key();
         let facts = self.facts.entry(key).or_default();
 
-        if let Some(existing) = facts.iter().find(|f| f.id == fact.id) {
-            if existing.content == fact.content {
+        if let Some(existing) = facts.iter().find(|f| f.id() == fact.id()) {
+            if existing.content() == fact.content() {
                 return Ok(false);
             }
             return Err(ConvergeError::Conflict {
-                id: fact.id.to_string(),
-                existing: existing.content.clone(),
-                new: fact.content,
+                id: fact.id().to_string(),
+                existing: existing.content().to_string(),
+                new: fact.content().to_string(),
                 context: Box::new(self.clone()),
             });
         }
@@ -322,6 +505,108 @@ mod tests {
 
         assert!(ctx.has_pending_proposals());
         assert_eq!(ctx.get_proposals(ContextKey::Seeds).len(), 1);
+    }
+
+    #[test]
+    fn snapshot_round_trips_facts_and_proposals() {
+        let mut ctx = ContextState::new();
+        ctx.add_fact(crate::context::new_fact(
+            ContextKey::Seeds,
+            "seed-1",
+            "persisted seed",
+        ))
+        .unwrap();
+        ctx.add_proposal(ProposedFact::new(
+            ContextKey::Hypotheses,
+            "hyp-1",
+            "staged hypothesis",
+            "test",
+        ))
+        .unwrap();
+
+        let restored = ContextState::from_snapshot(ctx.snapshot()).unwrap();
+
+        assert_eq!(restored.version(), 1);
+        assert!(restored.dirty_keys().is_empty());
+        assert_eq!(restored.get(ContextKey::Seeds)[0].id(), "seed-1");
+        assert_eq!(
+            restored.get(ContextKey::Seeds)[0].content(),
+            "persisted seed"
+        );
+        assert_eq!(
+            restored.get_proposals(ContextKey::Hypotheses)[0].id(),
+            "hyp-1"
+        );
+    }
+
+    #[test]
+    fn snapshot_rejects_fact_key_mismatch() {
+        let mut ctx = ContextState::new();
+        ctx.add_fact(crate::context::new_fact(
+            ContextKey::Seeds,
+            "seed-1",
+            "value",
+        ))
+        .unwrap();
+
+        let mut snapshot = ctx.snapshot();
+        let fact = snapshot
+            .facts
+            .get_mut(&ContextKey::Seeds)
+            .unwrap()
+            .pop()
+            .unwrap();
+        snapshot
+            .facts
+            .entry(ContextKey::Signals)
+            .or_default()
+            .push(fact);
+
+        let err = ContextState::from_snapshot(snapshot).unwrap_err();
+        assert!(matches!(err, ConvergeError::InvalidSnapshot { .. }));
+        assert!(err.to_string().contains("stored under Signals"));
+    }
+
+    #[test]
+    fn snapshot_rejects_merkle_mismatch() {
+        let mut ctx = ContextState::new();
+        ctx.add_fact(crate::context::new_fact(
+            ContextKey::Seeds,
+            "seed-1",
+            "value",
+        ))
+        .unwrap();
+
+        let mut snapshot = ctx.snapshot();
+        snapshot.merkle_root =
+            crate::integrity::MerkleRoot(crate::integrity::ContentHash::compute("tampered"));
+
+        let err = ContextState::from_snapshot(snapshot).unwrap_err();
+        assert!(matches!(err, ConvergeError::InvalidSnapshot { .. }));
+        assert!(err.to_string().contains("merkle root"));
+    }
+
+    #[test]
+    fn snapshot_rejects_duplicate_fact_ids() {
+        let mut ctx = ContextState::new();
+        ctx.add_fact(crate::context::new_fact(
+            ContextKey::Seeds,
+            "seed-1",
+            "value",
+        ))
+        .unwrap();
+
+        let mut snapshot = ctx.snapshot();
+        let duplicate = snapshot.facts.get(&ContextKey::Seeds).unwrap()[0].clone();
+        snapshot
+            .facts
+            .get_mut(&ContextKey::Seeds)
+            .unwrap()
+            .push(duplicate);
+
+        let err = ContextState::from_snapshot(snapshot).unwrap_err();
+        assert!(matches!(err, ConvergeError::InvalidSnapshot { .. }));
+        assert!(err.to_string().contains("duplicate fact"));
     }
 
     /// Test that Context implements the converge_pack::Context trait.

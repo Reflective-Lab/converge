@@ -16,7 +16,7 @@ use crate::types::{
 };
 
 /// Actor kind recorded on a promoted fact.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FactActorKind {
     /// Human approver.
     Human,
@@ -27,7 +27,7 @@ pub enum FactActorKind {
 }
 
 /// Read-only actor record attached to authoritative facts.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FactActor {
     id: ActorId,
     kind: FactActorKind,
@@ -46,9 +46,8 @@ impl FactActor {
         self.kind
     }
 
-    #[cfg(feature = "kernel-authority")]
     #[doc(hidden)]
-    pub fn new(id: impl Into<ActorId>, kind: FactActorKind) -> Self {
+    pub fn new_projection(id: impl Into<ActorId>, kind: FactActorKind) -> Self {
         Self {
             id: id.into(),
             kind,
@@ -57,7 +56,7 @@ impl FactActor {
 }
 
 /// Summary of validation checks attached to an authoritative fact.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct FactValidationSummary {
     checks_passed: Vec<ValidationCheckId>,
     checks_skipped: Vec<ValidationCheckId>,
@@ -83,9 +82,8 @@ impl FactValidationSummary {
         &self.warnings
     }
 
-    #[cfg(feature = "kernel-authority")]
     #[doc(hidden)]
-    pub fn new(
+    pub fn new_projection(
         checks_passed: Vec<ValidationCheckId>,
         checks_skipped: Vec<ValidationCheckId>,
         warnings: Vec<String>,
@@ -99,7 +97,7 @@ impl FactValidationSummary {
 }
 
 /// Typed evidence references attached to an authoritative fact.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "id")]
 pub enum FactEvidenceRef {
     /// Observation used as evidence.
@@ -111,7 +109,7 @@ pub enum FactEvidenceRef {
 }
 
 /// Local replayable trace reference.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FactLocalTrace {
     trace_id: TraceId,
     span_id: SpanId,
@@ -144,9 +142,8 @@ impl FactLocalTrace {
         self.sampled
     }
 
-    #[cfg(feature = "kernel-authority")]
     #[doc(hidden)]
-    pub fn new(
+    pub fn new_projection(
         trace_id: impl Into<TraceId>,
         span_id: impl Into<SpanId>,
         parent_span_id: Option<SpanId>,
@@ -162,7 +159,7 @@ impl FactLocalTrace {
 }
 
 /// Remote audit-only trace reference.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FactRemoteTrace {
     system: TraceSystemId,
     reference: TraceReference,
@@ -195,9 +192,8 @@ impl FactRemoteTrace {
         self.retention_hint.as_deref()
     }
 
-    #[cfg(feature = "kernel-authority")]
     #[doc(hidden)]
-    pub fn new(
+    pub fn new_projection(
         system: impl Into<TraceSystemId>,
         reference: impl Into<TraceReference>,
         retrieval_auth: Option<String>,
@@ -213,7 +209,7 @@ impl FactRemoteTrace {
 }
 
 /// Trace record attached to an authoritative fact.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum FactTraceLink {
     /// Local replayable trace.
@@ -231,7 +227,7 @@ impl FactTraceLink {
 }
 
 /// Read-only promotion record attached to an authoritative fact.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FactPromotionRecord {
     gate_id: GateId,
     policy_version_hash: ContentHash,
@@ -291,9 +287,8 @@ impl FactPromotionRecord {
         self.trace_link.is_replay_eligible()
     }
 
-    #[cfg(feature = "kernel-authority")]
     #[doc(hidden)]
-    pub fn new(
+    pub fn new_projection(
         gate_id: impl Into<GateId>,
         policy_version_hash: ContentHash,
         approver: FactActor,
@@ -314,29 +309,65 @@ impl FactPromotionRecord {
     }
 }
 
-/// A validated, authoritative assertion in the context.
+/// Read-only projection of a validated assertion in the context.
 ///
-/// Facts are append-only. Once added to the context, they are never
-/// mutated or removed (within a convergence run). History is preserved.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct Fact {
+/// This type is not promotion authority. It is the value suggestors and
+/// pack authors can read from context after the engine has promoted a
+/// proposal. Constructing one locally does not admit it into Converge; there is
+/// no public API that accepts a `ContextFact` as promoted truth.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ContextFact {
     /// Which context key this fact belongs to.
     key: ContextKey,
     /// Unique identifier within the context key namespace.
-    pub id: FactId,
+    id: FactId,
     /// The fact's content as a string. Interpretation is key-dependent.
-    pub content: String,
+    content: String,
     /// The immutable promotion record that made this fact authoritative.
     promotion_record: FactPromotionRecord,
     /// When the authoritative fact entered context.
     created_at: Timestamp,
 }
 
-impl Fact {
+impl ContextFact {
+    /// Creates a read-only context projection.
+    ///
+    /// This constructor does not promote anything and is intentionally named as
+    /// a projection constructor. The engine is still the only component that can
+    /// add context facts to a live `ContextState`.
+    #[must_use]
+    pub fn new_projection(
+        key: ContextKey,
+        id: impl Into<FactId>,
+        content: impl Into<String>,
+        promotion_record: FactPromotionRecord,
+        created_at: impl Into<Timestamp>,
+    ) -> Self {
+        Self {
+            key,
+            id: id.into(),
+            content: content.into(),
+            promotion_record,
+            created_at: created_at.into(),
+        }
+    }
+
     /// Returns the context key this fact belongs to.
     #[must_use]
     pub fn key(&self) -> ContextKey {
         self.key
+    }
+
+    /// Returns the fact identifier.
+    #[must_use]
+    pub fn id(&self) -> &FactId {
+        &self.id
+    }
+
+    /// Returns the fact content.
+    #[must_use]
+    pub fn content(&self) -> &str {
+        &self.content
     }
 
     /// Returns the immutable promotion record for this fact.
@@ -364,62 +395,6 @@ impl Fact {
     /// that representation's decoder.
     pub fn parse_json_content<T: serde::de::DeserializeOwned>(&self) -> serde_json::Result<T> {
         serde_json::from_str(&self.content)
-    }
-}
-
-/// Kernel-only construction helpers for authoritative facts.
-#[cfg(feature = "kernel-authority")]
-#[doc(hidden)]
-pub mod kernel_authority {
-    use super::*;
-
-    /// Creates a kernel-authoritative fact with default promotion metadata.
-    #[must_use]
-    pub fn new_fact(key: ContextKey, id: impl Into<FactId>, content: impl Into<String>) -> Fact {
-        new_fact_with_promotion(
-            key,
-            id,
-            content,
-            FactPromotionRecord::new(
-                "kernel-authority",
-                ContentHash::zero(),
-                FactActor::new("converge-kernel", FactActorKind::System),
-                FactValidationSummary::default(),
-                Vec::new(),
-                FactTraceLink::Local(FactLocalTrace::new("kernel-authority", "seed", None, true)),
-                Timestamp::epoch(),
-            ),
-            Timestamp::epoch(),
-        )
-    }
-
-    /// Creates a kernel-authoritative fact with an explicit promotion record.
-    #[must_use]
-    pub fn new_fact_with_promotion(
-        key: ContextKey,
-        id: impl Into<FactId>,
-        content: impl Into<String>,
-        promotion_record: FactPromotionRecord,
-        created_at: impl Into<Timestamp>,
-    ) -> Fact {
-        Fact {
-            key,
-            id: id.into(),
-            content: content.into(),
-            promotion_record,
-            created_at: created_at.into(),
-        }
-    }
-
-    /// Creates a kernel-authoritative fact whose content is `payload` serialized to JSON.
-    ///
-    /// Symmetric with [`Fact::parse_json_content`][super::Fact::parse_json_content].
-    pub fn new_fact_from_json_payload<T: serde::Serialize>(
-        key: ContextKey,
-        id: impl Into<FactId>,
-        payload: &T,
-    ) -> serde_json::Result<Fact> {
-        Ok(new_fact(key, id, serde_json::to_string(payload)?))
     }
 }
 
@@ -459,6 +434,30 @@ impl ProposedFact {
             confidence: UnitInterval::ONE,
             provenance: provenance.into(),
         }
+    }
+
+    /// Returns the context key this proposal targets.
+    #[must_use]
+    pub fn key(&self) -> ContextKey {
+        self.key
+    }
+
+    /// Returns the proposal identifier.
+    #[must_use]
+    pub fn id(&self) -> &ProposalId {
+        &self.id
+    }
+
+    /// Returns the proposed content.
+    #[must_use]
+    pub fn content(&self) -> &str {
+        &self.content
+    }
+
+    /// Returns the proposal provenance string.
+    #[must_use]
+    pub fn provenance(&self) -> &str {
+        &self.provenance
     }
 
     /// Returns the confidence value, always in [0.0, 1.0].
@@ -570,6 +569,30 @@ impl std::error::Error for ValidationError {}
 mod tests {
     use super::*;
 
+    fn projection_record() -> FactPromotionRecord {
+        FactPromotionRecord::new_projection(
+            "projection-test",
+            ContentHash::from_hex(
+                "1111111111111111111111111111111111111111111111111111111111111111",
+            ),
+            FactActor::new_projection("actor-1", FactActorKind::System),
+            FactValidationSummary::default(),
+            Vec::new(),
+            FactTraceLink::Local(FactLocalTrace::new_projection(
+                "trace-1", "span-1", None, true,
+            )),
+            Timestamp::epoch(),
+        )
+    }
+
+    fn projection_fact(
+        key: ContextKey,
+        id: impl Into<FactId>,
+        content: impl Into<String>,
+    ) -> ContextFact {
+        ContextFact::new_projection(key, id, content, projection_record(), Timestamp::epoch())
+    }
+
     #[test]
     fn trace_link_local_is_replay_eligible() {
         let local = FactTraceLink::Local(FactLocalTrace {
@@ -592,40 +615,38 @@ mod tests {
         assert!(!remote.is_replay_eligible());
     }
 
-    #[cfg(feature = "kernel-authority")]
     #[test]
     fn promotion_record_delegates_replay_eligibility() {
-        let local_record = FactPromotionRecord::new(
+        let local_record = FactPromotionRecord::new_projection(
             "gate-1",
             ContentHash::from_hex(
                 "1111111111111111111111111111111111111111111111111111111111111111",
             ),
-            FactActor::new("actor-1", FactActorKind::Human),
+            FactActor::new_projection("actor-1", FactActorKind::Human),
             FactValidationSummary::default(),
             Vec::new(),
-            FactTraceLink::Local(FactLocalTrace::new("t1", "s1", None, true)),
+            FactTraceLink::Local(FactLocalTrace::new_projection("t1", "s1", None, true)),
             "2026-01-01T00:00:00Z",
         );
         assert!(local_record.is_replay_eligible());
 
-        let remote_record = FactPromotionRecord::new(
+        let remote_record = FactPromotionRecord::new_projection(
             "gate-2",
             ContentHash::from_hex(
                 "2222222222222222222222222222222222222222222222222222222222222222",
             ),
-            FactActor::new("actor-2", FactActorKind::System),
+            FactActor::new_projection("actor-2", FactActorKind::System),
             FactValidationSummary::default(),
             Vec::new(),
-            FactTraceLink::Remote(FactRemoteTrace::new("dd", "ref-1", None, None)),
+            FactTraceLink::Remote(FactRemoteTrace::new_projection("dd", "ref-1", None, None)),
             "2026-01-01T00:00:00Z",
         );
         assert!(!remote_record.is_replay_eligible());
     }
 
-    #[cfg(feature = "kernel-authority")]
     #[test]
     fn fact_delegates_replay_eligibility() {
-        let fact = kernel_authority::new_fact(ContextKey::Seeds, "f1", "content");
+        let fact = projection_fact(ContextKey::Seeds, "f1", "content");
         assert!(fact.is_replay_eligible());
     }
 
@@ -737,14 +758,13 @@ mod tests {
         assert!(parsed.is_err());
     }
 
-    #[cfg(feature = "kernel-authority")]
     #[test]
     fn fact_parse_json_content_succeeds_for_valid_json() {
         #[derive(serde::Deserialize, PartialEq, Debug)]
         struct Payload {
             label: String,
         }
-        let fact = kernel_authority::new_fact(ContextKey::Seeds, "f", r#"{"label":"x"}"#);
+        let fact = projection_fact(ContextKey::Seeds, "f", r#"{"label":"x"}"#);
         let parsed: Payload = fact.parse_json_content().unwrap();
         assert_eq!(parsed, Payload { label: "x".into() });
     }
@@ -778,16 +798,18 @@ mod tests {
         assert!(result.is_err());
     }
 
-    #[cfg(feature = "kernel-authority")]
     #[test]
-    fn fact_new_from_json_payload_round_trips() {
+    fn fact_projection_json_payload_round_trips() {
         #[derive(serde::Serialize, serde::Deserialize, PartialEq, Debug)]
         struct Payload {
             label: String,
         }
         let payload = Payload { label: "x".into() };
-        let fact =
-            kernel_authority::new_fact_from_json_payload(ContextKey::Seeds, "f", &payload).unwrap();
+        let fact = projection_fact(
+            ContextKey::Seeds,
+            "f",
+            serde_json::to_string(&payload).unwrap(),
+        );
         let parsed: Payload = fact.parse_json_content().unwrap();
         assert_eq!(parsed, payload);
     }
@@ -808,29 +830,26 @@ mod tests {
         let _: &dyn std::error::Error = &err;
     }
 
-    #[cfg(feature = "kernel-authority")]
     #[test]
     fn fact_accessors() {
-        let fact = kernel_authority::new_fact(ContextKey::Constraints, "f2", "body");
+        let fact = projection_fact(ContextKey::Constraints, "f2", "body");
         assert_eq!(fact.key(), ContextKey::Constraints);
-        assert_eq!(fact.id, "f2");
-        assert_eq!(fact.content, "body");
+        assert_eq!(fact.id(), "f2");
+        assert_eq!(fact.content(), "body");
         assert_eq!(fact.created_at(), "1970-01-01T00:00:00Z");
-        assert_eq!(fact.promotion_record().gate_id(), "kernel-authority");
+        assert_eq!(fact.promotion_record().gate_id(), "projection-test");
     }
 
-    #[cfg(feature = "kernel-authority")]
     #[test]
     fn fact_actor_accessors() {
-        let actor = FactActor::new("agent-x", FactActorKind::Suggestor);
+        let actor = FactActor::new_projection("agent-x", FactActorKind::Suggestor);
         assert_eq!(actor.id(), "agent-x");
         assert_eq!(actor.kind(), FactActorKind::Suggestor);
     }
 
-    #[cfg(feature = "kernel-authority")]
     #[test]
     fn validation_summary_accessors() {
-        let vs = FactValidationSummary::new(
+        let vs = FactValidationSummary::new_projection(
             vec!["check-a".into()],
             vec!["check-b".into()],
             vec!["warn-c".into()],
@@ -840,20 +859,20 @@ mod tests {
         assert_eq!(vs.warnings(), &["warn-c"]);
     }
 
-    #[cfg(feature = "kernel-authority")]
     #[test]
     fn local_trace_accessors() {
-        let lt = FactLocalTrace::new("trace-1", "span-1", Some("parent-1".into()), false);
+        let lt =
+            FactLocalTrace::new_projection("trace-1", "span-1", Some("parent-1".into()), false);
         assert_eq!(lt.trace_id(), "trace-1");
         assert_eq!(lt.span_id(), "span-1");
         assert_eq!(lt.parent_span_id().map(SpanId::as_str), Some("parent-1"));
         assert!(!lt.sampled());
     }
 
-    #[cfg(feature = "kernel-authority")]
     #[test]
     fn remote_trace_accessors() {
-        let rt = FactRemoteTrace::new("sys", "ref", Some("auth".into()), Some("30d".into()));
+        let rt =
+            FactRemoteTrace::new_projection("sys", "ref", Some("auth".into()), Some("30d".into()));
         assert_eq!(rt.system(), "sys");
         assert_eq!(rt.reference(), "ref");
         assert_eq!(rt.retrieval_auth(), Some("auth"));

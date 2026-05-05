@@ -9,28 +9,10 @@ members = [
     "crates/core",
     "crates/provider-api",
     "crates/provider",
-    "crates/domain",
     "crates/experience",
-    "crates/knowledge",
     "crates/optimization",
-    "crates/analytics",
-    "crates/policy",
     "crates/runtime",
     "crates/storage",
-    "examples/hello-convergence",
-    "examples/custom-agent",
-    "examples/meeting-scheduler",
-    "examples/custom-provider",
-    "examples/expense-approval",
-    "examples/vendor-selection",
-    "examples/loan-application",
-    "examples/formation-mixed",
-    "examples/live-formation",
-    "examples/intent-codec-loop",
-    "examples/analytics-packs",
-    "examples/adaptive-gap-loop",
-    "examples/fixed-point-vs-budget",
-    "examples/reconciliation-loop",
 ]
 default-members = [
     "crates/model",
@@ -41,11 +23,8 @@ default-members = [
     "crates/core",
     "crates/provider-api",
     "crates/provider",
-    "crates/domain",
     "crates/experience",
-    "crates/knowledge",
     "crates/optimization",
-    "crates/policy",
     "crates/storage",
 ]
 
@@ -66,12 +45,8 @@ converge-client = { path = "crates/client", version = "3.7.6" }
 converge-core = { path = "crates/core", version = "3.7.6" }
 converge-provider-api = { path = "crates/provider-api", version = "3.7.6" }
 converge-provider = { path = "crates/provider", version = "3.7.6" }
-converge-domain = { path = "crates/domain", version = "3.7.6" }
 converge-experience = { path = "crates/experience", version = "3.7.6" }
-converge-knowledge = { path = "crates/knowledge", version = "3.7.6" }
 converge-optimization = { path = "crates/optimization", version = "3.7.6" }
-converge-analytics = { path = "crates/analytics", version = "3.7.6" }
-converge-policy = { path = "crates/policy", version = "3.7.6" }
 converge-runtime = { path = "crates/runtime", version = "3.7.6" }
 converge-storage = { path = "crates/storage", version = "3.7.6", default-features = false }
 

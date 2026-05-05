@@ -5,7 +5,7 @@ source: llm
 # Linear Regression (Inference)
 
 **Complexity:** O(n * d) where n = records, d = features
-**Converge module:** `converge_analytics::packs::regression::LinearRegressionSolver`
+**Converge module:** `prism::packs::regression::LinearRegressionSolver`
 **Reference:** Trivially verifiable: y = w . x + b
 
 ## Formula
@@ -78,7 +78,7 @@ The scores become the value column in the `portfolio-request` (if budget-constra
 ## Converge Validation
 
 ```
-cargo test -p converge-analytics --test reference_validation linear_regression
+cargo test -p prism --test reference_validation linear_regression
 ```
 
 All predictions (6.0, 5.0, 10.0) and mean (7.0) confirmed.

@@ -1,7 +1,7 @@
 // Contract: A Suggestor's execute() returns AgentEffect, which only holds ProposedFact.
-// Returning a Fact directly from execute() is a type error.
+// Returning a ContextFact directly from execute() is a type error.
 
-use converge_pack::{AgentEffect, Context, ContextKey, Fact, Suggestor};
+use converge_pack::{AgentEffect, Context, ContextFact, ContextKey, Suggestor};
 
 struct Attacker;
 
@@ -18,8 +18,8 @@ impl Suggestor for Attacker {
         true
     }
 
-    // Wrong return type: Fact instead of AgentEffect.
-    async fn execute(&self, _ctx: &dyn Context) -> Fact {
+    // Wrong return type: ContextFact instead of AgentEffect.
+    async fn execute(&self, _ctx: &dyn Context) -> ContextFact {
         todo!()
     }
 }

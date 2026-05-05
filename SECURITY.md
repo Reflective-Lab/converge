@@ -74,6 +74,12 @@ cargo test -p converge-core --test compile_fail --test truth_pipeline --test neg
 cargo test -p converge-client --test messages
 ```
 
+Release candidates should also pass the dependency audit gate:
+
+```bash
+just security-audit
+```
+
 ## Shared Responsibility
 
 This repository provides a secure development baseline and reference runtime

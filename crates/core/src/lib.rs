@@ -191,6 +191,7 @@
 //!
 //! See `deny.toml` at the crate root for CI enforcement of these rules.
 
+pub mod admission;
 mod agent;
 pub mod backend;
 pub mod capability;
@@ -217,8 +218,14 @@ pub mod truth;
 pub mod types;
 pub mod validation;
 
+pub use admission::{
+    AdmissionActor, AdmissionActorKind, AdmissionContent, AdmissionError, AdmissionReceipt,
+    AdmissionRequest, AdmissionSource,
+};
 pub use agent::{Suggestor, SuggestorId};
-pub use context::{ContextKey, ContextState, Fact, ProposedFact, ValidationError};
+pub use context::{
+    ContextFact, ContextKey, ContextSnapshot, ContextState, ProposedFact, ValidationError,
+};
 pub use effect::AgentEffect;
 pub use formation::{
     DeliberatedFormation, Formation, FormationDecision, FormationKind, FormationOutcome,
@@ -277,7 +284,7 @@ pub use traits::{ContextStore, Executor, Fingerprint, FingerprintError, Randomne
 pub use kernel_boundary::{
     AdapterTrace,
     ContentKind,
-    ContextFact,
+    ContextFact as KernelContextFact,
     // Contract types
     ContractResult,
     DataClassification,
@@ -349,7 +356,7 @@ pub use backend::{
 
 // Re-export new types module (3-tier hierarchy: Observation -> Proposal -> Fact)
 // Note: types::Fact is the governed semantic fact with PromotionRecord.
-// context::Fact is the stable read-only runtime/context surface.
+// context::ContextFact is the stable read-only runtime/context surface.
 pub use types::{
     Actor,
     ActorKind,

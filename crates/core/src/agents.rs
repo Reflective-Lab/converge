@@ -66,7 +66,7 @@ impl Suggestor for SeedSuggestor {
         // Only run if we haven't contributed yet
         !ctx.get(ContextKey::Seeds)
             .iter()
-            .any(|f| f.id == self.fact_id)
+            .any(|f| f.id().as_str() == self.fact_id)
     }
 
     async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
@@ -117,7 +117,7 @@ impl Suggestor for ReactOnceSuggestor {
             && !ctx
                 .get(ContextKey::Hypotheses)
                 .iter()
-                .any(|f| f.id == self.fact_id)
+                .any(|f| f.id().as_str() == self.fact_id)
     }
 
     async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {

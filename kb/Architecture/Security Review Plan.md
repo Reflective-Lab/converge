@@ -30,15 +30,20 @@ The review targets the **six public crates** and the **kernel boundary**. The go
 
 Prove that external code **cannot** do the following:
 
-- Construct a `Fact` without `kernel-authority` feature
-- Construct a `Fact::new()` from a downstream crate
-- Access `Fact.key` directly (private field)
+- Construct a `Fact` through the normal public authoring surface
+- Import the old `kernel-authority` module or call public promotion constructors
+- Access `ContextFact.key` directly (private field)
 - Emit an `AgentEffect` with direct facts (field removed)
+- Mutate a finalized `AgentEffect` instead of using `AgentEffectBuilder`
+- Push facts into `ContextState` or `TrackedContext` from downstream code
+- Fabricate `ContextSnapshot` internals with a struct literal
 - Construct a `Proposal<Validated>` without going through `PromotionGate`
 - Construct a `PromotionRecord` from outside the kernel
 - Import `converge-core` internals from a pack crate
 
 Each of these should be a `trybuild` compile-fail test with a clear error message.
+v3.8 removes the public `kernel-authority` feature as the authority boundary;
+Cargo feature unification is not a security boundary.
 
 ## 2. Property Tests (proptest)
 
@@ -111,9 +116,9 @@ For each public crate, verify:
 ## 6. Dependency Audit
 
 ```bash
-just deny           # cargo deny check (supply chain)
-cargo audit         # known vulnerabilities
-cargo geiger        # unsafe usage in dependency tree
+just sec-deny        # cargo deny check (supply chain)
+just security-audit  # blocking release-candidate dependency audit
+cargo geiger         # unsafe usage in dependency tree
 ```
 
 ## Regression Gate
@@ -149,9 +154,9 @@ cargo test -p converge-client --test messages
 - All trybuild tests pass (external code cannot forge facts)
 - All property tests pass across 10,000+ iterations
 - All negative tests pass (system rejects invalid input gracefully)
-- Zero `unsafe` blocks outside `ortools-sys`
+- Zero first-party `unsafe` blocks in the Converge workspace
 - Zero `SystemTime::now()` in kernel crates
 - `cargo deny check` clean
-- `cargo audit` clean
+- `cargo audit` clean or carrying only documented, time-boxed exceptions
 
 See also: [[Philosophy/Nine Axioms]], [[Architecture/Known Drift]], [[Architecture/API Surfaces]]

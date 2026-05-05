@@ -5,7 +5,7 @@ source: llm
 # Descriptive Statistics
 
 **Complexity:** O(n log n) for sorting (median), O(n) for rest
-**Converge module:** `converge_analytics::packs::descriptive_stats::DescriptiveStatsSolver`
+**Converge module:** `prism::packs::descriptive_stats::DescriptiveStatsSolver`
 **Reference:** Hand-computable. NIST StRD datasets for validation.
 
 ## Formulas
@@ -105,7 +105,7 @@ Without the baseline, the anomaly suggestor would have to compute statistics on-
 ## Converge Validation
 
 ```
-cargo test -p converge-analytics --test reference_validation descriptive_stats
+cargo test -p prism --test reference_validation descriptive_stats
 ```
 
 All values confirmed.

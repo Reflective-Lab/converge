@@ -17,7 +17,7 @@
 //!
 //! Human explanations are generated downstream from provenance + context.
 
-use crate::context::{ContextKey, Fact};
+use crate::context::{ContextFact, ContextKey};
 use std::collections::HashSet;
 use std::fmt::Write;
 
@@ -181,7 +181,7 @@ pub struct AgentPrompt {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct PromptContext {
     /// Facts grouped by `ContextKey`.
-    pub facts: Vec<(ContextKey, Vec<Fact>)>,
+    pub facts: Vec<(ContextKey, Vec<ContextFact>)>,
 }
 
 impl PromptContext {
@@ -192,7 +192,7 @@ impl PromptContext {
     }
 
     /// Adds facts for a given key.
-    pub fn add_facts(&mut self, key: ContextKey, facts: Vec<Fact>) {
+    pub fn add_facts(&mut self, key: ContextKey, facts: Vec<ContextFact>) {
         if !facts.is_empty() {
             self.facts.push((key, facts));
         }
@@ -294,9 +294,9 @@ impl AgentPrompt {
                     s.push_str("} {");
                 }
                 s.push_str(":id \"");
-                s.push_str(&escape_string(&fact.id));
+                s.push_str(&escape_string(fact.id().as_str()));
                 s.push_str("\" :c \"");
-                s.push_str(&escape_string(&fact.content));
+                s.push_str(&escape_string(fact.content()));
                 s.push('"');
             }
             s.push_str("}]");
@@ -338,7 +338,7 @@ impl AgentPrompt {
         for (key, facts) in &self.context.facts {
             writeln!(s, "\n## {key:?}").unwrap();
             for fact in facts {
-                writeln!(s, "- {}: {}", fact.id, fact.content).unwrap();
+                writeln!(s, "- {}: {}", fact.id(), fact.content()).unwrap();
             }
         }
 

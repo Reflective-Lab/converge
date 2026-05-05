@@ -4,10 +4,12 @@ source: mixed
 ---
 # Optimization Module
 
-`converge-optimization` provides OR-Tools-backed solvers exposed as Suggestors
-via the `SolverSuggestor` adapter.
+`converge-optimization` provides native optimization packs exposed as
+`Suggestor`s through `converge-pack::PackSuggestor`. It is pure Rust by
+default, with optional Varisat-backed constraint programming through the
+`sat` feature.
 
-## Available Solvers (11)
+## Representative Solver Packs
 
 | Problem | ContextKey Read | ContextKey Written |
 |---------|----------------|-------------------|
@@ -26,31 +28,31 @@ via the `SolverSuggestor` adapter.
 ## Usage in a Formation
 
 ```rust
-use converge_optimization::SolverSuggestor;
+use converge_pack::{ContextKey, PackSuggestor};
+use converge_optimization::packs::budget_allocation::BudgetAllocationPack;
 
-let solver = SolverSuggestor::budget_allocation(BudgetAllocationInput {
-    total_budget: 1_000_000.0,
-    categories: vec![...],
-    constraints: vec![...],
-});
-
+let solver = PackSuggestor::new(
+    BudgetAllocationPack,
+    ContextKey::Seeds,
+    ContextKey::Strategies,
+);
 engine.register_suggestor(solver);
 ```
 
 ## How It Works
 
 1. Seeder writes problem input to `ContextKey::Seeds`
-2. SolverSuggestor's `accepts()` checks if seeds contain its problem type
-3. `execute()` runs OR-Tools solver (milliseconds for typical problems)
+2. `PackSuggestor` checks whether seeds contain its problem type
+3. `execute()` runs the native solver
 4. Proposes solution to `ContextKey::Strategies`
 5. Other agents (policy gates, skeptics) can challenge the solution
 6. If challenged, solver may re-run with tighter constraints
 
 ## Feature Flags
 
-- Default: CP-SAT solver (pure Rust fallback)
+- Default: native Rust solvers
 - `sat` feature: Varisat SAT solver
-- `ffi` feature: OR-Tools C++ FFI (full solver suite)
+- `full` feature: all native optimization features
 
 ## Constraint Programming (CP) Module
 

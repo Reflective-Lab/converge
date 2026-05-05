@@ -19,7 +19,12 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::fetch::HttpFetchProvider;
-use crate::search::{WebFetchBackend, WebFetchError, WebFetchRequest, WebFetchResponse};
+use crate::search::{
+    MAX_WEB_FETCH_BYTES, MAX_WEB_FETCH_TIMEOUT_MS, WebFetchBackend, WebFetchError, WebFetchRequest,
+    WebFetchResponse, validate_public_http_url,
+};
+
+const MAX_FEED_CANDIDATES: usize = 256;
 
 /// Absolute URL used by feed discovery and fetch observations.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
@@ -29,7 +34,8 @@ pub struct FeedUrl(String);
 impl FeedUrl {
     pub fn new(value: impl Into<String>) -> Result<Self, FeedError> {
         let value = value.into();
-        Url::parse(&value).map_err(|error| FeedError::InvalidUrl(error.to_string()))?;
+        let url = Url::parse(&value).map_err(|error| FeedError::InvalidUrl(error.to_string()))?;
+        validate_public_http_url(&url).map_err(|error| FeedError::InvalidUrl(error.to_string()))?;
         Ok(Self(value))
     }
 
@@ -66,9 +72,14 @@ pub struct FeedByteLimit(NonZeroUsize);
 
 impl FeedByteLimit {
     pub fn new(value: usize) -> Result<Self, FeedError> {
-        NonZeroUsize::new(value)
-            .map(Self)
-            .ok_or_else(|| FeedError::InvalidLimit("max_bytes must be greater than zero".into()))
+        let value = NonZeroUsize::new(value)
+            .ok_or_else(|| FeedError::InvalidLimit("max_bytes must be greater than zero".into()))?;
+        if value.get() > MAX_WEB_FETCH_BYTES {
+            return Err(FeedError::InvalidLimit(format!(
+                "max_bytes must be <= {MAX_WEB_FETCH_BYTES}"
+            )));
+        }
+        Ok(Self(value))
     }
 
     #[must_use]
@@ -94,9 +105,15 @@ pub struct FeedCandidateLimit(NonZeroUsize);
 
 impl FeedCandidateLimit {
     pub fn new(value: usize) -> Result<Self, FeedError> {
-        NonZeroUsize::new(value).map(Self).ok_or_else(|| {
+        let value = NonZeroUsize::new(value).ok_or_else(|| {
             FeedError::InvalidLimit("max_candidates must be greater than zero".into())
-        })
+        })?;
+        if value.get() > MAX_FEED_CANDIDATES {
+            return Err(FeedError::InvalidLimit(format!(
+                "max_candidates must be <= {MAX_FEED_CANDIDATES}"
+            )));
+        }
+        Ok(Self(value))
     }
 
     #[must_use]
@@ -122,9 +139,15 @@ pub struct FeedTimeoutMs(NonZeroU64);
 
 impl FeedTimeoutMs {
     pub fn new(value: u64) -> Result<Self, FeedError> {
-        NonZeroU64::new(value)
-            .map(Self)
-            .ok_or_else(|| FeedError::InvalidLimit("timeout_ms must be greater than zero".into()))
+        let value = NonZeroU64::new(value).ok_or_else(|| {
+            FeedError::InvalidLimit("timeout_ms must be greater than zero".into())
+        })?;
+        if value.get() > MAX_WEB_FETCH_TIMEOUT_MS {
+            return Err(FeedError::InvalidLimit(format!(
+                "timeout_ms must be <= {MAX_WEB_FETCH_TIMEOUT_MS}"
+            )));
+        }
+        Ok(Self(value))
     }
 
     #[must_use]
@@ -281,18 +304,6 @@ impl FeedFetchRequest {
     }
 }
 
-impl From<&FeedFetchRequest> for WebFetchRequest {
-    fn from(request: &FeedFetchRequest) -> Self {
-        let mut fetch = WebFetchRequest::new(request.url.as_str())
-            .with_max_bytes(request.max_bytes.get())
-            .with_timeout_ms(request.timeout_ms.get());
-        for (name, value) in &request.headers {
-            fetch = fetch.with_header(name, value);
-        }
-        fetch
-    }
-}
-
 /// Normalized feed item observation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FeedItem {
@@ -407,9 +418,9 @@ impl FeedFetchBackend for HttpFeedProvider {
             });
         }
 
-        let fetch = WebFetchRequest::new(input_url.as_str())
-            .with_max_bytes(request.max_bytes.get())
-            .with_timeout_ms(request.timeout_ms.get());
+        let fetch = WebFetchRequest::new(input_url.as_str())?
+            .with_max_bytes(request.max_bytes.get())?
+            .with_timeout_ms(request.timeout_ms.get())?;
         if let Ok(response) = self.fetch_backend.fetch(&fetch) {
             candidates.extend(discover_alternate_links(&response.body, &response.url)?);
         }
@@ -429,10 +440,20 @@ impl FeedFetchBackend for HttpFeedProvider {
     }
 
     fn fetch_feed(&self, request: &FeedFetchRequest) -> Result<FeedFetchResponse, FeedError> {
-        let fetch_request = WebFetchRequest::from(request);
+        let fetch_request = web_fetch_request_from_feed(request)?;
         let response = self.fetch_backend.fetch(&fetch_request)?;
         parse_feed_response(self.provider_name(), response)
     }
+}
+
+fn web_fetch_request_from_feed(request: &FeedFetchRequest) -> Result<WebFetchRequest, FeedError> {
+    let mut fetch = WebFetchRequest::new(request.url.as_str())?
+        .with_max_bytes(request.max_bytes.get())?
+        .with_timeout_ms(request.timeout_ms.get())?;
+    for (name, value) in &request.headers {
+        fetch = fetch.with_header(name, value);
+    }
+    Ok(fetch)
 }
 
 fn parse_feed_response(
@@ -1052,6 +1073,15 @@ mod tests {
 
         let invalid_url = r#"{"url":"not a url"}"#;
         assert!(serde_json::from_str::<FeedFetchRequest>(invalid_url).is_err());
+
+        let localhost_url = r#"{"url":"http://127.0.0.1/feed.xml"}"#;
+        assert!(serde_json::from_str::<FeedFetchRequest>(localhost_url).is_err());
+
+        let huge_limit = format!(
+            r#"{{"url":"https://example.test/feed.xml","max_bytes":{}}}"#,
+            MAX_WEB_FETCH_BYTES + 1
+        );
+        assert!(serde_json::from_str::<FeedFetchRequest>(&huge_limit).is_err());
     }
 
     #[test]

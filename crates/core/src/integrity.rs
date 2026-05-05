@@ -34,7 +34,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::context::{ContextKey, ContextState, Fact};
+use crate::context::{ContextFact, ContextKey, ContextState};
 
 // ============================================================================
 // Lamport Clock
@@ -140,8 +140,8 @@ impl ContentHash {
 
     /// Computes the hash of a Fact (combines key, id, and content).
     #[must_use]
-    pub fn compute_fact(fact: &Fact) -> Self {
-        let combined = format!("{:?}|{}|{}", fact.key(), fact.id, fact.content);
+    pub fn compute_fact(fact: &ContextFact) -> Self {
+        let combined = format!("{:?}|{}|{}", fact.key(), fact.id(), fact.content());
         Self::compute(&combined)
     }
 
@@ -347,7 +347,12 @@ impl TrackedContext {
     #[must_use]
     pub fn verify_integrity(&self) -> bool {
         for (key, id, expected_hash) in &self.fact_hashes {
-            if let Some(fact) = self.context.get(*key).iter().find(|f| &f.id == id) {
+            if let Some(fact) = self
+                .context
+                .get(*key)
+                .iter()
+                .find(|f| f.id().as_str() == id)
+            {
                 if ContentHash::compute_fact(fact) != *expected_hash {
                     return false;
                 }
@@ -364,7 +369,7 @@ impl TrackedContext {
         for key in self.context.all_keys() {
             for fact in self.context.get(key) {
                 let hash = ContentHash::compute_fact(fact);
-                self.fact_hashes.push((key, fact.id.to_string(), hash));
+                self.fact_hashes.push((key, fact.id().to_string(), hash));
             }
         }
         self.merkle_root = None; // Invalidate cached root
@@ -375,9 +380,12 @@ impl TrackedContext {
     /// # Errors
     ///
     /// Returns an error if the fact conflicts with an existing fact.
-    pub fn add_fact(&mut self, fact: Fact) -> Result<bool, crate::error::ConvergeError> {
+    pub(crate) fn add_fact(
+        &mut self,
+        fact: ContextFact,
+    ) -> Result<bool, crate::error::ConvergeError> {
         let key = fact.key();
-        let id = fact.id.to_string();
+        let id = fact.id().to_string();
         let hash = ContentHash::compute_fact(&fact);
 
         let changed = self.context.add_fact(fact)?;

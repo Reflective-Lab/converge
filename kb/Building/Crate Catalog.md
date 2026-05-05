@@ -11,7 +11,7 @@ These six crates are the supported external API surfaces.
 | Crate | What it does |
 |---|---|
 | `converge-pack` | Author packs, suggestors, invariants, and proposal-only effects |
-| `converge-provider-api` | Backend identity, capability routing, and chat contracts |
+| `converge-provider-api` | Backend identity, capability routing, and chat contracts; transitional name |
 | `converge-model` | Curated semantic types shared across consumers |
 | `converge-kernel` | In-process embedding API |
 | `converge-protocol` | Generated `converge.v1` wire types |
@@ -29,8 +29,6 @@ surfaces.
 | `converge-domain` | Built-in domain packs: trust, money, delivery, data_metrics, plus example domain agents |
 | `converge-policy` | Cedar policy engine and policy suggestors |
 | `converge-optimization` | Solver packs and `SolverSuggestor` |
-| `converge-analytics` | Analytics and ML suggestors |
-| `converge-knowledge` | Knowledge base and knowledge suggestors |
 | `converge-experience` | Experience event storage |
 | `converge-runtime` | HTTP and gRPC runtime |
 | `converge-storage` | Object storage abstraction |
@@ -68,5 +66,9 @@ For provider adapters:
 [dependencies]
 converge-provider-api = "3"
 ```
+
+ADR-007 records the naming correction: the provider contract should eventually
+own the clean domain name, while concrete implementations use adapter-qualified
+names.
 
 See also: [[Architecture/API Surfaces]], [[Architecture/Crate Map]]

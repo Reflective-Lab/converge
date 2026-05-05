@@ -150,9 +150,9 @@ pub use feed::{
 #[cfg(feature = "_http")]
 pub use fetch::HttpFetchProvider;
 pub use search::{
-    SearchDepth, SearchTopic, WebFetchBackend, WebFetchError, WebFetchRequest, WebFetchResponse,
-    WebSearchBackend, WebSearchError, WebSearchImage, WebSearchRequest, WebSearchResponse,
-    WebSearchResult,
+    SearchDepth, SearchTopic, WebFetchBackend, WebFetchByteLimit, WebFetchError, WebFetchRequest,
+    WebFetchResponse, WebFetchTimeoutMs, WebFetchUrl, WebSearchBackend, WebSearchError,
+    WebSearchImage, WebSearchRequest, WebSearchResponse, WebSearchResult,
 };
 #[cfg(feature = "tavily")]
 pub use tavily::TavilySearchProvider;

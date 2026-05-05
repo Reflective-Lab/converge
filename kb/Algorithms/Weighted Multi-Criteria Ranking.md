@@ -5,7 +5,7 @@ source: llm
 # Weighted Multi-Criteria Ranking
 
 **Complexity:** O(n * c) where n = items, c = criteria
-**Converge module:** `converge_analytics::packs::ranking::WeightedScoringSolver`
+**Converge module:** `prism::packs::ranking::WeightedScoringSolver`
 **Reference:** Standard MCDM (Multi-Criteria Decision Making). See Hwang & Yoon (1981), *Multiple Attribute Decision Making*.
 
 ## Algorithm Steps
@@ -106,7 +106,7 @@ The top-ranked vendor is automatically surfaced to a contracting suggestor. If t
 ## Converge Validation
 
 ```
-cargo test -p converge-analytics --test reference_validation ranking
+cargo test -p prism --test reference_validation ranking
 ```
 
 Ranking order (A > C > B) and composite scores (0.70, 0.50, 0.30) confirmed.

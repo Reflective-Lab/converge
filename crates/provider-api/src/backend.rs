@@ -36,7 +36,7 @@ pub enum BackendKind {
 
     /// Constraint optimization — resource allocation, scheduling.
     ///
-    /// Examples: CP-SAT (OR-Tools), Polar (constraint mode), custom solvers.
+    /// Examples: native CP, SAT, Polar (constraint mode), custom solvers.
     Optimization,
 
     /// Analytics and ML — embeddings, classification, regression.

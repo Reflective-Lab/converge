@@ -88,7 +88,7 @@ Knowledge base for the Converge platform — a correctness-first, context-driven
 - [[Stack/Polars]] — data analytics and metrics
 
 ### Optimization
-- [[Stack/OR-Tools]] — constraint programming and solvers
+- [[Modules/Optimization]] — native optimization packs and constraint solvers
 
 ## Workflow
 
@@ -100,6 +100,7 @@ Knowledge base for the Converge platform — a correctness-first, context-driven
 
 ## Planning
 
+- [[Planning/v3.8 Foundation]] — foundation release principles, boundaries, and gates
 - [[Planning/MILESTONES]] — scheduled delivery across releases
 - [[Planning/LAYER-API-HARDENING]] — move up the stack one layer at a time
 - [[Planning/Formation Business Strategy]] — business framing, go-to-market wedges, and trust-building autonomy

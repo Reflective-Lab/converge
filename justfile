@@ -69,6 +69,14 @@ test-bench-run:
 test-soak:
     cargo test --workspace -- --include-ignored soak
 
+# Run quick local soak tests
+test-soak-quick:
+    SOAK_CYCLES=100 SOAK_CONCURRENCY=20 SOAK_ITERATIONS=50 cargo test -p converge-core --test soak -- --include-ignored soak --nocapture
+
+# Run CI-grade soak tests
+test-soak-ci:
+    SOAK_CYCLES=1000 SOAK_CONCURRENCY=100 SOAK_ITERATIONS=200 cargo test -p converge-core --test soak -- --include-ignored soak --nocapture
+
 # Security regression gate for policy, runtime, and public control surfaces
 sec-gate:
     cargo check --workspace
@@ -78,9 +86,17 @@ sec-gate:
     cargo test -p converge-core --test compile_fail --test truth_pipeline --test negative --test properties
     cargo test -p converge-client --test messages
 
+# Alias used by SECURITY.md and release checklists
+security-gate: sec-gate
+
+# Blocking dependency security audit for release candidates
+security-audit:
+    cargo audit --deny warnings --ignore RUSTSEC-2023-0071 --ignore RUSTSEC-2023-0089 --ignore RUSTSEC-2024-0384 --ignore RUSTSEC-2024-0436 --ignore RUSTSEC-2025-0012 --ignore RUSTSEC-2025-0134 --ignore RUSTSEC-2025-0141 --ignore RUSTSEC-2026-0002 --ignore RUSTSEC-2021-0141
+    cargo deny check
+
 # Smoke-test local runtime
 test-smoke url="http://127.0.0.1:8080":
-    bash ops/scripts/smoke-test.sh {{url}}
+    bash scripts/smoke-test.sh {{url}}
 
 # ── Lint & Format ─────────────────────────────────────────────────────
 
@@ -130,6 +146,26 @@ _coverage-summary:
 doc:
     cargo doc --no-deps --workspace
 
+# Generate local test coverage JSON
+coverage:
+    mkdir -p target/coverage
+    cargo llvm-cov --workspace --lib --tests --ignore-filename-regex '(^|/)(tests|benches|examples)/' --json --summary-only --output-path target/coverage/converge-coverage.json
+
+# Generate CI coverage JSON at repo root
+coverage-ci:
+    cargo llvm-cov --workspace --lib --tests --ignore-filename-regex '(^|/)(tests|benches|examples)/' --json --summary-only --output-path coverage.json
+
+# Run Criterion benchmarks and update kb/Baselines
+perf-baseline:
+    cargo bench -p converge-core -- --save-baseline v3.8.0
+    cargo bench -p converge-optimization -- --save-baseline v3.8.0
+    cargo bench -p converge-knowledge -- --save-baseline v3.8.0
+    python3 scripts/extract-criterion-baseline.py
+
+# Run Criterion profiler hooks where supported
+perf-profile:
+    cargo bench -p converge-core -- --profile-time 10
+
 # Open docs in browser
 doc-open:
     cargo doc --no-deps --workspace --open
@@ -137,7 +173,7 @@ doc-open:
 # ── Publish ────────────────────────────────────────────────────────────
 
 # Publishable crates in dependency order
-_publishable := "converge-pack converge-provider-api converge-core converge-policy converge-model converge-kernel converge-protocol converge-client converge-storage converge-provider converge-experience converge-knowledge ortools-sys converge-optimization converge-domain converge-analytics"
+_publishable := "converge-pack converge-provider-api converge-core converge-policy converge-model converge-kernel converge-protocol converge-client converge-storage converge-provider converge-experience converge-knowledge converge-optimization converge-domain converge-analytics"
 
 # Dry-run publish to crates.io (validates readiness)
 publish-dry-run:
@@ -162,11 +198,11 @@ sec-deny-advisories:
 
 # Start local runtime, preferring native Rust if available
 dev-up mode="auto":
-    bash ops/scripts/dev-up.sh {{mode}}
+    bash scripts/dev-up.sh {{mode}}
 
 # Stop local runtime or compose stack
 dev-down mode="auto":
-    bash ops/scripts/dev-down.sh {{mode}}
+    bash scripts/dev-down.sh {{mode}}
 
 # ── Examples ───────────────────────────────────────────────────────────
 
@@ -382,4 +418,3 @@ deps:
     @echo "  converge-experience"
     @echo "  converge-runtime"
     @echo "  converge-storage"
-    @echo "  ortools-sys"

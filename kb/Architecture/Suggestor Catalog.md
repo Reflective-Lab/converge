@@ -117,9 +117,10 @@ Direct `Suggestor` implementations in `converge_policy`.
 
 ---
 
-## Knowledge (2 Suggestors)
+## Knowledge (2 Suggestors — extracted to mnemos)
 
-Direct `Suggestor` implementations in `converge_knowledge`.
+Direct `Suggestor` implementations now in the **mnemos** extension crate
+(`~/dev/extensions/mnemos`). Extracted from `converge-knowledge` on 2026-05-05.
 
 | Agent | Purpose | Watches | Writes |
 |-------|---------|---------|--------|

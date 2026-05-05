@@ -8,7 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::fact::{Fact, ProposedFact};
+use crate::fact::{ContextFact, ProposedFact};
 
 /// Typed keys for the shared context namespace.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -51,8 +51,8 @@ pub trait Context: Send + Sync {
     /// Check whether any facts exist under this key.
     fn has(&self, key: ContextKey) -> bool;
 
-    /// Get all facts under this key.
-    fn get(&self, key: ContextKey) -> &[Fact];
+    /// Get all read-only context fact projections under this key.
+    fn get(&self, key: ContextKey) -> &[ContextFact];
 
     /// Get all proposed facts (unvalidated).
     fn get_proposals(&self, key: ContextKey) -> &[ProposedFact] {
@@ -71,7 +71,7 @@ mod tests {
     use super::*;
 
     struct MockContext {
-        facts: std::collections::HashMap<ContextKey, Vec<Fact>>,
+        facts: std::collections::HashMap<ContextKey, Vec<ContextFact>>,
     }
 
     impl MockContext {
@@ -87,7 +87,7 @@ mod tests {
             self.facts.get(&key).is_some_and(|v| !v.is_empty())
         }
 
-        fn get(&self, key: ContextKey) -> &[Fact] {
+        fn get(&self, key: ContextKey) -> &[ContextFact] {
             self.facts.get(&key).map_or(&[], Vec::as_slice)
         }
     }
@@ -111,15 +111,33 @@ mod tests {
         assert!(!ctx.has(ContextKey::Seeds));
     }
 
-    #[cfg(feature = "kernel-authority")]
     #[test]
     fn count_reflects_facts() {
-        use crate::fact::kernel_authority;
+        use crate::fact::{
+            FactActor, FactActorKind, FactLocalTrace, FactPromotionRecord, FactTraceLink,
+            FactValidationSummary,
+        };
+        use crate::types::{ContentHash, Timestamp};
 
         let mut ctx = MockContext::empty();
+        let record = FactPromotionRecord::new_projection(
+            "projection-test",
+            ContentHash::zero(),
+            FactActor::new_projection("test", FactActorKind::System),
+            FactValidationSummary::default(),
+            Vec::new(),
+            FactTraceLink::Local(FactLocalTrace::new_projection("trace", "span", None, true)),
+            Timestamp::epoch(),
+        );
         ctx.facts.insert(
             ContextKey::Seeds,
-            vec![kernel_authority::new_fact(ContextKey::Seeds, "f1", "a")],
+            vec![ContextFact::new_projection(
+                ContextKey::Seeds,
+                "f1",
+                "a",
+                record,
+                Timestamp::epoch(),
+            )],
         );
         assert_eq!(ctx.count(ContextKey::Seeds), 1);
         assert!(ctx.has(ContextKey::Seeds));

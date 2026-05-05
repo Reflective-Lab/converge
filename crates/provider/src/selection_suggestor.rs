@@ -56,10 +56,10 @@ impl Suggestor for ProviderSelectionSuggestor {
 
     fn accepts(&self, ctx: &dyn Context) -> bool {
         ctx.get(ContextKey::Seeds).iter().any(|f| {
-            f.id.starts_with(REQUEST_PREFIX)
-                && match serde_json::from_str::<ProviderRequest>(&f.content) {
-                    Ok(_) => !assignment_exists(ctx, request_id(&f.id)),
-                    Err(_) => !malformed_diagnostic_exists(ctx, &f.id),
+            f.id().as_str().starts_with(REQUEST_PREFIX)
+                && match serde_json::from_str::<ProviderRequest>(f.content()) {
+                    Ok(_) => !assignment_exists(ctx, request_id(f.id().as_str())),
+                    Err(_) => !malformed_diagnostic_exists(ctx, f.id().as_str()),
                 }
         })
     }
@@ -70,11 +70,11 @@ impl Suggestor for ProviderSelectionSuggestor {
         for fact in ctx
             .get(ContextKey::Seeds)
             .iter()
-            .filter(|f| f.id.starts_with(REQUEST_PREFIX))
+            .filter(|f| f.id().as_str().starts_with(REQUEST_PREFIX))
         {
-            match serde_json::from_str::<ProviderRequest>(&fact.content) {
+            match serde_json::from_str::<ProviderRequest>(fact.content()) {
                 Ok(req) => {
-                    if assignment_exists(ctx, request_id(&fact.id)) {
+                    if assignment_exists(ctx, request_id(fact.id().as_str())) {
                         continue;
                     }
 
@@ -90,19 +90,19 @@ impl Suggestor for ProviderSelectionSuggestor {
                     );
                 }
                 Err(error) => {
-                    if malformed_diagnostic_exists(ctx, &fact.id) {
+                    if malformed_diagnostic_exists(ctx, fact.id().as_str()) {
                         continue;
                     }
 
                     let diagnostic = serde_json::json!({
-                        "request_fact_id": fact.id,
+                        "request_fact_id": fact.id(),
                         "message": "malformed provider request ignored",
                         "error": error.to_string(),
                     });
                     proposals.push(
                         ProposedFact::new(
                             ContextKey::Diagnostic,
-                            malformed_diagnostic_id(&fact.id),
+                            malformed_diagnostic_id(fact.id().as_str()),
                             diagnostic.to_string(),
                             self.name(),
                         )
@@ -240,7 +240,7 @@ fn assignment_exists(ctx: &dyn Context, request_id: &str) -> bool {
     let assignment_id = format!("{}{}", ASSIGNMENT_PREFIX, request_id);
     ctx.get(ContextKey::Strategies)
         .iter()
-        .any(|f| f.id == assignment_id)
+        .any(|f| f.id().as_str() == assignment_id)
 }
 
 fn malformed_diagnostic_id(fact_id: &str) -> String {
@@ -251,7 +251,7 @@ fn malformed_diagnostic_exists(ctx: &dyn Context, fact_id: &str) -> bool {
     let diagnostic_id = malformed_diagnostic_id(fact_id);
     ctx.get(ContextKey::Diagnostic)
         .iter()
-        .any(|fact| fact.id == diagnostic_id)
+        .any(|fact| fact.id().as_str() == diagnostic_id)
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -474,7 +474,7 @@ mod tests {
         let diagnostics = first.context.get(ContextKey::Diagnostic);
         assert_eq!(diagnostics.len(), 1);
         assert_eq!(
-            diagnostics[0].id,
+            diagnostics[0].id(),
             "provider-request-error:provider-request:broken"
         );
         assert!(!first.context.has(ContextKey::Strategies));

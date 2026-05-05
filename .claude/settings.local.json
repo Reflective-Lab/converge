@@ -103,7 +103,15 @@
       "Bash(wait 17915)",
       "Bash(git tag -a v3.7.5 -m 'Release v3.7.5 *)",
       "Read(//Users/kpernyer/dev/work/ferrox/**)",
-      "Read(//Users/kpernyer/dev/work/ferrox/crates/**)"
+      "Read(//Users/kpernyer/dev/work/ferrox/crates/**)",
+      "Bash(cp -R /Users/kpernyer/dev/work/converge/crates/knowledge/proto /Users/kpernyer/dev/extensions/mnemos/crates/mnemos/proto)",
+      "Bash(cp -R /Users/kpernyer/dev/work/converge/crates/knowledge/benches /Users/kpernyer/dev/extensions/mnemos/crates/mnemos/benches)",
+      "Bash(git -c 'user.name=Kenneth Pernyer' -c user.email=kpernyer@gmail.com commit -m ' *)",
+      "Bash(cp -R /Users/kpernyer/dev/work/converge/crates/analytics/src /Users/kpernyer/dev/extensions/prism/crates/prism/src)",
+      "Bash(cp -R /Users/kpernyer/dev/work/converge/crates/analytics/tests /Users/kpernyer/dev/extensions/prism/crates/prism/tests)",
+      "Bash(git init *)",
+      "Bash([ -f \"/Users/kpernyer/dev/work/converge/examples/$ex/Cargo.toml\" ])",
+      "Bash(cp -R /Users/kpernyer/dev/work/converge/examples/__TRACKED_VAR__ /Users/kpernyer/dev/atelier/crates/example-__TRACKED_VAR__)"
     ]
   }
 }

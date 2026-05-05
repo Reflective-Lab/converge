@@ -42,16 +42,18 @@ Key surface:
 - `ContextKey`
 - `AgentEffect`
 - `ProposedFact`
-- `Fact` (read-only outside kernel-authority code)
+- `ContextFact` (read-only context projection for normal pack authors and downstream consumers)
 - semantic contract values such as `FactId`, `ProposalId`, `GateId`, `Timestamp`, and `ContentHash`
 - `Invariant`
 
 Status:
 - canonical authoring contract
-- authoritative fact creation is feature-gated
+- normal authoring is proposal-only
+- `kernel-authority` is removed; authoritative construction is engine-owned
+- persistence uses `ContextSnapshot` rather than fact constructors
 - semantic identifiers, hashes, and timestamps are typed contract values, not string conventions
 
-### `converge-provider-api`
+### `converge-provider-api` (Transitional Name)
 
 Purpose:
 - backend identity, capability routing, chat contracts, and selection criteria
@@ -70,6 +72,10 @@ Key surface:
 
 Status:
 - canonical provider capability contract
+- naming drift: the contract has the `-api` suffix while the implementation
+  crate has the clean `converge-provider` name. v3.8 uses the rule that
+  contracts get the real domain names and implementations carry adapter
+  qualifiers.
 
 ### `converge-model`
 
@@ -176,8 +182,6 @@ contracts:
 - `converge-domain`
 - `converge-policy`
 - `converge-optimization`
-- `converge-analytics`
-- `converge-knowledge`
 - `converge-experience`
 - `converge-runtime`
 - `converge-storage`

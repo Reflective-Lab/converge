@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **BREAKING**: `converge-knowledge` extracted to the **mnemos** extension repo
+  (`~/dev/extensions/mnemos`). Foundation no longer ships vector storage,
+  agentic memory, or learning implementations. Downstream consumers must
+  depend on `mnemos` directly. See ADR-008.
+- **BREAKING**: `converge-analytics` extracted to the **prism** extension repo
+  (`~/dev/extensions/prism`). Foundation no longer ships Polars/Burn ML
+  pipelines, training agents, or analytics packs. Downstream consumers must
+  depend on `prism` directly.
+- **BREAKING**: `converge-domain` and `examples/*` extracted to the
+  **atelier** showcase repo (`~/dev/atelier`). The four built-in domain packs
+  (trust, money, delivery, data_metrics) and 13 worked examples now live in
+  atelier. Downstream consumers depend on `atelier-domain`.
+- **BREAKING**: `converge-policy` extracted to the **arbiter** extension
+  repo (`~/dev/extensions/arbiter`). Cedar policy engine, policy suggestors,
+  and ed25519-signed delegation tokens now live in arbiter. Foundation
+  `converge-pack` keeps the gate trait and authorization vocabulary.
+
 ### Added
 - **Optimization Suggestor adapter**: `SolverSuggestor<P: Pack>` wraps all 11 optimization domain packs as first-class Suggestors. Every solver participates in the convergence loop via `register_suggestor_in_pack`.
 - **Policy Suggestor adapters**: `PolicyGateSuggestor`, `DelegationVerifySuggestor`, `FlowGateSuggestor` bridge Cedar policy evaluation into the convergence loop.

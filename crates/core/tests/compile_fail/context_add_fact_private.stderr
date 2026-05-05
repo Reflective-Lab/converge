@@ -6,5 +6,5 @@ error[E0624]: method `add_fact` is private
   |
  ::: src/context.rs
   |
-  |     pub(crate) fn add_fact(&mut self, fact: Fact) -> Result<bool, ConvergeError> {
-  |     ---------------------------------------------------------------------------- private method defined here
+  |     pub(crate) fn add_fact(&mut self, fact: ContextFact) -> Result<bool, ConvergeError> {
+  |     ----------------------------------------------------------------------------------- private method defined here

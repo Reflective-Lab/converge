@@ -6,6 +6,20 @@ source: mixed
 
 Providers are the adapter implementations that plug into [[Architecture/Ports|ports]]. They live outside the hexagon. The core never imports them — they import the core.
 
+> **Backend-layer plug.** Providers populate the *lower* of the two
+> pluggable layers — operational capability adapters. They never see
+> `Suggestor`, `Context`, or `ProposedFact`. The Suggestor layer sits above
+> them and uses them through capability handles. See
+> [[Architecture/Plug Boundary]] for the layering rule.
+
+> **v3.8 location.** Concrete provider implementations move out of the
+> Converge foundation into extension repositories (mnemos for knowledge,
+> prism for analytics, manifold for LLM/search/fetch/feed adapters).
+> The capability *contracts* stay in the foundation; the *implementations*
+> live in extensions. See
+> [[ADRs/ADR-008-extension-crate-boundaries]] and
+> [[Planning/v3.8 Foundation]].
+
 ## Chat Backends
 
 ### Cloud (converge-provider)
@@ -81,7 +95,8 @@ Object stores (S3, GCS, local filesystem) for artifact persistence.
 
 | Provider | Port | Purpose |
 |---|---|---|
-| OR-Tools (CP-SAT) | Constraint solver | Scheduling, resource allocation, multi-criteria optimization |
+| Native optimization packs | `Suggestor` / pack solver | Scheduling, routing, resource allocation, multi-criteria optimization |
+| Varisat SAT | Constraint solver | Optional native constraint programming |
 
 ## Capability Presets
 
@@ -98,4 +113,4 @@ BackendRequirements::vector_search()      // Similarity recall
 
 Providers produce **observations, never decisions** ([[Philosophy/Nine Axioms#4. Agents Suggest, Engine Decides|Axiom 4]]). A `ChatBackend` response or `WebSearchBackend` result becomes input to an agent or workflow. The engine's promotion gate decides what becomes truth. Providers have no governance authority.
 
-See also: [[Architecture/Ports]], [[Architecture/Hexagonal Architecture]], [[Concepts/Backends and Capabilities]]
+See also: [[Architecture/Plug Boundary]], [[Architecture/Ports]], [[Architecture/Hexagonal Architecture]], [[Concepts/Backends and Capabilities]]

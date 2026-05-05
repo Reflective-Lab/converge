@@ -1,7 +1,7 @@
-error[E0277]: the trait bound `Fact: From<ProposedFact>` is not satisfied
-  --> tests/compile_fail/proposed_fact_bypass_confidence.rs:16:32
+error[E0277]: the trait bound `ContextFact: From<ProposedFact>` is not satisfied
+  --> tests/compile_fail/proposed_fact_bypass_confidence.rs:16:39
    |
-16 |     let _fact: Fact = proposal.into();
-   |                                ^^^^ the trait `From<ProposedFact>` is not implemented for `Fact`
+16 |     let _fact: ContextFact = proposal.into();
+   |                                       ^^^^ the trait `From<ProposedFact>` is not implemented for `ContextFact`
    |
-   = note: required for `ProposedFact` to implement `Into<Fact>`
+   = note: required for `ProposedFact` to implement `Into<ContextFact>`

@@ -64,11 +64,12 @@ async fn evidence_valid_id_roundtrips() {
 
     let fact = facts
         .iter()
-        .find(|f| f.id == test_id)
+        .find(|f| f.id().as_str() == test_id)
         .expect("should find fact");
-    assert_eq!(&fact.id, &test_id, "ID should roundtrip unchanged");
+    assert_eq!(fact.id().as_str(), test_id, "ID should roundtrip unchanged");
     assert_eq!(
-        &fact.content, &test_content,
+        fact.content(),
+        test_content,
         "content should roundtrip unchanged"
     );
 }

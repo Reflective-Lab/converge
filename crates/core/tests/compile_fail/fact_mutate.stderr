@@ -1,4 +1,4 @@
-error[E0616]: field `key` of struct `converge_core::Fact` is private
+error[E0616]: field `key` of struct `converge_core::ContextFact` is private
  --> tests/compile_fail/fact_mutate.rs:9:10
   |
 9 |     fact.key = ContextKey::Seeds;

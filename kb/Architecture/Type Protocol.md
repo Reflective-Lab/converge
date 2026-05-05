@@ -36,8 +36,14 @@ This means:
 
 ### Kernel and Promotion Boundary
 
-- `Fact` remains authoritative and cannot be constructed by consumers without `kernel-authority`.
-- `ProposedFact` is the intended consumer path.
+- `Fact` remains authoritative and is not part of the normal consumer surface.
+- `ContextFact` is the read-only public projection returned by context reads.
+- `ProposedFact` is the intended consumer write path; the engine validates and
+  promotes proposals into facts.
+- The old `kernel-authority` Cargo feature has been removed because public
+  feature unification is not an authority boundary; see
+  [[Architecture/ADRs/ADR-006-promotion-authority-boundary]].
+- Durable rehydration uses `ContextSnapshot`, not raw fact constructors.
 - Compile-fail tests prove the boundary from the consumer side.
 
 ### Public Semantic Surface

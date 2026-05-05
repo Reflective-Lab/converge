@@ -1,5 +1,4 @@
-// Contract: promotion metadata constructors are hidden from pack consumers
-// unless kernel authority is explicitly enabled.
+// Contract: promotion metadata authority constructors are not public pack API.
 
 use converge_pack::{FactActor, FactActorKind};
 

@@ -16,6 +16,7 @@ All major entities in the Converge knowledge base, organized by category.
 - [Formation Building Review](Architecture/Formation%20Building%20Review.md)
 - [Hexagonal Architecture](Architecture/Hexagonal%20Architecture.md)
 - [Known Drift](Architecture/Known%20Drift.md)
+- [Plug Boundary](Architecture/Plug%20Boundary.md) — load-bearing rule: Suggestor and Backend are two distinct layers
 - [Ports](Architecture/Ports.md)
 - [Providers](Architecture/Providers.md)
 - [Purity Rules](Architecture/Purity%20Rules.md)
@@ -30,8 +31,8 @@ All major entities in the Converge knowledge base, organized by category.
 - [ADR-003: Pack Authoring Contract](Architecture/ADRs/ADR-003-pack-authoring-contract.md)
 - [ADR-004: Contract Stabilization](Architecture/ADRs/ADR-004-contract-stabilization.md)
 - [ADR-005: Type Ownership Boundaries](Architecture/ADRs/ADR-005-type-ownership-boundaries.md)
-- [ADR-006: Clock Injection for Kernel Determinism](Architecture/ADRs/ADR-006-clock-injection.md)
-- [ADR-007: Capability Contract Ownership](Architecture/ADRs/ADR-007-capability-contract-ownership.md)
+- [ADR-006: Promotion Authority Boundary](Architecture/ADRs/ADR-006-promotion-authority-boundary.md)
+- [ADR-007: Provider and Tool Contract Names](Architecture/ADRs/ADR-007-provider-tool-contracts.md)
 
 ## Building
 

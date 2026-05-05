@@ -33,7 +33,10 @@ Pure Rust implementations — no external solver required.
 
 Five domain solver packs with typed problem specs, invariant suites, and determinism guarantees: meeting scheduling, inventory rebalancing, lead routing, budget allocation, anomaly triage.
 
-Optional C++ OR-Tools FFI via `ortools-sys` (feature `ffi`). Native CP-SAT via Varisat (feature `sat`).
+Native CP support is provided through Varisat with the `sat` feature. The
+current workspace does not ship an OR-Tools FFI crate; any future OR-Tools
+integration should be an adapter implementation, not part of the kernel
+contract.
 
 ## Knowledge Base
 

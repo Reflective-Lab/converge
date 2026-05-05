@@ -32,8 +32,7 @@
 //! ## Feature Flags
 //!
 //! - `sat` - Varisat SAT solver for constraint programming
-//! - `ffi` - OR-Tools C++ FFI bindings
-//! - `full` - All features
+//! - `full` - All native optimization features
 
 // ── Public API: Pack types re-exported from converge-pack ────────────
 

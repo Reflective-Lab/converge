@@ -30,6 +30,28 @@ pub mod formation {
     };
 }
 
+pub mod admission {
+    //! External observation admission API.
+    //!
+    //! Admission stages observations as proposals. It does not construct
+    //! authoritative facts; promotion remains engine-owned.
+
+    pub use converge_model::{
+        AdmissionActor, AdmissionActorKind, AdmissionContent, AdmissionError, AdmissionReceipt,
+        AdmissionRequest, AdmissionSource,
+    };
+
+    use crate::{ContextState, ConvergeError};
+
+    /// Stages an external observation for governed promotion.
+    pub fn admit_observation(
+        context: &mut ContextState,
+        request: AdmissionRequest,
+    ) -> Result<AdmissionReceipt, ConvergeError> {
+        context.submit_observation(request)
+    }
+}
+
 pub use converge_core::gates::hitl::{
     ContextItem, GateDecision, GateEvent, GateEventKind, GateRequest, GateVerdict, HitlPolicy,
     TimeoutAction, TimeoutPolicy,
@@ -43,24 +65,30 @@ pub use converge_core::recall::{
     RecallUse, RelevanceLevel, recall_from_store,
 };
 pub use converge_core::{
-    ApprovalPointId, BackendId, Budget, BudgetResource, ChainId, ConstraintName, ConstraintValue,
-    ContextState, ConvergeError, ConvergeResult, CorrelationId, Criterion, CriterionEvaluator,
-    CriterionId, CriterionOutcome, CriterionResult, DecisionStep, Engine, EngineHitlPolicy,
-    EventId, EventQuery, ExperienceEvent, ExperienceEventEnvelope, ExperienceEventKind,
-    ExperienceEventObserver, ExperienceRecord, ExperienceStore, ExperienceStoreError,
-    ExperienceStoreResult, HitlPause, IntegrityProof, Invariant, InvariantClass, InvariantResult,
-    LamportClock, MerkleRoot, OverrideTarget, PackId, RunResult, StreamingCallback, SuggestorId,
-    TenantId, TraceLinkId, TruthId, TypesBudgets, TypesIntentId, TypesIntentKind, TypesRootIntent,
-    TypesRunHooks, UnitInterval, UserExperienceEvent, UserExperienceEventEnvelope,
+    AdmissionActor, AdmissionActorKind, AdmissionContent, AdmissionError, AdmissionReceipt,
+    AdmissionRequest, AdmissionSource, ApprovalPointId, BackendId, Budget, BudgetResource, ChainId,
+    ConstraintName, ConstraintValue, ContextSnapshot, ContextState, ConvergeError, ConvergeResult,
+    CorrelationId, Criterion, CriterionEvaluator, CriterionId, CriterionOutcome, CriterionResult,
+    DecisionStep, Engine, EngineHitlPolicy, EventId, EventQuery, ExperienceEvent,
+    ExperienceEventEnvelope, ExperienceEventKind, ExperienceEventObserver, ExperienceRecord,
+    ExperienceStore, ExperienceStoreError, ExperienceStoreResult, HitlPause, IntegrityProof,
+    Invariant, InvariantClass, InvariantResult, LamportClock, MerkleRoot, OverrideTarget, PackId,
+    RunResult, StreamingCallback, SuggestorId, TenantId, TraceLinkId, TruthId, TypesBudgets,
+    TypesIntentId, TypesIntentKind, TypesRootIntent, TypesRunHooks, UnitInterval,
+    UserExperienceEvent, UserExperienceEventEnvelope,
 };
 pub use converge_pack::{
-    AgentEffect, Context, ContextKey, Fact, ProposedFact, Suggestor, ValidationError,
+    AgentEffect, Context, ContextFact, ContextKey, ProposedFact, Suggestor, ValidationError,
 };
 
 #[cfg(test)]
 mod tests {
     use super::{
-        BudgetResource, StopReason,
+        BudgetResource, ContextKey, ContextState, StopReason,
+        admission::{
+            AdmissionActor, AdmissionActorKind, AdmissionContent, AdmissionRequest,
+            AdmissionSource, admit_observation,
+        },
         formation::{
             Capability, FormationCatalog, FormationRequest, FormationTemplate,
             FormationTemplateMetadata, ProviderRequest, StaticFormationTemplate, SuggestorRole,
@@ -106,5 +134,23 @@ mod tests {
             catalog.get("analysis-only").map(FormationTemplate::id),
             Some("analysis-only")
         );
+    }
+
+    #[test]
+    fn kernel_admission_stages_observation() {
+        let mut context = ContextState::new();
+        let request = AdmissionRequest::new(
+            AdmissionActor::new("organism-runtime", AdmissionActorKind::System).unwrap(),
+            AdmissionSource::new("truth-document").unwrap(),
+            ContextKey::Seeds,
+            "truth-doc-1",
+            AdmissionContent::new(r#"{"claim":"approved source"}"#).unwrap(),
+        )
+        .unwrap();
+
+        let receipt = admit_observation(&mut context, request).unwrap();
+
+        assert!(receipt.staged());
+        assert_eq!(receipt.proposal_id().as_str(), "truth-doc-1");
     }
 }

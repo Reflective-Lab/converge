@@ -41,8 +41,8 @@ pub fn context_to_guest(ctx: &dyn converge_core::Context, cycle: u32) -> GuestCo
             let guest_facts: Vec<GuestFact> = key_facts
                 .iter()
                 .map(|f| GuestFact {
-                    id: f.id.clone(),
-                    content: f.content.clone(),
+                    id: f.id().to_string(),
+                    content: f.content().to_string(),
                 })
                 .collect();
             facts.insert(format!("{key:?}"), guest_facts);
@@ -188,7 +188,7 @@ impl converge_core::Invariant for WasmInvariant {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use converge_core::{ContextKey, ContextState, Fact};
+    use converge_core::{ContextFact, ContextKey, ContextState};
     use std::collections::HashMap;
 
     /// Build the WAT for an invariant that always returns ok.

@@ -4,9 +4,14 @@ source: mixed
 ---
 # System Overview
 
-Converge is a correctness-first, context-driven, multi-suggestor **library**.
+Converge is a correctness-first, context-driven, multi-suggestor foundation.
+Its center is a pure kernel and a small set of public contracts. The workspace
+also contains an HTTP/gRPC runtime crate, but runtime machinery is an adapter
+around the kernel, not part of the kernel contract.
 
-It has no runtime. It does not own sockets, message buses, process lifecycle, or deployment. Those belong to [[Lattice]] — the execution mesh. Converge runs inside agent processes that participate in the Lattice mesh.
+The kernel does not own sockets, message buses, process lifecycle, deployment,
+provider SDKs, or tool integrations. Those live in runtime, provider, tool, or
+ecosystem layers outside the core convergence loop.
 
 The kernel is pure. It owns the convergence loop, the promotion gate, runtime
 invariants, typed stop reasons, HITL pauses, and the run integrity proof. It
@@ -46,7 +51,7 @@ Lattice.
 ```text
 crates/
   pack/           canonical pack authoring contract
-  provider-api/   canonical provider capability contract
+  provider-api/   provider capability contract; transitional name
   model/          curated semantic model surface
   kernel/         canonical embedding API
   protocol/       generated converge.v1 wire contract
@@ -54,10 +59,7 @@ crates/
   core/           engine implementation and promotion path
   provider/       provider adapters
   domain/         built-in domain packs and governed flow logic
-  policy/         Cedar policy engine and policy suggestors
   optimization/   solver packs and Suggestor adapter
-  analytics/      analytics and ML suggestors
-  knowledge/      knowledge base and knowledge suggestors
   experience/     experience event storage
   runtime/        HTTP and gRPC runtime
   storage/        object storage abstraction
@@ -70,7 +72,13 @@ At a high level:
 - `converge-pack`, `converge-provider-api`, and `converge-protocol` are the leaf contracts.
 - `converge-core` builds on `converge-pack`.
 - `converge-kernel` and `converge-model` sit above the engine implementation.
-- Provider, domain, policy, optimization, analytics, and knowledge crates depend on contracts and the engine implementation as needed.
+- Provider, domain, policy, and optimization crates depend on contracts and the engine implementation as needed.
+- Analytics suggestors live in the **prism** extension repo and depend on the same contracts.
+- Knowledge suggestors live in the **mnemos** extension repo and depend on the same contracts.
+
+`converge-provider-api` is the current provider contract name, but v3.8 treats
+that as naming drift: stable contracts should get the real domain names and
+implementations should add adapter qualifiers.
 
 See [[Architecture/API Surfaces]] for the actual support boundary.
 
@@ -110,25 +118,32 @@ Key properties:
 
 Other internal crates still participate in the same loop through `Suggestor`:
 
-- `converge-policy`
 - `converge-optimization`
-- `converge-analytics`
-- `converge-knowledge`
 
-There is no special side pipeline for them.
+Knowledge suggestors live in the **mnemos** extension repo
+(`~/dev/extensions/mnemos`). Analytics suggestors live in the **prism**
+extension repo (`~/dev/extensions/prism`). Policy suggestors and the Cedar
+engine live in the **arbiter** extension repo
+(`~/dev/extensions/arbiter`). Domain packs and worked examples live in the
+**atelier** showcase repo (`~/dev/atelier`). All of them join the loop the
+same way through `Suggestor`. Extension crates depend on Converge
+contracts; Converge does not depend on them. See
+[[ADRs/ADR-008-extension-crate-boundaries]].
+
+There is no special side pipeline for any of them.
 
 ## Feature Notes
 
 Notable feature-gated paths in the current workspace:
 
-- `converge-pack/kernel-authority`
-  `converge-core` enables this so the engine can construct authoritative `Fact` values.
-- `converge-optimization/ffi`, `sat`, `full`
-  `full` pulls in OR-Tools FFI and requires the local OR-Tools build tree.
-- `converge-analytics/storage`, `excel`
-  Optional storage and Excel ingest integrations.
+- `converge-optimization/sat`, `full`
+  `sat` enables native Varisat-backed constraint programming; `full` enables
+  all native optimization features.
 - `converge-provider` backend features
   Enable concrete providers such as `openai`, `anthropic`, `gemini`, and others.
+
+Promotion authority is not feature-gated. Pack authors emit `ProposedFact`,
+context readers see `ContextFact`, and the engine owns promotion.
 
 ## Support Boundary
 

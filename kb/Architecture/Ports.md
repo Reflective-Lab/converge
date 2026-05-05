@@ -6,6 +6,12 @@ source: mixed
 
 Ports are the trait definitions that form the boundary of the [[Architecture/Hexagonal Architecture|hexagon]]. The core defines what it needs. Adapters provide it.
 
+> **Two layers, not one.** Ports come in two distinct levels: the
+> *Suggestor* layer (purposeful, agency-aware) and the *Backend / Capability*
+> layer (operational, capability-aware). A Suggestor uses Backends; the engine
+> sees Suggestors. They must not be collapsed.
+> See [[Architecture/Plug Boundary]] for the load-bearing rule.
+
 ## Authoring Ports (`converge-pack`)
 
 These are the public contract. Every port is a trait. Every trait is `Send + Sync`.
@@ -22,10 +28,15 @@ These are the public contract. Every port is a trait. Every trait is `Send + Syn
 
 ## Provider Routing Ports (`converge-provider-api`)
 
+`converge-provider-api` is the current provider contract crate name. ADR-007
+marks that name as transitional; the port ownership is stable, but the final
+crate naming should put the clean domain name on the contract.
+
 | Port | Purpose | Key Methods |
 |---|---|---|
 | `Backend` | Capability declaration | `name()`, `kind()`, `capabilities()`, `has_capability()` |
 | `BackendSelector` | Capability-based routing | `select(&BackendRequirements)` |
+| `ChatBackend` | Multi-turn LLM chat | `chat(ChatRequest)` |
 
 ### Backend Requirements
 
@@ -51,14 +62,16 @@ Selection is by capability, not by name ([[Concepts/Backends and Capabilities]])
 
 | Port | Purpose | Key Methods |
 |---|---|---|
-| `ChatBackend` | Multi-turn LLM chat | `chat(ChatRequest)` |
 | `DynChatBackend` | Runtime-polymorphic chat | `chat(ChatRequest)` |
 | `EmbedBackend` | Vector embeddings | `embed(EmbedRequest)` |
 | `WebSearchBackend` | Web search retrieval | `search_web(WebSearchRequest)` |
 | `VectorRecall` | Similarity search | Vector-indexed retrieval |
 | `Reranking` | Result re-ranking | Cross-encoder relevance scoring |
 
-These are implementation details, not stable external contracts.
+These are implementation details unless and until ADR-007 promotes them into a
+provider or tool contract. In particular, web fetch, feed fetch, and search
+DTOs need contract-owned types before external adapters can depend on them
+without pulling in implementation crates.
 
 ## Error Contract
 
@@ -74,4 +87,4 @@ BackendError {
 
 Retryability is declared, not guessed: `RateLimit`, `Unavailable`, `Network`, `Timeout` are retryable. `Authentication`, `InvalidRequest` are not.
 
-See also: [[Architecture/Providers]], [[Architecture/Hexagonal Architecture]]
+See also: [[Architecture/Plug Boundary]], [[Architecture/Providers]], [[Architecture/Hexagonal Architecture]]

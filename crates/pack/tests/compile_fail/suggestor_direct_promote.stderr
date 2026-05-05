@@ -1,7 +1,7 @@
 warning: unused import: `AgentEffect`
  --> tests/compile_fail/suggestor_direct_promote.rs:4:21
   |
-4 | use converge_pack::{AgentEffect, Context, ContextKey, Fact, Suggestor};
+4 | use converge_pack::{AgentEffect, Context, ContextFact, ContextKey, Suggestor};
   |                     ^^^^^^^^^^^
   |
   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
@@ -9,7 +9,7 @@ warning: unused import: `AgentEffect`
 error[E0195]: lifetime parameters or bounds on method `execute` do not match the trait declaration
   --> tests/compile_fail/suggestor_direct_promote.rs:22:21
    |
-22 |     async fn execute(&self, _ctx: &dyn Context) -> Fact {
+22 |     async fn execute(&self, _ctx: &dyn Context) -> ContextFact {
    |                     ^ lifetimes do not match method in trait
    |
   ::: src/agent.rs

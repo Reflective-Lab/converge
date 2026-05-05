@@ -76,7 +76,7 @@ jobs:
       - name: Extract baseline data
         if: always()
         run: |
-          python3 ops/scripts/extract-criterion-baseline.py || echo "⚠ Baseline extraction failed (benches may not have run)"
+          python3 scripts/extract-criterion-baseline.py || echo "⚠ Baseline extraction failed (benches may not have run)"
       - name: Check for regressions
         if: always()
         run: |

@@ -32,8 +32,8 @@ Not everything belongs in `converge-domain`.
 |---|---|
 | `converge-policy` | Policy and flow gates as Suggestors |
 | `converge-optimization` | Solver packs through `SolverSuggestor<P>` |
-| `converge-analytics` | Feature extraction, training, inference, monitoring suggestors |
-| `converge-knowledge` | Retrieval and persistence suggestors for the knowledge base |
+| `prism` (extension) | Feature extraction, training, inference, monitoring suggestors. Lives in `~/dev/extensions/prism`. |
+| `mnemos` (extension) | Retrieval and persistence suggestors for the knowledge base. Lives in `~/dev/extensions/mnemos`. |
 
 These are still plain `Suggestor`s. They register through the same engine API
 and run in the same convergence loop.

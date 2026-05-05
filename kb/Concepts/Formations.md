@@ -67,3 +67,13 @@ rails — see [[Architecture/Formation Building Review]].
 ## Code Pattern
 
 See [[Architecture/Formation Pattern]] for the actual embedding recipe.
+
+## The Composition Rule
+
+A Formation is a list of `SuggestorId`s plus a declared set of capability
+requirements — never adapter types, never vendor names. The runtime resolves
+capabilities against the Backend pool at activation. This is the Plug Boundary
+applied to formations: the Suggestor layer is what a Formation composes; the
+Backend layer is what those Suggestors consume.
+
+See [[Architecture/Plug Boundary]] for the load-bearing layering rule.

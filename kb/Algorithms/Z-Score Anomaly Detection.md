@@ -5,7 +5,7 @@ source: llm
 # Z-Score Anomaly Detection
 
 **Complexity:** O(n)
-**Converge module:** `converge_analytics::packs::anomaly_detection::ZScoreSolver`
+**Converge module:** `prism::packs::anomaly_detection::ZScoreSolver`
 **Reference:** Standard statistical method. Any introductory statistics textbook.
 
 ## Formula
@@ -77,7 +77,7 @@ This Diagnostic fact triggers downstream suggestors. A triage suggestor reads th
 ## Converge Validation
 
 ```
-cargo test -p converge-analytics --test reference_validation zscore
+cargo test -p prism --test reference_validation zscore
 ```
 
 Mean=19.0, stddev=27.0, 1 anomaly at index 9 confirmed.

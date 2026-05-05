@@ -5,7 +5,7 @@ source: llm
 # K-Means Clustering
 
 **Complexity:** O(n * k * d * I) where n = points, k = clusters, d = dimensions, I = iterations
-**Converge module:** `converge_analytics::packs::segmentation::KMeansSolver`
+**Converge module:** `prism::packs::segmentation::KMeansSolver`
 **Reference:** Lloyd, S. P. (1982). "Least squares quantization in PCM." *IEEE Transactions on Information Theory*, 28(2), 129-137.
 
 ## Algorithm Steps
@@ -98,7 +98,7 @@ The formation converges when all three strategies are proposed and the assignmen
 ## Converge Validation
 
 ```
-cargo test -p converge-analytics --test reference_validation kmeans
+cargo test -p prism --test reference_validation kmeans
 ```
 
 Correct cluster assignments and centroid positions confirmed.

@@ -5,7 +5,7 @@ source: llm
 # Cosine Similarity
 
 **Complexity:** O(n^2 * d) for all pairs, where n = items, d = dimensions
-**Converge module:** `converge_analytics::packs::similarity::PairwiseSimilaritySolver`
+**Converge module:** `prism::packs::similarity::PairwiseSimilaritySolver`
 **Reference:** Hand-computable from the definition.
 
 ## Formula
@@ -86,7 +86,7 @@ The cost matrix is then handed to `AssignmentSuggestor` (Hungarian) which finds 
 ## Converge Validation
 
 ```
-cargo test -p converge-analytics --test reference_validation cosine_similarity
+cargo test -p prism --test reference_validation cosine_similarity
 ```
 
 Both cases (1.0/0.0 and 0.7071) confirmed.

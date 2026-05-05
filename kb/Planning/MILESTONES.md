@@ -4,9 +4,47 @@
 
 > Architecture follow-up for crate boundaries: [[Planning/CRATE-BOUNDARY-REALIGNMENT]].
 
+## Current: v3.8 — Foundation Release
+**Target:** 2026-05 | **Epic:** E1
+
+**Theme:** Stop expanding surface area and make the long-lived contract boring,
+typed, secure, measurable, and well named.
+
+Canonical plan: [[Planning/v3.8 Foundation]].
+
+- [x] Seal finalized `AgentEffect` behind builder-only mutation.
+- [x] Resolve promotion authority so authoritative `Fact` construction is not
+      exposed through public Cargo feature unification.
+- [x] Harden feed/web fetch against SSRF, unsafe redirects, and unbounded body
+      or timeout limits.
+- [ ] Decide provider/tool extraction and apply the naming rule: contracts get
+      real names, implementations carry adapter qualifiers.
+- [ ] Classify providers, analytics, policy, and knowledge as foundation
+      contracts versus extension implementations.
+- [x] Extract knowledge to **mnemos** extension repo (2026-05-05).
+- [x] Extract analytics to **prism** extension repo (2026-05-05).
+- [ ] Extract provider implementations to **manifold** extension repo —
+      DEFERRED. The `llm/selection.rs` harness imports concrete vendor
+      backend types and is itself imported by
+      `crates/runtime/src/execution/packs.rs` (`ChatBackendSelectionConfig`).
+      Clean extraction needs the selection harness refactored to be
+      vendor-agnostic via dyn-dispatch first. Treat as a dedicated workstream.
+- [x] Extract Cedar policy engine to **arbiter** extension repo (2026-05-05).
+- [x] Move `crates/domain` and `examples/` to the **atelier** showcase repo
+      (`~/dev/atelier`) on 2026-05-05; single workspace, will also receive
+      contributions from organism and axiom over time.
+- [x] Relocate **ferrox** from `~/dev/work/ferrox` to `~/dev/extensions/ferrox`
+      to match the extension naming.
+- [x] Land ADR-006 authority boundary before Organism builds the Truth Document
+      to IntentPacket bridge.
+- [ ] Add release-grade security audit, coverage, performance profiling, and
+      soak commands.
+- [ ] Run KB sanity cleanup and lift the 5-8 core ideas that define the next
+      stable period.
+
 ## Moved: OR-Tools Native Solver Wiring → ferrox
 Moved: 2026-04-22 — C++ FFI dependency doesn't belong in a pure Rust platform crate.
-OR-Tools integration now lives in `~/dev/work/ferrox`. Converge pack solvers remain on the
+OR-Tools integration now lives in `~/dev/extensions/ferrox`. Converge pack solvers remain on the
 current backtracking/nearest-neighbor heuristics until ferrox exposes a Rust-native interface
 that Converge can consume without a C++ toolchain dependency.
 
@@ -55,7 +93,7 @@ that Converge can consume without a C++ toolchain dependency.
 
 - [ ] Classify every currently publishable crate as canonical, transitional, or private
 - [ ] Set `publish = false` on crates that are not deliberately supported external contracts
-- [ ] Split library concerns from server and CLI concerns in crates such as `converge-policy` and `converge-knowledge`
+- [ ] Split library concerns from server and CLI concerns in crates such as `converge-policy` (knowledge already extracted to mnemos)
 - [ ] Remove unnecessary provider coupling from library crates where trait boundaries already suffice
 - [ ] Add a CI guard that fails on accidental expansion of the publishable surface
 - [ ] Reconcile `Cargo.toml` manifests with `kb/Architecture/API Surfaces.md` and `kb/Architecture/Crate Map.md`

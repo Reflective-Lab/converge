@@ -87,7 +87,7 @@ These crates are not domain packs, but they still participate through
 
 - `converge-policy`
 - `converge-optimization`
-- `converge-analytics`
-- `converge-knowledge`
+- `prism` (extension repo — formerly `converge-analytics`)
+- `mnemos` (extension repo — formerly `converge-knowledge`)
 
 See also: [[Concepts/Domain Packs]], [[Architecture/Suggestor Contract]]

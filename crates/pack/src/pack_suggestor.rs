@@ -53,7 +53,7 @@ impl<P: Pack> Suggestor for PackSuggestor<P> {
             return AgentEffect::empty();
         };
 
-        let inputs: serde_json::Value = match serde_json::from_str(&seed_fact.content) {
+        let inputs: serde_json::Value = match serde_json::from_str(seed_fact.content()) {
             Ok(v) => v,
             Err(_) => return AgentEffect::empty(),
         };

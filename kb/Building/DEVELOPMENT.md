@@ -35,27 +35,21 @@ See [examples/README.md](examples/README.md) for the full list.
 ```
 crates/
 ├── pack/          # Canonical pack authoring contract
-├── provider-api/  # Canonical provider capability contract
+├── provider-api/  # Provider capability contract; transitional name
 ├── model/         # Curated semantic model surface
 ├── kernel/        # Curated in-process embedding API
 ├── protocol/      # Generated wire contract (converge.v1)
 ├── client/        # Canonical remote Rust SDK
 ├── core/          # Convergence engine (implementation)
-├── traits/        # Deprecated compatibility facade
 ├── provider/      # LLM backends (Anthropic, OpenAI, Gemini, Ollama, ...)
-├── domain/        # Domain packs (scheduling, routing, drafting, ...)
+├── domain/        # Built-in domain packs and governed flow logic
 ├── experience/    # Event-sourced audit store
 ├── knowledge/     # Vector knowledge base
-├── mcp/           # Model Context Protocol (client + server)
-├── optimization/  # Constraint solving (OR-Tools)
+├── optimization/  # Native optimization and constraint solving
 ├── storage/       # Object storage abstraction
 ├── policy/        # Cedar policy engine
-├── llm/           # Local LLM inference (Burn)
 ├── analytics/     # ML/analytics agents
-├── tool/          # Development toolchain (Gherkin, JTBD)
-├── runtime/       # HTTP/gRPC execution service
-├── remote/        # Compatibility CLI on top of client + protocol
-└── application/   # Reference distribution
+└── runtime/       # HTTP/gRPC execution service
 ```
 
 See [kb/Architecture/System Overview.md](kb/Architecture/System%20Overview.md) for the full
@@ -138,13 +132,13 @@ just jj-push
 
 ```bash
 # Audit dependencies for vulnerabilities and license compliance
-just deny
+just sec-deny
 
 # Advisories only (faster)
-just deny-advisories
+just sec-deny-advisories
 
-# Validate repository assurance docs and compliance declarations
-just compliance-check
+# Blocking release-candidate audit
+just security-audit
 ```
 
 ## Publishing to crates.io
@@ -162,11 +156,8 @@ Publishable crates in dependency order (see [ADR-001](kb/Architecture/ADRs/ADR-0
 9. `converge-storage`
 10. `converge-provider`
 11. `converge-experience`
-12. `converge-knowledge`
-13. `ortools-sys`
-14. `converge-optimization`
-15. `converge-domain`
-16. `converge-analytics`
+12. `converge-optimization`
+13. `converge-domain`
 
 ```bash
 # Validate readiness

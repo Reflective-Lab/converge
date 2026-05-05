@@ -17,7 +17,7 @@ thiserror.workspace = true
 tracing.workspace = true
 
 # Converge integration
-converge-pack = { workspace = true, features = ["kernel-authority"] }
+converge-pack.workspace = true
 converge-core.workspace = true
 converge-model.workspace = true
 async-trait.workspace = true

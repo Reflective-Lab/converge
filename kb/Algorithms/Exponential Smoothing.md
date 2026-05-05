@@ -5,7 +5,7 @@ source: llm
 # Simple Exponential Smoothing (SES)
 
 **Complexity:** O(n)
-**Converge module:** `converge_analytics::packs::forecasting::ExponentialSmoothingSolver`
+**Converge module:** `prism::packs::forecasting::ExponentialSmoothingSolver`
 **Reference:** Hyndman, R. J.; Athanasopoulos, G. (2021). *Forecasting: Principles and Practice*, 3rd ed. Chapter 8.
 
 ## Formula
@@ -81,7 +81,7 @@ Seeds ← "flow-request:logistics-week43"
 ## Converge Validation
 
 ```
-cargo test -p converge-analytics --test reference_validation exponential_smoothing
+cargo test -p prism --test reference_validation exponential_smoothing
 ```
 
 Forecast = 112.5 confirmed.

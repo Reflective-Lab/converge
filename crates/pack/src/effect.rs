@@ -16,10 +16,69 @@ use crate::fact::ProposedFact;
 #[derive(Debug, Default)]
 pub struct AgentEffect {
     /// New proposals to be validated by the engine.
-    pub proposals: Vec<ProposedFact>,
+    proposals: Vec<ProposedFact>,
+}
+
+/// Construction helper for incrementally assembling an [`AgentEffect`].
+///
+/// This keeps mutation in the authoring phase while preserving [`AgentEffect`]
+/// as the finished proposal output value returned by a suggestor.
+#[derive(Debug, Default)]
+pub struct AgentEffectBuilder {
+    proposals: Vec<ProposedFact>,
+}
+
+impl AgentEffectBuilder {
+    /// Creates an empty builder.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Adds one proposal and returns the builder for fluent construction.
+    #[must_use]
+    pub fn proposal(mut self, proposal: ProposedFact) -> Self {
+        self.proposals.push(proposal);
+        self
+    }
+
+    /// Adds many proposals and returns the builder for fluent construction.
+    #[must_use]
+    pub fn proposals(mut self, proposals: impl IntoIterator<Item = ProposedFact>) -> Self {
+        self.proposals.extend(proposals);
+        self
+    }
+
+    /// Appends one proposal to an existing mutable builder.
+    pub fn push(&mut self, proposal: ProposedFact) {
+        self.proposals.push(proposal);
+    }
+
+    /// Appends many proposals to an existing mutable builder.
+    pub fn extend(&mut self, proposals: impl IntoIterator<Item = ProposedFact>) {
+        self.proposals.extend(proposals);
+    }
+
+    /// Returns true if the builder has no proposals.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.proposals.is_empty()
+    }
+
+    /// Finalizes the builder into a suggestor effect.
+    #[must_use]
+    pub fn build(self) -> AgentEffect {
+        AgentEffect::with_proposals(self.proposals)
+    }
 }
 
 impl AgentEffect {
+    /// Starts building an effect incrementally.
+    #[must_use]
+    pub fn builder() -> AgentEffectBuilder {
+        AgentEffectBuilder::new()
+    }
+
     /// Creates an empty effect (no contributions).
     #[must_use]
     pub fn empty() -> Self {
@@ -38,6 +97,18 @@ impl AgentEffect {
     #[must_use]
     pub fn with_proposals(proposals: Vec<ProposedFact>) -> Self {
         Self { proposals }
+    }
+
+    /// Borrows the proposals carried by this effect.
+    #[must_use]
+    pub fn proposals(&self) -> &[ProposedFact] {
+        &self.proposals
+    }
+
+    /// Consumes the effect and returns its proposals.
+    #[must_use]
+    pub fn into_proposals(self) -> Vec<ProposedFact> {
+        self.proposals
     }
 
     /// Returns true if this effect contributes nothing.
@@ -68,15 +139,15 @@ mod tests {
     fn empty_effect_is_empty() {
         let e = AgentEffect::empty();
         assert!(e.is_empty());
-        assert!(e.proposals.is_empty());
+        assert!(e.proposals().is_empty());
     }
 
     #[test]
     fn with_proposal_single() {
         let e = AgentEffect::with_proposal(proposal(ContextKey::Seeds, "p1"));
         assert!(!e.is_empty());
-        assert_eq!(e.proposals.len(), 1);
-        assert_eq!(e.proposals[0].id, "p1");
+        assert_eq!(e.proposals().len(), 1);
+        assert_eq!(e.proposals()[0].id, "p1");
     }
 
     #[test]
@@ -85,7 +156,44 @@ mod tests {
             proposal(ContextKey::Seeds, "p1"),
             proposal(ContextKey::Hypotheses, "p2"),
         ]);
-        assert_eq!(e.proposals.len(), 2);
+        assert_eq!(e.proposals().len(), 2);
+    }
+
+    #[test]
+    fn builder_supports_fluent_proposal_construction() {
+        let e = AgentEffect::builder()
+            .proposal(proposal(ContextKey::Seeds, "p1"))
+            .proposal(proposal(ContextKey::Hypotheses, "p2"))
+            .build();
+
+        assert_eq!(e.proposals().len(), 2);
+        assert_eq!(e.proposals()[0].id, "p1");
+        assert_eq!(e.proposals()[1].id, "p2");
+    }
+
+    #[test]
+    fn builder_supports_mutable_incremental_construction() {
+        let mut builder = AgentEffect::builder();
+        assert!(builder.is_empty());
+
+        builder.push(proposal(ContextKey::Seeds, "p1"));
+        builder.extend([proposal(ContextKey::Hypotheses, "p2")]);
+
+        let e = builder.build();
+        assert_eq!(e.proposals().len(), 2);
+        assert_eq!(e.affected_keys().len(), 2);
+    }
+
+    #[test]
+    fn builder_supports_iterator_construction() {
+        let proposals = [
+            proposal(ContextKey::Seeds, "p1"),
+            proposal(ContextKey::Hypotheses, "p2"),
+        ];
+
+        let e = AgentEffect::builder().proposals(proposals).build();
+
+        assert_eq!(e.proposals().len(), 2);
     }
 
     #[test]

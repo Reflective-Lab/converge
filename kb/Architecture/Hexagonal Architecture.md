@@ -32,8 +32,8 @@ Converge follows hexagonal architecture (ports and adapters). The core engine ha
         │   RootIntent ─── Budget ─── Criteria                 │
         │                                                      │
         │            ── PORTS (traits) ──                       │
-        │   Backend · ChatBackend · EmbedBackend               │
-        │   BackendSelector · WebSearchBackend                 │
+        │   Suggestor · Invariant · Backend · ChatBackend      │
+        │   BackendSelector · StreamingCallback                │
         │   Invariant · Suggestor · ExperienceReplayer         │
         │   StreamingCallback                                  │
         │                                                      │
@@ -43,7 +43,7 @@ Converge follows hexagonal architecture (ports and adapters). The core engine ha
      │  LLM    │ │Storage │ │Search│ │Optimize│  │Analytics │
      │Providers│ │Adapters│ │      │ │        │  │          │
      └─────────┘ └────────┘ └──────┘ └────────┘  └──────────┘
-     Anthropic    SurrealDB   LanceDB  OR-Tools    Burn
+     Anthropic    SurrealDB   LanceDB  Native CP    Burn
      OpenAI       LanceDB     Qdrant              Polars
      Ollama       S3/GCS
      Gemini       Local FS
@@ -68,7 +68,14 @@ You author packs against `converge-pack`. Your suggestor receives a `&dyn Contex
 
 ### For Contributors
 
-The dependency arrow always points inward. `converge-pack` and `converge-provider-api` are the leaf contracts (zero internal deps). `converge-core` depends on `converge-pack`. `converge-provider` depends on `converge-pack` + `converge-provider-api`. If you find yourself importing an adapter from a contract crate, you've broken the architecture. See [[Architecture/Purity Rules]].
+The dependency arrow always points inward. `converge-pack` and
+`converge-provider-api` are the current leaf contracts (zero internal deps).
+`converge-provider-api` is transitional naming drift under ADR-007: contracts
+should get the real domain names and implementations should add adapter
+qualifiers. `converge-core` depends on `converge-pack`. `converge-provider`
+depends on `converge-pack` + `converge-provider-api`. If you find yourself
+importing an adapter from a contract crate, you've broken the architecture. See
+[[Architecture/Purity Rules]].
 
 ## Driving vs Driven
 
@@ -83,7 +90,7 @@ The dependency arrow always points inward. `converge-pack` and `converge-provide
 - LLM providers (cloud and local)
 - Experience/event stores (SurrealDB, LanceDB, S3)
 - Search engines (vector, full-text)
-- Optimization solvers (OR-Tools)
+- Optimization solvers (native algorithms and optional SAT)
 - Analytics engines (Burn, Polars)
 
 The core doesn't know which side is which. It only knows traits.

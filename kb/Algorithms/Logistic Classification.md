@@ -5,7 +5,7 @@ source: llm
 # Logistic Classification (Sigmoid)
 
 **Complexity:** O(n * d)
-**Converge module:** `converge_analytics::packs::classification::LogisticClassifier`
+**Converge module:** `prism::packs::classification::LogisticClassifier`
 **Reference:** Sigmoid function: standard ML classification. Verifiable against any scikit-learn implementation.
 
 ## Formula
@@ -98,7 +98,7 @@ The borderline case (0.54) gets a lower-confidence proposal — a human-in-the-l
 ## Converge Validation
 
 ```
-cargo test -p converge-analytics --test reference_validation logistic
+cargo test -p prism --test reference_validation logistic
 ```
 
 Both probabilities and classifications confirmed.

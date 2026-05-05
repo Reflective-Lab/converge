@@ -1,5 +1,22 @@
-error[E0599]: no function or associated item named `construct` found for struct `converge_core::Fact` in the current scope
- --> tests/compile_fail/fact_new_reexport_unavailable.rs:7:23
+error[E0599]: no function or associated item named `construct` found for struct `converge_core::ContextFact` in the current scope
+ --> tests/compile_fail/fact_new_reexport_unavailable.rs:7:30
   |
-7 |     let _fact = Fact::construct(ContextKey::Seeds, "test-id", "test-content");
-  |                       ^^^^^^^^^ function or associated item not found in `converge_core::Fact`
+7 |     let _fact = ContextFact::construct(ContextKey::Seeds, "test-id", "test-content");
+  |                              ^^^^^^^^^ function or associated item not found in `converge_core::ContextFact`
+  |
+note: if you're trying to build a new `converge_core::ContextFact`, consider using `converge_core::ContextFact::new_projection` which returns `converge_core::ContextFact`
+ --> $WORKSPACE/crates/pack/src/fact.rs
+  |
+  | /     pub fn new_projection(
+  | |         key: ContextKey,
+  | |         id: impl Into<FactId>,
+  | |         content: impl Into<String>,
+  | |         promotion_record: FactPromotionRecord,
+  | |         created_at: impl Into<Timestamp>,
+  | |     ) -> Self {
+  | |_____________^
+help: there is a method `content` with a similar name, but with different arguments
+ --> $WORKSPACE/crates/pack/src/fact.rs
+  |
+  |     pub fn content(&self) -> &str {
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

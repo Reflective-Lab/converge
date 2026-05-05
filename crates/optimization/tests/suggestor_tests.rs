@@ -45,7 +45,7 @@ async fn assignment_taha_3x3_optimal_cost_9() {
     let result = engine.run(ctx).await.unwrap();
     let facts = result.context.get(ContextKey::Strategies);
     assert_eq!(facts.len(), 1);
-    let plan: AssignmentPlan = serde_json::from_str(&facts[0].content).unwrap();
+    let plan: AssignmentPlan = serde_json::from_str(facts[0].content()).unwrap();
     assert_eq!(plan.total_cost, 9);
     assert_eq!(plan.assignments.len(), 3);
     assert!((plan.utilization - 1.0).abs() < f64::EPSILON);
@@ -131,7 +131,7 @@ async fn portfolio_clrs_5_items_optimal_value_26() {
     let result = engine.run(ctx).await.unwrap();
     let facts = result.context.get(ContextKey::Strategies);
     assert_eq!(facts.len(), 1);
-    let sel: PortfolioSelection = serde_json::from_str(&facts[0].content).unwrap();
+    let sel: PortfolioSelection = serde_json::from_str(facts[0].content()).unwrap();
     assert_eq!(sel.total_value, 26);
     assert!(sel.total_weight <= 20);
 }
@@ -219,7 +219,7 @@ async fn schedule_three_sequential_tasks_makespan_16() {
     let result = engine.run(ctx).await.unwrap();
     let facts = result.context.get(ContextKey::Strategies);
     assert_eq!(facts.len(), 1);
-    let plan: SchedulePlan = serde_json::from_str(&facts[0].content).unwrap();
+    let plan: SchedulePlan = serde_json::from_str(facts[0].content()).unwrap();
     assert_eq!(plan.makespan, 16);
     assert_eq!(plan.scheduled.len(), 3);
 }
@@ -329,7 +329,7 @@ async fn flow_cheap_path_first_demand_3_cost_6() {
     let result = engine.run(ctx).await.unwrap();
     let facts = result.context.get(ContextKey::Strategies);
     assert_eq!(facts.len(), 1);
-    let plan: FlowPlan = serde_json::from_str(&facts[0].content).unwrap();
+    let plan: FlowPlan = serde_json::from_str(facts[0].content()).unwrap();
     assert_eq!(plan.total_flow, 3);
     assert_eq!(plan.total_cost, 6);
     assert!((plan.fulfillment - 1.0).abs() < f64::EPSILON);
@@ -346,7 +346,7 @@ async fn flow_overflow_to_expensive_path_demand_4_cost_16() {
 
     let result = engine.run(ctx).await.unwrap();
     let plan: FlowPlan =
-        serde_json::from_str(&result.context.get(ContextKey::Strategies)[0].content).unwrap();
+        serde_json::from_str(result.context.get(ContextKey::Strategies)[0].content()).unwrap();
     assert_eq!(plan.total_flow, 4);
     assert_eq!(plan.total_cost, 16);
 }

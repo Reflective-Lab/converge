@@ -21,7 +21,6 @@ thiserror.workspace = true
 [features]
 default = []
 strum = ["dep:strum"]
-kernel-authority = []
 
 [dev-dependencies]
 proptest.workspace = true

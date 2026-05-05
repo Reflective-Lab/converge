@@ -34,8 +34,8 @@ The goal is simple: **make the right thing easy to use**.
 Rules:
 
 - `converge-core` is the constitutional engine crate. It is not the default next-layer import.
-- `converge-provider-api` is the canonical capability contract for chat and routing vocabulary.
-- `converge-provider` is the implementation layer for ready-made adapters, env helpers, and provider registry behavior.
+- `converge-provider-api` is the current canonical capability contract for chat and routing vocabulary, but its name is transitional under ADR-007.
+- `converge-provider` is the current implementation layer for ready-made adapters, env helpers, and provider registry behavior.
 
 ## Organism Layer
 
@@ -102,5 +102,5 @@ needs.
 
 - [[Architecture/API Surfaces]]
 - [[Architecture/Dependency Rules]]
-- [[Architecture/ADRs/ADR-007-capability-contract-ownership]]
+- [[Architecture/ADRs/ADR-007-provider-tool-contracts]]
 - [[Planning/LAYER-API-HARDENING]]

@@ -75,10 +75,10 @@ impl Suggestor for AssignmentSuggestor {
 
     fn accepts(&self, ctx: &dyn Context) -> bool {
         ctx.get(ContextKey::Seeds).iter().any(|f| {
-            f.id.starts_with(REQUEST_PREFIX)
-                && match serde_json::from_str::<AssignmentRequest>(&f.content) {
-                    Ok(_) => !plan_exists(ctx, req_id(&f.id)),
-                    Err(_) => !error_exists(ctx, &f.id),
+            f.id().as_str().starts_with(REQUEST_PREFIX)
+                && match serde_json::from_str::<AssignmentRequest>(f.content()) {
+                    Ok(_) => !plan_exists(ctx, req_id(f.id().as_str())),
+                    Err(_) => !error_exists(ctx, f.id().as_str()),
                 }
         })
     }
@@ -89,11 +89,11 @@ impl Suggestor for AssignmentSuggestor {
         for fact in ctx
             .get(ContextKey::Seeds)
             .iter()
-            .filter(|f| f.id.starts_with(REQUEST_PREFIX))
+            .filter(|f| f.id().as_str().starts_with(REQUEST_PREFIX))
         {
-            match serde_json::from_str::<AssignmentRequest>(&fact.content) {
+            match serde_json::from_str::<AssignmentRequest>(fact.content()) {
                 Ok(req) => {
-                    if plan_exists(ctx, req_id(&fact.id)) {
+                    if plan_exists(ctx, req_id(fact.id().as_str())) {
                         continue;
                     }
                     let plan = solve(&req);
@@ -108,18 +108,18 @@ impl Suggestor for AssignmentSuggestor {
                     );
                 }
                 Err(e) => {
-                    if error_exists(ctx, &fact.id) {
+                    if error_exists(ctx, fact.id().as_str()) {
                         continue;
                     }
                     let diag = serde_json::json!({
-                        "request_fact_id": fact.id,
+                        "request_fact_id": fact.id(),
                         "message": "malformed assignment request",
                         "error": e.to_string(),
                     });
                     proposals.push(
                         ProposedFact::new(
                             ContextKey::Diagnostic,
-                            format!("{}{}", ERROR_PREFIX, fact.id),
+                            format!("{}{}", ERROR_PREFIX, fact.id()),
                             diag.to_string(),
                             self.name(),
                         )
@@ -197,12 +197,16 @@ fn req_id(fact_id: &str) -> &str {
 
 fn plan_exists(ctx: &dyn Context, request_id: &str) -> bool {
     let id = format!("{}{}", PLAN_PREFIX, request_id);
-    ctx.get(ContextKey::Strategies).iter().any(|f| f.id == id)
+    ctx.get(ContextKey::Strategies)
+        .iter()
+        .any(|f| f.id().as_str() == id)
 }
 
 fn error_exists(ctx: &dyn Context, fact_id: &str) -> bool {
     let id = format!("{}{}", ERROR_PREFIX, fact_id);
-    ctx.get(ContextKey::Diagnostic).iter().any(|f| f.id == id)
+    ctx.get(ContextKey::Diagnostic)
+        .iter()
+        .any(|f| f.id().as_str() == id)
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -240,7 +244,7 @@ mod tests {
         let result = engine.run(ctx).await.unwrap();
         let plans = result.context.get(ContextKey::Strategies);
         assert_eq!(plans.len(), 1);
-        let plan: AssignmentPlan = serde_json::from_str(&plans[0].content).unwrap();
+        let plan: AssignmentPlan = serde_json::from_str(plans[0].content()).unwrap();
         assert_eq!(plan.total_cost, 9, "optimal cost = 9");
         assert_eq!(plan.assignments.len(), 3);
         assert!((plan.utilization - 1.0).abs() < f64::EPSILON);

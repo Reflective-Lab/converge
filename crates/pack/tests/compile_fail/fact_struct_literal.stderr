@@ -9,12 +9,25 @@ help: call `Into::into` on this expression to convert `String` into `FactId`
 9 |         id: "test-id".to_string().into(),
   |                                  +++++++
 
-error: cannot construct `Fact` with struct literal syntax due to private fields
- --> tests/compile_fail/fact_struct_literal.rs:7:17
-  |
-7 |     let _fact = Fact {
-  |                 ^^^^
-8 |         key: ContextKey::Seeds,
-  |         ---------------------- private field
-  |
-  = note: ...and other private fields `promotion_record` and `created_at` that were not provided
+error: cannot construct `ContextFact` with struct literal syntax due to private fields
+  --> tests/compile_fail/fact_struct_literal.rs:7:17
+   |
+ 7 |     let _fact = ContextFact {
+   |                 ^^^^^^^^^^^
+ 8 |         key: ContextKey::Seeds,
+   |         ---------------------- private field
+ 9 |         id: "test-id".to_string(),
+   |         ------------------------- private field
+10 |         content: "test-content".to_string(),
+   |         ----------------------------------- private field
+   |
+   = note: ...and other private fields `promotion_record` and `created_at` that were not provided
+help: you might have meant to use the `new_projection` associated function
+   |
+ 7 -     let _fact = ContextFact {
+ 8 -         key: ContextKey::Seeds,
+ 9 -         id: "test-id".to_string(),
+10 -         content: "test-content".to_string(),
+11 -     };
+ 7 +     let _fact = ContextFact::new_projection(_, _, _, _, _);
+   |
