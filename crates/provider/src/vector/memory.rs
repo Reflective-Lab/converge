@@ -20,7 +20,8 @@ use super::cosine_similarity;
 /// - Small workloads (< 100k vectors)
 /// - Ephemeral vector caches
 ///
-/// For production workloads, use `LanceStore` or `QdrantStore`.
+/// For production workloads, use a persistent vector-store adapter from
+/// `manifold` or another extension.
 ///
 /// # Thread Safety
 ///

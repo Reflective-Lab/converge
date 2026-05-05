@@ -5,6 +5,13 @@ source: mixed
 
 > **Usage**: Run weekly or before releases to identify vulnerable dependencies.
 
+> **Note (2026-05-05):** The crate inventory below references crates that
+> have moved to extension repos: `converge-knowledge` → **mnemos**,
+> `converge-analytics` → **prism**, `converge-policy` → **arbiter**,
+> `converge-domain` → **atelier**. Each extension repo has its own
+> dependency surface and should be scanned independently. See
+> [[Architecture/Extension Topology]].
+
 ---
 
 ## Mission

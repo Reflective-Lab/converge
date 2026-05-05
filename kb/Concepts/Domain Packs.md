@@ -7,7 +7,10 @@ source: mixed
 Domain packs are **one** way of organizing built-in suggestors. They are not
 the only way to participate in convergence.
 
-## Built-In Packs from `converge-domain`
+## Built-In Packs (atelier showcase, formerly `converge-domain`)
+
+These packs moved to the **atelier** showcase repo (`~/dev/atelier`) on
+2026-05-05. They are exemplars, not foundation contracts.
 
 | Pack | Purpose | Representative Suggestors |
 |---|---|---|
@@ -26,14 +29,14 @@ engine.register_suggestor_in_pack("delivery", RiskAssessorAgent);
 
 ## Other Suggestor Families in the Same Loop
 
-Not everything belongs in `converge-domain`.
+Not every Suggestor belongs in an atelier domain pack.
 
 | Crate | Role in the loop |
 |---|---|
-| `converge-policy` | Policy and flow gates as Suggestors |
+| `arbiter` (extension, formerly `converge-policy`) | Policy and flow gates as Suggestors. Lives in `~/dev/extensions/arbiter`. |
 | `converge-optimization` | Solver packs through `SolverSuggestor<P>` |
-| `prism` (extension) | Feature extraction, training, inference, monitoring suggestors. Lives in `~/dev/extensions/prism`. |
-| `mnemos` (extension) | Retrieval and persistence suggestors for the knowledge base. Lives in `~/dev/extensions/mnemos`. |
+| `prism` (extension, formerly `converge-analytics`) | Feature extraction, training, inference, monitoring suggestors. Lives in `~/dev/extensions/prism`. |
+| `mnemos` (extension, formerly `converge-knowledge`) | Retrieval and persistence suggestors for the knowledge base. Lives in `~/dev/extensions/mnemos`. |
 
 These are still plain `Suggestor`s. They register through the same engine API
 and run in the same convergence loop.

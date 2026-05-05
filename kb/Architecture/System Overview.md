@@ -58,7 +58,6 @@ crates/
   client/         canonical remote Rust SDK
   core/           engine implementation and promotion path
   provider/       provider adapters
-  domain/         built-in domain packs and governed flow logic
   optimization/   solver packs and Suggestor adapter
   experience/     experience event storage
   runtime/        HTTP and gRPC runtime
@@ -109,25 +108,28 @@ Key properties:
 
 ## Built-In Packs vs Other Suggestors
 
-`converge-domain` currently owns the built-in packs:
+The previously built-in packs (`trust`, `money`, `delivery`, `data_metrics`)
+moved to the **atelier** showcase repo (`~/dev/atelier`, formerly
+`converge-domain`) on 2026-05-05. The foundation no longer ships built-in
+domain packs.
 
-- `trust`
-- `money`
-- `delivery`
-- `data_metrics`
-
-Other internal crates still participate in the same loop through `Suggestor`:
+Internal crates that still participate in the convergence loop through
+`Suggestor`:
 
 - `converge-optimization`
 
 Knowledge suggestors live in the **mnemos** extension repo
-(`~/dev/extensions/mnemos`). Analytics suggestors live in the **prism**
-extension repo (`~/dev/extensions/prism`). Policy suggestors and the Cedar
-engine live in the **arbiter** extension repo
-(`~/dev/extensions/arbiter`). Domain packs and worked examples live in the
-**atelier** showcase repo (`~/dev/atelier`). All of them join the loop the
-same way through `Suggestor`. Extension crates depend on Converge
+(`~/dev/extensions/mnemos`, formerly `converge-knowledge`). Analytics
+suggestors live in the **prism** extension repo
+(`~/dev/extensions/prism`, formerly `converge-analytics`). Policy suggestors
+and the Cedar engine live in the **arbiter** extension repo
+(`~/dev/extensions/arbiter`, formerly `converge-policy`). Source-specific
+connector ports such as LinkedIn live in **embassy**
+(`~/dev/extensions/embassy`); generic provider adapters belong in
+**manifold**. All of them join the loop the same way through `Suggestor` when
+they contribute to convergence. Extension crates depend on Converge
 contracts; Converge does not depend on them. See
+[[Architecture/Extension Topology]] and
 [[ADRs/ADR-008-extension-crate-boundaries]].
 
 There is no special side pipeline for any of them.

@@ -7,12 +7,14 @@ All major entities in the Converge knowledge base, organized by category.
 
 ## Architecture
 
+- [Core Ideas](Architecture/Core%20Ideas.md) — durable principles for the next stable period
 - [System Overview](Architecture/System%20Overview.md)
 - [API Surfaces](Architecture/API%20Surfaces.md)
 - [Golden Path Matrix](Architecture/Golden%20Path%20Matrix.md)
 - [Crate Map](Architecture/Crate%20Map.md)
 - [Dependency Rules](Architecture/Dependency%20Rules.md)
 - [Engine Execution Model](Architecture/Engine%20Execution%20Model.md)
+- [Extension Topology](Architecture/Extension%20Topology.md) — canonical extension homes and the Embassy vs Manifold split
 - [Formation Building Review](Architecture/Formation%20Building%20Review.md)
 - [Hexagonal Architecture](Architecture/Hexagonal%20Architecture.md)
 - [Known Drift](Architecture/Known%20Drift.md)
@@ -21,6 +23,7 @@ All major entities in the Converge knowledge base, organized by category.
 - [Providers](Architecture/Providers.md)
 - [Purity Rules](Architecture/Purity%20Rules.md)
 - [Security Review Plan](Architecture/Security%20Review%20Plan.md)
+- [Storage Boundary](Architecture/Storage%20Boundary.md) — storage ports, database adapters, and Runway assembly
 - [Transport Protocols](Architecture/Transport%20Protocols.md)
 - [Type Protocol](Architecture/Type%20Protocol.md)
 
@@ -33,6 +36,7 @@ All major entities in the Converge knowledge base, organized by category.
 - [ADR-005: Type Ownership Boundaries](Architecture/ADRs/ADR-005-type-ownership-boundaries.md)
 - [ADR-006: Promotion Authority Boundary](Architecture/ADRs/ADR-006-promotion-authority-boundary.md)
 - [ADR-007: Provider and Tool Contract Names](Architecture/ADRs/ADR-007-provider-tool-contracts.md)
+- [ADR-008: Extension Crate Boundaries](Architecture/ADRs/ADR-008-extension-crate-boundaries.md)
 
 ## Building
 

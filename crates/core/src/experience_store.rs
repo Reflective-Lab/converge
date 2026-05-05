@@ -366,8 +366,8 @@ pub struct TimeRange {
 /// append-only event storage and query access for governance, debugging,
 /// and downstream analytics.
 ///
-/// See [`converge_experience`] for concrete implementations:
-/// `InMemoryExperienceStore`, `SurrealDbExperienceStore`, `LanceDbExperienceStore`.
+/// See [`converge_experience`] for in-memory test support and `manifold` for
+/// database-backed adapters.
 pub trait ExperienceStore: Send + Sync {
     /// Append a single event.
     fn append_event(&self, event: ExperienceEventEnvelope) -> ExperienceStoreResult<()>;

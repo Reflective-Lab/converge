@@ -25,6 +25,13 @@ You must be strict, practical, and evidence-driven.
 
 ## 1) Context: Layering Model (non-negotiable)
 
+> **Note (2026-05-05):** Several crates referenced below have moved to
+> extension repos: `converge-knowledge` → **mnemos**,
+> `converge-analytics` → **prism**, `converge-policy` → **arbiter**,
+> `converge-domain` (packs and examples) → **atelier**. The layering
+> principles still apply; the canonical crate map is
+> [[Architecture/Extension Topology]] and [[Architecture/Crate Map]].
+
 Use this as the reference architecture (flag violations explicitly):
 
 ### converge-core

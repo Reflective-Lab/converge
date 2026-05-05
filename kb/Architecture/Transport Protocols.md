@@ -80,7 +80,7 @@ Highest latency. Use only when both gRPC and SSE are blocked.
 
 ## WebSocket
 
-WebSocket is used internally for SurrealDB connections (`surrealdb::engine::remote::ws::Ws`), not as a client-facing transport. The gRPC bidirectional stream provides the same full-duplex semantics with better tooling.
+WebSocket is used by the SurrealDB adapter (`surrealdb::engine::remote::ws::Ws`), not as a client-facing Converge transport. The gRPC bidirectional stream provides the same full-duplex semantics with better tooling.
 
 ## Capability Negotiation
 

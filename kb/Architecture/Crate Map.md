@@ -37,14 +37,19 @@ versions, dependency versions, lints, and build profiles.
   contracts and adapter-qualified names to implementations.
 - `converge-core` owns the engine implementation and promotion path.
 - `converge-kernel` owns the embedding surface above `converge-core`.
-- `converge-domain` owns the built-in domain packs.
+- Domain packs and worked examples live in **atelier** (`~/dev/atelier`).
 - `converge-optimization` still joins the convergence loop by implementing `Suggestor`.
 - Knowledge suggestors live in **mnemos** (`~/dev/extensions/mnemos`).
 - Analytics suggestors live in **prism** (`~/dev/extensions/prism`).
 - Policy suggestors and Cedar engine live in **arbiter** (`~/dev/extensions/arbiter`).
-- Domain packs and worked examples live in **atelier** (`~/dev/atelier`).
+- Source-specific connector ports live in **embassy** (`~/dev/extensions/embassy`).
 - Provider vendor adapters will live in **manifold** (deferred — see [[Planning/v3.8 Foundation]]).
-- See [[ADRs/ADR-008-extension-crate-boundaries]] and [[Architecture/Plug Boundary]].
+- Storage contracts stay in the foundation; concrete database and object-store
+  adapters are extraction candidates. Runway assembles and operates them.
+- See [[Architecture/Extension Topology]],
+  [[Architecture/Storage Boundary]],
+  [[ADRs/ADR-008-extension-crate-boundaries]], and
+  [[Architecture/Plug Boundary]].
 
 ## Publish Reality
 

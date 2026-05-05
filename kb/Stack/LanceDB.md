@@ -4,7 +4,9 @@ source: mixed
 ---
 # LanceDB
 
-LanceDB serves two roles: experience store and vector search engine. Feature-gated behind `lancedb`.
+LanceDB serves two roles: experience store and vector search engine. The v3.8
+boundary moves the concrete LanceDB adapters out of the foundation and into
+extensions.
 
 ## Experience Store
 
@@ -42,4 +44,13 @@ Arrow columnar format (via `arrow-schema`, `arrow-array`). RecordBatch-based. Ef
 - Arrow-native — interops with Polars
 - Append-optimized — fits the append-only truth model ([[Philosophy/Nine Axioms#3. Append-Only Truth|Axiom 3]])
 
-See also: [[Stack/SurrealDB]], [[Stack/Polars]], [[Concepts/Experience and Recall]]
+## v3.8 Boundary
+
+LanceDB belongs with the capability it serves:
+
+- Knowledge recall and memory live in `mnemos`.
+- Generic vector search can live in `manifold` if it is exposed as an
+  interchangeable capability.
+- Runtime persistence is wired by the host runtime.
+
+See also: [[Architecture/Storage Boundary]], [[Stack/SurrealDB]], [[Stack/Polars]], [[Concepts/Experience and Recall]]

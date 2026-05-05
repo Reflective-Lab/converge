@@ -133,7 +133,6 @@ Current command set:
 
 ```bash
 cargo check --workspace
-cargo test -p converge-policy
 cargo test -p converge-runtime --lib
 cargo test -p converge-pack --test compile_fail
 cargo test -p converge-core --test compile_fail --test truth_pipeline --test negative --test properties

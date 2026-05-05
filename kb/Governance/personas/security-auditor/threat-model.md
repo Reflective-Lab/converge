@@ -5,6 +5,13 @@ source: mixed
 
 > **Usage**: Run quarterly or before major releases to maintain threat model currency.
 
+> **Note (2026-05-05):** Several crates referenced in the diagrams below have
+> moved to extension repos: `converge-knowledge` → **mnemos**,
+> `converge-analytics` → **prism**, `converge-policy` → **arbiter**,
+> `converge-domain` (packs and examples) → **atelier**. The threat model
+> categories still apply; the canonical crate map is
+> [[Architecture/Crate Map]] and [[Architecture/Extension Topology]].
+
 ---
 
 ## Mission

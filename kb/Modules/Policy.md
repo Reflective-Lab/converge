@@ -4,8 +4,16 @@ source: mixed
 ---
 # Policy Module
 
-`converge-policy` provides Cedar-based authorization as Suggestors. Policy
-enforcement happens INSIDE the convergence loop, not as an external gate.
+> **Extracted to extension on 2026-05-05.** The Cedar policy engine, policy
+> suggestors, and ed25519 delegation tokens now live in the **arbiter**
+> extension (`~/dev/extensions/arbiter`, formerly `converge-policy`).
+> Foundation `converge-pack` keeps the gate trait and authorization
+> vocabulary; concrete Cedar wiring lives in arbiter. See
+> [[Architecture/Extension Topology]].
+
+The arbiter extension provides Cedar-based authorization as Suggestors.
+Policy enforcement happens INSIDE the convergence loop, not as an external
+gate.
 
 ## Available Suggestors (3)
 
@@ -18,7 +26,7 @@ enforcement happens INSIDE the convergence loop, not as an external gate.
 ## Usage in a Formation
 
 ```rust
-use converge_policy::PolicyGateSuggestor;
+use arbiter::PolicyGateSuggestor;
 
 let policy = PolicyGateSuggestor::new(cedar_policy_set);
 engine.register_suggestor(policy);

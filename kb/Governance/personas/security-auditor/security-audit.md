@@ -5,6 +5,13 @@ source: mixed
 
 > **Usage**: Run monthly to assess security posture of the codebase.
 
+> **Note (2026-05-05):** The component table below references crates that
+> have moved to extension repos: `converge-knowledge` → **mnemos**,
+> `converge-analytics` → **prism**, `converge-policy` → **arbiter**,
+> `converge-domain` → **atelier**. Audit those repos separately; the
+> canonical crate map is [[Architecture/Crate Map]] and
+> [[Architecture/Extension Topology]].
+
 ---
 
 ## Mission

@@ -8,7 +8,11 @@ Polars is used for data analytics and metrics computation within the LLM and ana
 
 ## Role in Converge
 
-The `converge-llm` bridge module converts analysis dataframes into state injections for agent prompts.
+Polars is the foundation of the **prism** extension's analytics pipelines
+(`~/dev/extensions/prism`, formerly `converge-analytics`). Foundation no
+longer ships Polars-backed pack code. The runway `converge-llm` bridge
+module converts analysis dataframes into state injections for agent
+prompts.
 
 ```rust
 PolarsMetrics → MetricsBuilder → to_state_injection()

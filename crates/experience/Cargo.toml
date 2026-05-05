@@ -6,25 +6,14 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Experience store implementations for the Converge platform"
+description = "Experience store test support and observer bridge for the Converge platform"
 keywords = ["converge", "ledger", "experience", "audit", "event-sourcing"]
-categories = ["database"]
+categories = ["development-tools::testing"]
 
 [dependencies]
 converge-core.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-surrealdb = { workspace = true, optional = true }
-lancedb = { workspace = true, optional = true }
-arrow-array = { workspace = true, optional = true }
-arrow-schema = { workspace = true, optional = true }
-tokio = { workspace = true, optional = true }
-tokio-stream = { workspace = true, optional = true }
-
-[features]
-default = []
-surrealdb = ["dep:surrealdb", "dep:tokio"]
-lancedb = ["dep:lancedb", "dep:arrow-array", "dep:arrow-schema", "dep:tokio", "dep:tokio-stream"]
 
 [dev-dependencies]
 proptest.workspace = true

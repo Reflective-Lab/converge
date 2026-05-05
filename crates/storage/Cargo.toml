@@ -6,26 +6,15 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Object storage abstraction for Converge — local, S3, GCS"
-keywords = ["storage", "s3", "gcs", "object-store", "converge"]
+description = "Object storage contract types for Converge"
+keywords = ["storage", "object-store", "converge"]
 categories = ["filesystem"]
 
 [dependencies]
 object_store.workspace = true
-tokio.workspace = true
-futures.workspace = true
 serde.workspace = true
 toml.workspace = true
 thiserror.workspace = true
-tracing.workspace = true
-url.workspace = true
-
-[features]
-default = ["local"]
-local = ["object_store/fs"]
-s3 = ["object_store/aws"]
-gcs = ["object_store/gcp"]
-all-backends = ["local", "s3", "gcs"]
 
 [dev-dependencies]
 tempfile.workspace = true

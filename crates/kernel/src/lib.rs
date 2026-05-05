@@ -78,8 +78,16 @@ pub use converge_core::{
     UserExperienceEvent, UserExperienceEventEnvelope,
 };
 pub use converge_pack::{
-    AgentEffect, Context, ContextFact, ContextKey, ProposedFact, Suggestor, ValidationError,
+    AgentEffect, ArtifactId, Context, ContextFact, ContextKey, ProposedFact, Suggestor,
+    ValidationError,
 };
+
+// Experience-side surface (artifact lifecycle, replay traces).
+// These let downstream consumers (Organism learning, Helms, etc.) reference
+// governed-artifact and replay vocabulary without importing converge_core.
+pub use converge_core::experience_store::ArtifactKind;
+pub use converge_core::governed_artifact::LifecycleEvent;
+pub use converge_core::kernel_boundary::{LocalReplayTrace, RemoteReplayTrace, ReplayTrace};
 
 #[cfg(test)]
 mod tests {

@@ -11,7 +11,7 @@
 //! # Available Stores
 //!
 //! - [`InMemoryVectorStore`] - In-memory store for testing and small workloads
-//! - `LanceStore` - `LanceDB` embedded store (requires `lancedb` feature)
+//! - `LanceStore` - `LanceDB` embedded store in the `manifold` extension
 //! - `QdrantStore` - Qdrant distributed store (requires `qdrant` feature)
 //!
 //! # Example
@@ -36,12 +36,6 @@
 mod memory;
 
 pub use memory::InMemoryVectorStore;
-
-#[cfg(feature = "lancedb")]
-mod lancedb;
-
-#[cfg(feature = "lancedb")]
-pub use lancedb::LanceStore;
 
 #[cfg(feature = "qdrant")]
 mod qdrant;

@@ -4,6 +4,11 @@ source: mixed
 ---
 # Analytics Packs
 
+> **Moved to prism extension on 2026-05-05.** Analytics packs now live in the
+> **prism** extension repo (`~/dev/extensions/prism`, formerly
+> `converge-analytics`). The file paths below describe the prism workspace
+> layout. See [[Architecture/Extension Topology]].
+
 Prepackaged Suggestors for common data analytics and machine learning problems.
 Each pack implements the `Pack` trait from `converge-optimization` and participates
 in formations via `SolverSuggestor<P>`.
@@ -192,6 +197,8 @@ Each pack defines invariants that the gate evaluates before promoting results:
 
 ## File Layout
 
+In the prism extension (`~/dev/extensions/prism`):
+
 ```
 crates/analytics/src/
 ├── packs/
@@ -211,8 +218,8 @@ crates/analytics/src/
 
 ## Example & Tests
 
-- **Example:** `examples/analytics-packs/` — runs all 9 packs, one at a time
-- **Integration tests:** `crates/analytics/tests/pack_integration.rs` — 9 tests,
+- **Example:** `examples/analytics-packs/` (in prism) — runs all 9 packs, one at a time
+- **Integration tests:** `crates/analytics/tests/pack_integration.rs` (in prism) — 9 tests,
   each proving a pack converges and produces correct output
 
 See also: [[Formation Pattern]], [[Suggestor Contract]], [[API Surfaces]]

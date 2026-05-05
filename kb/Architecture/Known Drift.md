@@ -54,6 +54,18 @@ keeps the policy gate trait and authorization vocabulary; Cedar engine
 wiring, policy suggestors, and ed25519 delegation token verification live
 in arbiter.
 
+### Connector Port Topology — CLOSED
+Source-specific connector ports live in **embassy**
+(`~/dev/extensions/embassy`). LinkedIn is the first example: if the semantic
+contract must name the external party, it belongs in embassy. Generic
+capability adapters still belong in manifold. See
+[[Architecture/Extension Topology]].
+
+Organism's LinkedIn intelligence module was removed during the extraction.
+Remaining LinkedIn mentions in social URL parsing and domain-pack registry
+entries are different layers and should not be folded into the port migration
+until their own connector or pack work is scoped.
+
 ### Merge Order Documentation (Axiom 6) — CLOSED
 Live docs now match the implementation: core merges in registration order by `SuggestorId`.
 

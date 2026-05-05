@@ -146,8 +146,8 @@ Event-sourced audit ledger with three backends:
 | Backend | Feature | Notes |
 |---|---|---|
 | In-memory | (always on) | Property-tested, input validation |
-| SurrealDB | `surrealdb` | WebSocket, namespaced |
-| LanceDB | `lancedb` | Vector-indexed, Arrow schema, similarity search |
+| SurrealDB | `manifold` | WebSocket, namespaced |
+| LanceDB | `manifold` / `mnemos` | Vector-indexed, Arrow schema, similarity search |
 
 ## Object Storage
 

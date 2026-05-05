@@ -5,6 +5,12 @@ source: mixed
 
 > **Usage**: Run monthly to assess test coverage health and identify gaps.
 
+> **Note (2026-05-05):** The crate table below lists crates that have moved
+> to extension repos: `converge-knowledge` → **mnemos**, `converge-analytics`
+> → **prism**, `converge-policy` → **arbiter**, `converge-domain` →
+> **atelier**. Each extension repo runs its own coverage. See
+> [[Architecture/Extension Topology]].
+
 ---
 
 ## Mission

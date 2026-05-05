@@ -64,9 +64,10 @@ All accessed through `converge_optimization::suggestor::SolverSuggestor::new(Pac
 
 ---
 
-## Analytics — ML Pipeline Agents (11 Suggestors)
+## Analytics — ML Pipeline Agents (11 Suggestors — extracted to prism)
 
-Direct `Suggestor` implementations in `converge_analytics`.
+Direct `Suggestor` implementations now in the **prism** extension crate
+(`~/dev/extensions/prism`). Extracted from `converge-analytics` on 2026-05-05.
 
 | Agent | Purpose | Watches | Writes |
 |-------|---------|---------|--------|
@@ -82,9 +83,11 @@ Direct `Suggestor` implementations in `converge_analytics`.
 | DeploymentAgent | Deploys validated models | Evaluations, Strategies | Signals, Strategies |
 | SampleInferenceAgent | Demo inference for validation | Signals, Strategies | Strategies |
 
-## Analytics — Data Packs (9 Suggestors via `SolverSuggestor<Pack>`)
+## Analytics — Data Packs (9 Suggestors via `SolverSuggestor<Pack>` — extracted to prism)
 
-Accessed through `converge_optimization::suggestor::SolverSuggestor::new(AnalyticsPack, input_key, output_key)`.
+Live in the **prism** extension (`~/dev/extensions/prism`, formerly
+`converge-analytics`). Accessed through
+`converge_optimization::suggestor::SolverSuggestor::new(AnalyticsPack, input_key, output_key)`.
 
 | Pack | Purpose | Default: Input → Output |
 |------|---------|-------------------------|
@@ -100,9 +103,10 @@ Accessed through `converge_optimization::suggestor::SolverSuggestor::new(Analyti
 
 ---
 
-## Policy Gates (8 Suggestors)
+## Policy Gates (8 Suggestors — extracted to arbiter)
 
-Direct `Suggestor` implementations in `converge_policy`.
+Direct `Suggestor` implementations now in the **arbiter** extension crate
+(`~/dev/extensions/arbiter`). Extracted from `converge-policy` on 2026-05-05.
 
 | Gate | Purpose | Watches | Writes |
 |------|---------|---------|--------|
@@ -129,9 +133,10 @@ Direct `Suggestor` implementations now in the **mnemos** extension crate
 
 ---
 
-## Domain Packs (47 Suggestors)
+## Domain Packs (47 Suggestors — moved to atelier)
 
-Registered via `register_suggestor_in_pack()` in `converge_domain`.
+Registered via `register_suggestor_in_pack()` in the **atelier** showcase
+repo (`~/dev/atelier`). Moved from `converge-domain` on 2026-05-05.
 
 ### Trust (8)
 

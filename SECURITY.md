@@ -80,6 +80,12 @@ Release candidates should also pass the dependency audit gate:
 just security-audit
 ```
 
+`just security-audit` runs `cargo audit` and `cargo deny check` and
+writes machine-readable + human reports to `target/security/`
+(`audit.json`, `deny.txt`, `summary.txt`). See
+[kb/Building/Release Commands.md](kb/Building/Release%20Commands.md) for
+the full release-gate command set.
+
 ## Shared Responsibility
 
 This repository provides a secure development baseline and reference runtime

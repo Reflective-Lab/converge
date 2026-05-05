@@ -32,10 +32,6 @@ base64.workspace = true
 sha2.workspace = true
 hex.workspace = true
 zeroize = { workspace = true, optional = true }
-lancedb = { workspace = true, optional = true }
-arrow-array = { workspace = true, optional = true }
-arrow-schema = { workspace = true, optional = true }
-futures = { workspace = true, optional = true }
 
 # Async runtime used by async backend implementations
 tokio.workspace = true
@@ -73,9 +69,8 @@ feed = ["_http", "dep:quick-xml"]
 registry = []
 
 # Stores
-lancedb = ["dep:lancedb", "dep:arrow-array", "dep:arrow-schema", "dep:futures"]
 qdrant = []
-all-vector = ["lancedb", "qdrant"]
+all-vector = ["qdrant"]
 
 # Security hardening (zeroize secrets on drop)
 secure = ["dep:zeroize"]

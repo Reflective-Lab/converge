@@ -14,11 +14,25 @@ Providers are the adapter implementations that plug into [[Architecture/Ports|po
 
 > **v3.8 location.** Concrete provider implementations move out of the
 > Converge foundation into extension repositories (mnemos for knowledge,
-> prism for analytics, manifold for LLM/search/fetch/feed adapters).
+> prism for analytics, manifold for generic LLM/search/fetch/feed adapters,
+> embassy for source-specific connector ports such as LinkedIn).
 > The capability *contracts* stay in the foundation; the *implementations*
 > live in extensions. See
+> [[Architecture/Extension Topology]],
 > [[ADRs/ADR-008-extension-crate-boundaries]] and
 > [[Planning/v3.8 Foundation]].
+
+> **Embassy split.** A connector is not automatically a generic provider. If
+> the API has to name the external party in its semantic types, such as
+> `LinkedInProfile`, it belongs in `embassy`. If the caller should ask for a
+> vendor-neutral capability such as web search, feed retrieval, or LLM chat, it
+> belongs in `manifold`.
+
+> **Storage split.** Storage is still a port. Runtime persistence stores are
+> wired by the host runtime; capability stores/search backends are selected
+> through provider routing. Reusable database adapters live in extensions.
+> Runway operates databases but does not own the reusable contract. See
+> [[Architecture/Storage Boundary]].
 
 ## Chat Backends
 
@@ -55,9 +69,10 @@ Search providers are intentionally separate from chat:
 
 `Brave` and `Tavily` are not `ChatBackend`s. They are search tools that can be composed with chat backends at the workflow layer.
 
-### Local Inference (converge-llm)
+### Local Inference (runway `converge-llm`)
 
-Local inference remains a separate kernel/runtime path:
+Local inference lives in runway (`~/dev/work/runway/crates/llm`) — it is
+the local-inference distribution component, not a foundation contract:
 
 | Engine | Framework | GPU Support | Use Case |
 |---|---|---|---|
@@ -68,15 +83,19 @@ Local inference remains a separate kernel/runtime path:
 
 ## Storage Providers
 
-All implement `ExperienceStore`:
+Storage providers implement runtime persistence ports or capability backends.
+The implementation crates should live outside the foundation unless they are
+small deterministic test support.
 
 | Provider | Protocol | Best For |
 |---|---|---|
-| `SurrealDbExperienceStore` | WebSocket | Multi-tenant, relational + document queries |
-| `LanceDbExperienceStore` | Local/remote | Vector-indexed retrieval, similarity search |
+| SurrealDB adapter | WebSocket | Multi-tenant, relational + document queries |
+| LanceDB adapter | Local/remote | Vector-indexed retrieval, similarity search |
 | `InMemoryExperienceStore` | None | Development, testing |
 
-Object stores (S3, GCS, local filesystem) for artifact persistence.
+Object stores (S3, GCS, local filesystem) are artifact persistence adapters;
+their SDKs and credentials should not define the Converge foundation release
+cadence.
 
 ## Search & Embedding Providers
 
@@ -113,4 +132,4 @@ BackendRequirements::vector_search()      // Similarity recall
 
 Providers produce **observations, never decisions** ([[Philosophy/Nine Axioms#4. Agents Suggest, Engine Decides|Axiom 4]]). A `ChatBackend` response or `WebSearchBackend` result becomes input to an agent or workflow. The engine's promotion gate decides what becomes truth. Providers have no governance authority.
 
-See also: [[Architecture/Plug Boundary]], [[Architecture/Ports]], [[Architecture/Hexagonal Architecture]], [[Concepts/Backends and Capabilities]]
+See also: [[Architecture/Plug Boundary]], [[Architecture/Ports]], [[Architecture/Storage Boundary]], [[Architecture/Hexagonal Architecture]], [[Concepts/Backends and Capabilities]]

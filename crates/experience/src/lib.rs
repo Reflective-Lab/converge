@@ -1,23 +1,14 @@
 // Copyright 2024-2026 Reflective Labs
 // SPDX-License-Identifier: MIT
 
-//! # Experience Store Implementations
+//! # Experience Store Support
 //!
-//! This crate provides concrete implementations of the `ExperienceStore` trait.
-//! The first implementation is in-memory for tests and local development.
+//! This crate provides in-memory test support and observer plumbing for the
+//! `ExperienceStore` contract. External database adapters live in extension
+//! crates such as `manifold`.
 
 mod validate;
 
-#[cfg(feature = "surrealdb")]
-mod surrealdb_store;
-
-#[cfg(feature = "lancedb")]
-mod lancedb_store;
-
-#[cfg(feature = "lancedb")]
-pub use lancedb_store::{LanceDbConfig, LanceDbExperienceStore, SimilarEvent, VectorEvent};
-#[cfg(feature = "surrealdb")]
-pub use surrealdb_store::{SurrealDbConfig, SurrealDbExperienceStore};
 pub use validate::{validate_envelope, validate_user_envelope};
 
 use std::collections::BTreeMap;
@@ -207,8 +198,7 @@ use converge_core::ExperienceEventObserver;
 /// Pass this to `Engine::set_event_observer()` to capture all convergence
 /// events into a store for audit, debugging, and downstream consumption.
 ///
-/// Works with `InMemoryExperienceStore`, `SurrealDbExperienceStore`,
-/// `LanceDbExperienceStore`, or any custom `ExperienceStore` impl.
+/// Works with `InMemoryExperienceStore` or any custom `ExperienceStore` impl.
 pub struct StoreObserver<S: ExperienceStore = InMemoryExperienceStore> {
     store: Arc<S>,
     next_id: AtomicU64,

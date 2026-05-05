@@ -46,6 +46,7 @@ Knowledge base for the Converge platform — a correctness-first, context-driven
 
 ## Architecture
 
+- [[Architecture/Core Ideas]] — durable principles for the next stable period
 - [[Architecture/System Overview]] — system design, dependency graph, and runtime shape
 - [[Architecture/Layer Contract]] — Converge's authority boundary in the Axiom -> Organism -> Converge stack
 - [[Architecture/Hexagonal Architecture]] — ports and adapters, the big picture
@@ -53,8 +54,10 @@ Knowledge base for the Converge platform — a correctness-first, context-driven
 - [[Architecture/Golden Path Matrix]] — the first dependency each next layer should reach for
 - [[Architecture/ADRs/README]] — binding architecture decisions
 - [[Architecture/Known Drift]] — where code diverges from axioms (and how we fix it)
+- [[Architecture/Extension Topology]] — canonical homes for extension ports, providers, and adapters
 - [[Architecture/Ports]] — trait definitions (the boundary)
 - [[Architecture/Providers]] — adapter implementations (the outside world)
+- [[Architecture/Storage Boundary]] — storage ports, database adapters, and Runway assembly
 - [[Architecture/Formation Building Review]] — Organism-layer guidance for formation compilers, tournaments, learning, and bounded exploration
 - [[Architecture/Transport Protocols]] — gRPC, SSE, REST, WebSocket
 - [[Architecture/Lean Packaging and Embedding]] — runtime shell variants and embedding baseline

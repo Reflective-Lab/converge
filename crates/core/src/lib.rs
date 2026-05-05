@@ -175,8 +175,7 @@
 //! | `fastembed` | Embeddings | Model execution |
 //! | `polars` | DataFrames | Heavy computation |
 //! | `arrow` | Columnar data | Analytics dependency |
-//! | `lancedb` | Vector DB | Persistence |
-//! | `surrealdb` | Database | Persistence |
+//! | `manifold` | Database/object-store adapters | Persistence |
 //! | `postgres` | Database | Persistence |
 //! | `rand` | Randomness | Non-determinism |
 //! | `rayon` | Parallelism | Execution strategy |

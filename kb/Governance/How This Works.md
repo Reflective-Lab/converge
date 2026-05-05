@@ -95,7 +95,7 @@ The runtime's governance ([[Concepts/Invariants]], [[Concepts/HITL Gates]], [[Co
 For consequential business transitions, the runtime now uses a default gated path:
 
 - flow code projects state into a neutral `FlowGateInput`
-- `converge-policy` evaluates Cedar through `FlowGateAuthorizer`
+- the **arbiter** extension (formerly `converge-policy`) evaluates Cedar through `FlowGateAuthorizer`
 - the result is `promote`, `reject`, or `escalate`
 - HITL approval resumes the same flow instead of bypassing governance
 

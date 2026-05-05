@@ -108,6 +108,10 @@ both layers:
   search, fetch, feed providers. Surfaces capabilities, not purpose. Higher-
   level provider-selection Suggestors may stay in the foundation if they are
   domain-neutral.
+- **embassy** — owns source-specific connector ports and adapters where the
+  external party's identity is part of the semantic contract. A LinkedIn
+  connector may expose `LinkedInProfile`; a generic web-search backend should
+  not.
 
 If any extension finds itself wanting to expose a type that crosses both
 layers, that is a design smell — split the extension along the layer line.
@@ -122,6 +126,7 @@ layers, that is a design smell — split the extension along the layer line.
   engine should hold (the `kernel-authority` mistake).
 
 See also: [[Architecture/Hexagonal Architecture]], [[Architecture/Ports]],
+[[Architecture/Extension Topology]],
 [[Concepts/Formations]], [[Concepts/Backends and Capabilities]],
 [[ADRs/ADR-006-promotion-authority-boundary]],
 [[ADRs/ADR-007-provider-tool-contracts]],

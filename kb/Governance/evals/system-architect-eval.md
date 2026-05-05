@@ -44,6 +44,13 @@ Perform a rapid architecture check of the Converge codebase. Verify layer bounda
 
 ## Criteria Checklist
 
+> **Note (2026-05-05):** The layer rows below reference crates that have
+> moved to extension repos: `converge-knowledge` → **mnemos**,
+> `converge-analytics` → **prism**, `converge-policy` → **arbiter**,
+> `converge-domain` → **atelier**. The boundary rules still apply; see
+> [[Architecture/Extension Topology]] and [[Architecture/Crate Map]] for the
+> current map.
+
 ### 1. Layer Boundaries (Critical)
 
 Check each layer for violations:

@@ -4,7 +4,12 @@ source: mixed
 ---
 # Analytics Module
 
-`converge-analytics` provides ML pipeline stages as Suggestors. Each stage
+> **Extracted to extension on 2026-05-05.** Analytics now lives in the
+> **prism** extension (`~/dev/extensions/prism`, formerly `converge-analytics`).
+> Foundation no longer ships Polars/Burn ML pipelines or analytics packs. See
+> [[Architecture/Extension Topology]].
+
+The prism extension provides ML pipeline stages as Suggestors. Each stage
 participates in the convergence loop, enabling data-driven decision making
 alongside reasoning agents.
 
@@ -28,7 +33,7 @@ alongside reasoning agents.
 ## Usage in a Formation
 
 ```rust
-use converge_analytics::engine::FeatureAgent;
+use prism::engine::FeatureAgent;
 
 engine.register_suggestor(FeatureAgent::new(feature_config));
 engine.register_suggestor(InferenceAgent::new(model_path));

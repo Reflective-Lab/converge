@@ -2,7 +2,7 @@
 
 > See `~/dev/work/EPIC.md` for the coarse-grained outcomes these milestones advance.
 
-> Architecture follow-up for crate boundaries: [[Planning/CRATE-BOUNDARY-REALIGNMENT]].
+> Architecture follow-up for crate boundaries: [[Architecture/Extension Topology]] and [[Planning/v3.8 Foundation]].
 
 ## Current: v3.8 — Foundation Release
 **Target:** 2026-05 | **Epic:** E1
@@ -19,8 +19,9 @@ Canonical plan: [[Planning/v3.8 Foundation]].
       or timeout limits.
 - [ ] Decide provider/tool extraction and apply the naming rule: contracts get
       real names, implementations carry adapter qualifiers.
-- [ ] Classify providers, analytics, policy, and knowledge as foundation
-      contracts versus extension implementations.
+- [x] Classify providers, analytics, policy, knowledge, connectors, and solvers
+      as foundation contracts versus extension implementations
+      ([[Architecture/Extension Topology]], 2026-05-05).
 - [x] Extract knowledge to **mnemos** extension repo (2026-05-05).
 - [x] Extract analytics to **prism** extension repo (2026-05-05).
 - [ ] Extract provider implementations to **manifold** extension repo —
@@ -35,6 +36,12 @@ Canonical plan: [[Planning/v3.8 Foundation]].
       contributions from organism and axiom over time.
 - [x] Relocate **ferrox** from `~/dev/work/ferrox` to `~/dev/extensions/ferrox`
       to match the extension naming.
+- [x] Establish **embassy** as the extension home for source-specific connector
+      ports such as LinkedIn (`~/dev/extensions/embassy`, 2026-05-05).
+- [x] Decide storage boundary: storage is a port; runtime persistence is
+      host-wired; reusable database adapters live in extensions; Runway owns
+      operations and deployment assembly ([[Architecture/Storage Boundary]],
+      2026-05-05).
 - [x] Land ADR-006 authority boundary before Organism builds the Truth Document
       to IntentPacket bridge.
 - [ ] Add release-grade security audit, coverage, performance profiling, and

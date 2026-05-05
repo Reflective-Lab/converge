@@ -62,9 +62,10 @@ let result = engine.run(ctx).await?;
 implements it can participate. A single formation can include:
 
 - Optimization solvers from `converge-optimization`
-- Policy gates from `converge-policy`
-- Analytics agents from `converge-analytics`
-- Domain pack agents from `converge-domain`
+- Policy gates from the **arbiter** extension (formerly `converge-policy`)
+- Analytics agents from the **prism** extension (formerly `converge-analytics`)
+- Knowledge / recall agents from the **mnemos** extension (formerly `converge-knowledge`)
+- Domain pack agents from the **atelier** showcase (formerly `converge-domain`)
 - Custom LLM agents from `organism-planning`
 - Simulation agents from `organism-simulation`
 - Application-specific agents from `helms`
@@ -158,8 +159,9 @@ The Engine's fixed-point detection handles the coordination.
 
 ## Analytics Pack Compositions
 
-Analytics packs (`converge-analytics`) are designed to compose with optimization
-and policy packs in formations. Common patterns:
+Analytics packs (the **prism** extension, `~/dev/extensions/prism`, formerly
+`converge-analytics`) are designed to compose with optimization and policy
+packs in formations. Common patterns:
 
 | Formation | Packs composed | Use case |
 |---|---|---|

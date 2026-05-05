@@ -4,7 +4,10 @@ source: mixed
 ---
 # Burn
 
-Burn is the neural network framework used for local LLM inference in `converge-llm`.
+Burn is the neural network framework used for local LLM inference. The
+`converge-llm` crate was relocated from the foundation to **runway**
+(`~/dev/work/runway/crates/llm`) as the local inference distribution
+component.
 
 ## Role in Converge
 
@@ -36,6 +39,6 @@ Powers the local inference engines — [[Architecture/Providers|providers]] that
 
 ## GPU Server
 
-For remote GPU inference, `converge-llm` includes a gRPC server that hosts Burn engines. Clients connect via `GrpcBackend`. This keeps GPU hardware separate from the convergence engine.
+For remote GPU inference, runway's `converge-llm` includes a gRPC server that hosts Burn engines. Clients connect via `GrpcBackend`. This keeps GPU hardware separate from the convergence engine.
 
 See also: [[Stack/Ollama]], [[Stack/vLLM]], [[Architecture/Providers]]

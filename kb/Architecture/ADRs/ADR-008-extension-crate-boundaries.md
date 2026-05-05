@@ -10,7 +10,8 @@ source: codex
 
 The Converge workspace currently contains several crates that are valuable but
 not foundational: provider adapters, analytics/ML suggestors, Cedar policy
-implementation, knowledge stores, search/fetch/feed integrations, and other
+implementation, knowledge stores, search/fetch/feed integrations,
+source-specific connector ports, storage implementations, and other
 service-facing code.
 
 These crates increase compile time, pull in volatile dependency trees, and
@@ -20,8 +21,8 @@ contracts, while extension crates implement those contracts.
 
 ## Decision
 
-Converge 3.8 treats provider, analytics, policy, and knowledge implementation
-crates as extension candidates.
+Converge 3.8 treats provider, analytics, policy, knowledge, connector, storage,
+and solver implementation crates as extension candidates.
 
 The foundation repository keeps:
 
@@ -40,6 +41,11 @@ Extension crates or external repositories own:
 - Cedar or other policy engine implementations
 - knowledge stores, vector indexes, feed/search/fetch integrations, and
   ingestion adapters
+- source-specific connector ports and adapters when the external party's
+  identity is part of the contract, such as LinkedIn
+- concrete storage adapters, database SDKs, object-store SDKs, credentials,
+  migrations, and service-specific persistence wiring
+- native solver integrations and heavy optimization implementation packages
 
 The dependency rule is one-way: extensions depend on Converge contracts;
 Converge contracts do not depend on extensions.
@@ -54,6 +60,16 @@ Converge contracts do not depend on extensions.
   policy engine wiring moves out.
 - **Knowledge:** recall/evidence vocabulary may stay; vector stores, agentic
   memory, ingestion, and retrieval implementations move out.
+- **Connectors:** universal capability contracts stay in the foundation.
+  Source-specific connector ports live in `embassy` when names such as
+  `LinkedInProfile` are part of the semantic contract. Generic fetch/search
+  providers live in `manifold`.
+- **Storage:** storage contracts are ports. Runtime persistence stores are
+  wired by the host runtime. Database and object-store implementations move out
+  to extension adapters or product/deployment assembly. Runway operates heavy
+  databases; it does not own the reusable Rust contract.
+- **Optimization:** generic solver and suggestor contracts may stay; heavy
+  solver integrations live in `ferrox`.
 
 ## Consequences
 
@@ -66,4 +82,5 @@ Converge contracts do not depend on extensions.
   in the foundation repository.
 
 See also: [[Planning/v3.8 Foundation]], [[Architecture/API Surfaces]],
+[[Architecture/Extension Topology]], [[Architecture/Storage Boundary]],
 [[Architecture/ADRs/ADR-007-provider-tool-contracts]].

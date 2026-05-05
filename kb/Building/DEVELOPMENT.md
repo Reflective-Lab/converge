@@ -128,6 +128,22 @@ just jj-squash
 just jj-push
 ```
 
+## Release Gates
+
+The four release-grade commands for v3.8 are documented in
+[Release Commands](Release%20Commands.md):
+
+```bash
+just security-audit         # supply-chain audit → target/security/
+just coverage               # workspace coverage → target/coverage/
+just performance-profile    # criterion baseline → target/criterion/, kb/Baselines/
+just soak                   # bounded soak run  → target/soak/
+```
+
+Each command is idempotent, runs from a fresh checkout, and writes
+archivable artefacts for the release tag. See the reference doc for
+output layout, baseline policy, and CI bindings.
+
 ## Supply Chain Security
 
 ```bash
@@ -137,7 +153,7 @@ just sec-deny
 # Advisories only (faster)
 just sec-deny-advisories
 
-# Blocking release-candidate audit
+# Blocking release-candidate audit (full report → target/security/)
 just security-audit
 ```
 
