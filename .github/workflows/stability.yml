@@ -163,22 +163,40 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@v1
 
   # ── Optional: Live provider endpoints (if secrets configured) ─────────
+  # Note: GitHub does not allow `secrets` in a job-level `if:`. The guard
+  # is moved to a first step so the workflow validates and the job
+  # gracefully no-ops when the API key is not present.
 
   live-endpoints:
     name: Live Provider Tests
     runs-on: ubuntu-latest
-    if: ${{ secrets.OPENAI_API_KEY != '' }}
     steps:
+      - name: Check for live-endpoint secrets
+        id: gate
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -z "${OPENAI_API_KEY}" ]; then
+            echo "live=false" >> "$GITHUB_OUTPUT"
+            echo "OPENAI_API_KEY not set; skipping live-endpoint tests."
+          else
+            echo "live=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/checkout@v5
+        if: steps.gate.outputs.live == 'true'
       - name: Install protoc
+        if: steps.gate.outputs.live == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler
       - uses: dtolnay/rust-toolchain@stable
+        if: steps.gate.outputs.live == 'true'
         with:
           toolchain: ${{ env.RUST_VERSION }}
       - uses: Swatinem/rust-cache@v2
+        if: steps.gate.outputs.live == 'true'
       - name: Run live endpoint tests
+        if: steps.gate.outputs.live == 'true'
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
