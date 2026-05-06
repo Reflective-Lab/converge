@@ -65,13 +65,17 @@ they can use a storage implementation.
 - If it only defines typed request/response values and traits, it can be a
   foundation contract.
 
-## Current Drift
+## Extraction Status
 
-`converge-experience` still carries SurrealDB and LanceDB implementations behind
-feature flags. `converge-storage` still carries object-store implementations
-behind feature flags. That was useful while the workspace was monolithic, but
-it no longer matches the v3.8 foundation rule. Extract implementations; keep
-contracts.
+Closed for v3.8. `converge-storage` now carries object-storage contract types
+only. `converge-experience` carries in-memory test support and observer
+plumbing only. Concrete local/S3/GCS object-store builders, SurrealDB and
+LanceDB experience stores, and the generic LanceDB vector adapter live in
+`~/dev/extensions/manifold`.
+
+Prism consumes only the `converge-storage` object-store contract; it no longer
+depends on foundation-owned local storage builders. Runway remains the place to
+operate databases and wire credentials, not the reusable Rust adapter home.
 
 See also: [[Architecture/Extension Topology]], [[Architecture/Ports]],
 [[Architecture/Providers]], [[Planning/v3.8 Foundation]].

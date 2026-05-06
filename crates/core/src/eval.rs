@@ -54,7 +54,7 @@
 //!                 outcome: EvalOutcome::Pass,
 //!                 score: 1.0,
 //!                 rationale: format!("Found {} distinct strategies", distinct_count),
-//!                 fact_ids: strategies.iter().map(|s| s.id.clone()).collect(),
+//!                 fact_ids: strategies.iter().map(|s| s.id().clone()).collect(),
 //!                 metadata: None,
 //!             }
 //!         } else {
@@ -63,7 +63,7 @@
 //!                 outcome: EvalOutcome::Fail,
 //!                 score: distinct_count as f64 / 3.0,
 //!                 rationale: format!("Only {} strategies found, need 3", distinct_count),
-//!                 fact_ids: strategies.iter().map(|s| s.id.clone()).collect(),
+//!                 fact_ids: strategies.iter().map(|s| s.id().clone()).collect(),
 //!                 metadata: None,
 //!             }
 //!         }

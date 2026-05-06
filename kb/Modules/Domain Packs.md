@@ -73,8 +73,8 @@ Representative suggestors:
 ## Registration Pattern
 
 ```rust
-use converge_domain::packs::delivery::RiskAssessorAgent;
-use converge_domain::packs::trust::AuditWriterAgent;
+use atelier_domain::packs::delivery::RiskAssessorAgent;
+use atelier_domain::packs::trust::AuditWriterAgent;
 
 engine.register_suggestor_in_pack("delivery", RiskAssessorAgent);
 engine.register_suggestor_in_pack("trust", AuditWriterAgent);

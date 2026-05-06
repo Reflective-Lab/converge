@@ -111,7 +111,20 @@
       "Bash(cp -R /Users/kpernyer/dev/work/converge/crates/analytics/tests /Users/kpernyer/dev/extensions/prism/crates/prism/tests)",
       "Bash(git init *)",
       "Bash([ -f \"/Users/kpernyer/dev/work/converge/examples/$ex/Cargo.toml\" ])",
-      "Bash(cp -R /Users/kpernyer/dev/work/converge/examples/__TRACKED_VAR__ /Users/kpernyer/dev/atelier/crates/example-__TRACKED_VAR__)"
+      "Bash(cp -R /Users/kpernyer/dev/work/converge/examples/__TRACKED_VAR__ /Users/kpernyer/dev/atelier/crates/example-__TRACKED_VAR__)",
+      "Bash([ -f \"$repo/Cargo.toml\" ])",
+      "Bash(just --list)",
+      "Bash(gh auth *)",
+      "Bash(awk '{print $1}')",
+      "Bash(gh repo *)",
+      "Bash(python3 *)",
+      "Bash(command -v cargo-audit)",
+      "Bash(command -v cargo-deny)",
+      "Bash(command -v cargo-llvm-cov)",
+      "Bash(just security-audit *)",
+      "Bash(echo \"---EXIT: $?\")",
+      "Bash(echo \"---EXIT $?\")",
+      "Bash(just coverage *)"
     ]
   }
 }

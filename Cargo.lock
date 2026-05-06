@@ -654,7 +654,7 @@ checksum = "c2459377285ad874054d797f3ccebf984978aa39129f6eafde5cdc8315b612f8"
 
 [[package]]
 name = "converge-client"
-version = "3.8.0"
+version = "3.8.1"
 dependencies = [
  "converge-protocol",
  "thiserror 2.0.18",
@@ -663,7 +663,7 @@ dependencies = [
 
 [[package]]
 name = "converge-core"
-version = "3.8.0"
+version = "3.8.1"
 dependencies = [
  "async-trait",
  "converge-pack",
@@ -688,7 +688,7 @@ dependencies = [
 
 [[package]]
 name = "converge-experience"
-version = "3.8.0"
+version = "3.8.1"
 dependencies = [
  "converge-core",
  "proptest",
@@ -699,7 +699,7 @@ dependencies = [
 
 [[package]]
 name = "converge-kernel"
-version = "3.8.0"
+version = "3.8.1"
 dependencies = [
  "converge-core",
  "converge-model",
@@ -712,7 +712,7 @@ dependencies = [
 
 [[package]]
 name = "converge-model"
-version = "3.8.0"
+version = "3.8.1"
 dependencies = [
  "converge-core",
  "converge-pack",
@@ -725,7 +725,7 @@ dependencies = [
 
 [[package]]
 name = "converge-optimization"
-version = "3.8.0"
+version = "3.8.1"
 dependencies = [
  "approx",
  "async-trait",
@@ -753,7 +753,7 @@ dependencies = [
 
 [[package]]
 name = "converge-pack"
-version = "3.8.0"
+version = "3.8.1"
 dependencies = [
  "async-trait",
  "hex",
@@ -767,7 +767,7 @@ dependencies = [
 
 [[package]]
 name = "converge-protocol"
-version = "3.8.0"
+version = "3.8.1"
 dependencies = [
  "prost 0.13.5",
  "prost-types 0.13.5",
@@ -777,7 +777,7 @@ dependencies = [
 
 [[package]]
 name = "converge-provider"
-version = "3.8.0"
+version = "3.8.1"
 dependencies = [
  "async-trait",
  "base64",
@@ -809,7 +809,7 @@ dependencies = [
 
 [[package]]
 name = "converge-provider-api"
-version = "3.8.0"
+version = "3.8.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -819,7 +819,7 @@ dependencies = [
 
 [[package]]
 name = "converge-runtime"
-version = "3.8.0"
+version = "3.8.1"
 dependencies = [
  "anyhow",
  "async-nats",
@@ -879,7 +879,7 @@ dependencies = [
 
 [[package]]
 name = "converge-storage"
-version = "3.8.0"
+version = "3.8.1"
 dependencies = [
  "object_store",
  "serde",

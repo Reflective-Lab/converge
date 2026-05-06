@@ -58,6 +58,10 @@ Knowledge base for the Converge platform — a correctness-first, context-driven
 - [[Architecture/Ports]] — trait definitions (the boundary)
 - [[Architecture/Providers]] — adapter implementations (the outside world)
 - [[Architecture/Storage Boundary]] — storage ports, database adapters, and Runway assembly
+- [[Architecture/Suggestor Catalog]] — every Suggestor that ships today, grouped by pack
+- [[Architecture/Suggestor Contract]] — the trait every contributor implements
+- [[Architecture/Formation Pattern]] — composition rules for Suggestors and capabilities
+- [[Architecture/Embedding Quick Start]] — fastest path to embed the kernel
 - [[Architecture/Formation Building Review]] — Organism-layer guidance for formation compilers, tournaments, learning, and bounded exploration
 - [[Architecture/Transport Protocols]] — gRPC, SSE, REST, WebSocket
 - [[Architecture/Lean Packaging and Embedding]] — runtime shell variants and embedding baseline
@@ -105,9 +109,14 @@ Knowledge base for the Converge platform — a correctness-first, context-driven
 
 - [[Planning/v3.8 Foundation]] — foundation release principles, boundaries, and gates
 - [[Planning/MILESTONES]] — scheduled delivery across releases
+- [[Planning/Authority Slice]] — ADR-006 implementation slice (read-only ContextFact, sealed promotion)
 - [[Planning/LAYER-API-HARDENING]] — move up the stack one layer at a time
 - [[Planning/Formation Business Strategy]] — business framing, go-to-market wedges, and trust-building autonomy
 - [[Planning/Organism Formation Compiler Milestone Draft]] — Organism compiler milestone with vendor selection as first proof wedge
+
+## History
+
+- [[History/CHANGELOG]] — release notes
 
 ## Experiments
 

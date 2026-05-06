@@ -110,7 +110,6 @@ soak:
 # Security regression gate for policy, runtime, and public control surfaces
 sec-gate:
     cargo check --workspace
-    cargo test -p converge-policy
     cargo test -p converge-runtime --lib
     cargo test -p converge-pack --test compile_fail
     cargo test -p converge-core --test compile_fail --test truth_pipeline --test negative --test properties
@@ -137,25 +136,19 @@ security-audit:
     : > "${summary}"
     echo "── cargo-audit ──────────────────────────────" | tee -a "${summary}"
     cargo audit --json \
-        --ignore RUSTSEC-2023-0071 \
         --ignore RUSTSEC-2023-0089 \
         --ignore RUSTSEC-2024-0384 \
         --ignore RUSTSEC-2024-0436 \
         --ignore RUSTSEC-2025-0012 \
         --ignore RUSTSEC-2025-0134 \
-        --ignore RUSTSEC-2025-0141 \
-        --ignore RUSTSEC-2026-0002 \
         --ignore RUSTSEC-2021-0141 \
         > "${out_dir}/audit.json" || true
     cargo audit --deny warnings \
-        --ignore RUSTSEC-2023-0071 \
         --ignore RUSTSEC-2023-0089 \
         --ignore RUSTSEC-2024-0384 \
         --ignore RUSTSEC-2024-0436 \
         --ignore RUSTSEC-2025-0012 \
         --ignore RUSTSEC-2025-0134 \
-        --ignore RUSTSEC-2025-0141 \
-        --ignore RUSTSEC-2026-0002 \
         --ignore RUSTSEC-2021-0141 \
         2>&1 | tee -a "${summary}"
     audit_human_status=${PIPESTATUS[0]}
@@ -234,19 +227,21 @@ coverage:
     set -euo pipefail
     out_dir="target/coverage"
     mkdir -p "${out_dir}/html"
-    excludes=(
-        --exclude converge-runtime
-    )
-    common=(--workspace "${excludes[@]}" --lib --tests
+    common=(--workspace --exclude converge-runtime --lib --tests
         --ignore-filename-regex '(^|/)(tests|benches|examples)/')
     cargo llvm-cov clean --workspace
-    # Collect once, render from the same data.
+    # Drop trybuild scratch — it pins absolute paths to crates that may
+    # have moved (e.g. atelier/prism/arbiter extractions). Trybuild
+    # regenerates these on next run.
+    rm -rf target/tests/trybuild
+    # Collect once, render from the same data. The --exclude applies during
+    # collection; `report` reads the already-filtered profraw set.
     cargo llvm-cov "${common[@]}" --no-report
-    cargo llvm-cov report "${excludes[@]}" \
+    cargo llvm-cov report \
         --json --summary-only --output-path "${out_dir}/converge-coverage.json"
-    cargo llvm-cov report "${excludes[@]}" \
+    cargo llvm-cov report \
         --lcov --output-path "${out_dir}/lcov.info"
-    cargo llvm-cov report "${excludes[@]}" \
+    cargo llvm-cov report \
         --html --output-dir "${out_dir}/html"
     pct=$(python3 -c "import json; d=json.load(open('${out_dir}/converge-coverage.json')); print(f\"{d['data'][0]['totals']['lines']['percent']:.1f}\")")
     echo "coverage: ${pct}%  json→${out_dir}/converge-coverage.json  lcov→${out_dir}/lcov.info  html→${out_dir}/html/index.html"
@@ -301,7 +296,7 @@ doc-open:
 # ── Publish ────────────────────────────────────────────────────────────
 
 # Publishable crates in dependency order
-_publishable := "converge-pack converge-provider-api converge-core converge-policy converge-model converge-kernel converge-protocol converge-client converge-storage converge-provider converge-experience converge-knowledge converge-optimization converge-domain converge-analytics"
+_publishable := "converge-pack converge-provider-api converge-core converge-model converge-kernel converge-protocol converge-client converge-storage converge-provider converge-experience converge-optimization"
 
 # Dry-run publish to crates.io (validates readiness)
 publish-dry-run:
@@ -527,11 +522,7 @@ deps:
     @echo "Internal workspace crates:"
     @echo "  converge-core"
     @echo "  converge-provider"
-    @echo "  converge-domain"
-    @echo "  converge-policy"
     @echo "  converge-optimization"
-    @echo "  converge-analytics"
-    @echo "  converge-knowledge"
     @echo "  converge-experience"
     @echo "  converge-runtime"
     @echo "  converge-storage"

@@ -24,6 +24,10 @@ All major entities in the Converge knowledge base, organized by category.
 - [Purity Rules](Architecture/Purity%20Rules.md)
 - [Security Review Plan](Architecture/Security%20Review%20Plan.md)
 - [Storage Boundary](Architecture/Storage%20Boundary.md) — storage ports, database adapters, and Runway assembly
+- [Suggestor Catalog](Architecture/Suggestor%20Catalog.md) — every Suggestor that ships, by pack
+- [Suggestor Contract](Architecture/Suggestor%20Contract.md) — the trait every contributor implements
+- [Formation Pattern](Architecture/Formation%20Pattern.md) — composition rules for Suggestors and capabilities
+- [Embedding Quick Start](Architecture/Embedding%20Quick%20Start.md) — fastest path to embed the kernel
 - [Transport Protocols](Architecture/Transport%20Protocols.md)
 - [Type Protocol](Architecture/Type%20Protocol.md)
 
@@ -44,13 +48,20 @@ All major entities in the Converge knowledge base, organized by category.
 - [Context Keys](Building/Context%20Keys.md)
 - [Crate Catalog](Building/Crate%20Catalog.md)
 - [Deployment](Building/Deployment.md)
+- [DEVELOPMENT](Building/DEVELOPMENT.md) — workspace layout and publish order
 - [Getting Started](Building/Getting%20Started.md)
+- [Release Commands](Building/Release%20Commands.md) — `just security-audit`, `coverage`, `performance-profile`, `soak`
 - [Streaming](Building/Streaming.md)
 - [Writing Agents](Building/Writing%20Agents.md)
+
+## History
+
+- [CHANGELOG](History/CHANGELOG.md) — release notes
 
 ## Planning
 
 - [Milestones](Planning/MILESTONES.md)
+- [Authority Slice](Planning/Authority%20Slice.md) — ADR-006 implementation slice
 - [Formation Business Strategy](Planning/Formation%20Business%20Strategy.md)
 - [Organism Formation Compiler Milestone Draft](Planning/Organism%20Formation%20Compiler%20Milestone%20Draft.md)
 - [Layer API Hardening](Planning/LAYER-API-HARDENING.md)

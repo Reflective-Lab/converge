@@ -104,16 +104,18 @@ async fn main() {
 
 Every loop participant is a `Suggestor`. There are no side-car pipeline traits for policy, optimization, analytics, or knowledge.
 
-| Kind | Typical implementation | Registration path |
+| Kind | Typical implementation | Home |
 |---|---|---|
-| Built-in domain logic | `converge-domain` agents and packs | `register_suggestor()` or `register_suggestor_in_pack()` |
-| Policy and governance | `PolicyGateSuggestor`, `FlowGateSuggestor` | `register_suggestor()` |
-| Optimization | `SolverSuggestor<P>` | `register_suggestor()` |
-| Analytics / ML | `FeatureAgent`, training and inference suggestors | `register_suggestor()` |
-| Knowledge | `KnowledgeRetrievalSuggestor`, `KnowledgeStoreSuggestor` | `register_suggestor()` |
-| Custom LLMs and tools | any crate implementing `Suggestor` | `register_suggestor()` |
+| Optimization | `SolverSuggestor<P>` | `crates/optimization` (foundation) |
+| Domain packs | trust, money, delivery, data_metrics agents | [`atelier`](https://github.com/Reflective-Lab/atelier) showcase repo |
+| Policy and governance | `PolicyGateSuggestor`, `FlowGateSuggestor` | [`arbiter`](https://github.com/Reflective-Lab/arbiter) extension |
+| Analytics / ML | `FeatureAgent`, training and inference suggestors | [`prism`](https://github.com/Reflective-Lab/prism) extension |
+| Knowledge | retrieval and store suggestors | [`mnemos`](https://github.com/Reflective-Lab/mnemos) extension |
+| Source-specific connectors | LinkedIn, Stripe, OCR, ... | [`embassy`](https://github.com/Reflective-Lab/embassy) extension |
+| Native solvers | OR-Tools, CP-SAT, ... | [`ferrox`](https://github.com/Reflective-Lab/ferrox) extension |
+| Custom LLMs and tools | any crate implementing `Suggestor` | your crate |
 
-The mixed formation example shows this explicitly: one engine run combining an intent seeder, an optimization solver, a policy gate, and an LLM-style evaluator. See [examples/formation-mixed](examples/formation-mixed/).
+All of them register through the same call: `engine.register_suggestor(...)`. See [kb/Architecture/Extension Topology](kb/Architecture/Extension%20Topology.md) for the full extension map and [kb/Architecture/Core Ideas](kb/Architecture/Core%20Ideas.md) for the durable principles.
 
 ## Formation Offering API
 
@@ -151,88 +153,36 @@ Six crates define the supported external API. Semver promises apply to these sur
 
 Everything else in the workspace is internal implementation or internal batteries-included functionality. Some of those crates are publishable today; that does **not** make them canonical public contracts.
 
-## Built-In Packs and Internal Suggestor Crates
+## Foundation vs Extensions
 
-`converge-domain` currently ships the built-in domain packs:
+Foundation owns universal contracts and the convergence kernel. Implementation-heavy capabilities — vector stores, ML pipelines, policy engines, source-specific connectors, native solvers, vendor SDKs — live in extension repositories under `~/dev/extensions/*` and consume foundation contracts through `Suggestor` adapters.
 
-- `trust`
-- `money`
-- `delivery`
-- `data_metrics`
+The dependency arrow is one-way: **foundation contracts ← extensions ← products**. Foundation never imports an extension.
 
-Other internal crates join the **same** convergence loop through `Suggestor` adapters instead of separate pipeline machinery:
+| Repo | Contains | Extracted |
+|---|---|---|
+| [`atelier`](https://github.com/Reflective-Lab/atelier) | Showcase: domain packs (trust, money, delivery, data_metrics) plus worked examples | 2026-05-05 |
+| [`mnemos`](https://github.com/Reflective-Lab/mnemos) | Knowledge retrieval and storage suggestors | 2026-05-05 |
+| [`prism`](https://github.com/Reflective-Lab/prism) | Analytics and ML suggestors (feature, training, inference, monitoring) | 2026-05-05 |
+| [`arbiter`](https://github.com/Reflective-Lab/arbiter) | Cedar policy engine and policy suggestors | 2026-05-05 |
+| [`embassy`](https://github.com/Reflective-Lab/embassy) | Source-specific connector ports (LinkedIn, ...) | 2026-05-05 |
+| [`ferrox`](https://github.com/Reflective-Lab/ferrox) | Native solver bridge (OR-Tools / CP-SAT) | relocated 2026-05-05 |
 
-- `converge-policy`
-- `converge-optimization`
-- `converge-analytics`
-- `converge-knowledge`
-
-That split is deliberate. Domain packs are not a dumping ground for every subsystem.
+See [kb/Architecture/Extension Topology](kb/Architecture/Extension%20Topology.md) for the full map.
 
 ## Examples
 
-The workspace currently ships these example crates:
+Worked examples live in the [`atelier`](https://github.com/Reflective-Lab/atelier) showcase repo (extracted from this workspace on 2026-05-05). It contains the canonical hello-convergence, custom-agent, custom-provider, meeting-scheduler, expense-approval, vendor-selection, loan-application, formation-mixed, intent-codec-loop, live-formation, adaptive-gap-loop, fixed-point-vs-budget, reconciliation-loop, and analytics-packs examples.
 
-- `hello-convergence`
-- `custom-agent`
-- `custom-provider`
-- `meeting-scheduler`
-- `expense-approval`
-- `vendor-selection`
-- `loan-application`
-- `formation-mixed`
-- `intent-codec-loop`
-- `live-formation`
-- `adaptive-gap-loop`
-- `fixed-point-vs-budget`
-- `reconciliation-loop`
-- `analytics-packs`
+Business-shaped examples such as `expense-approval`, `vendor-selection`, and `loan-application` are kernel-behavior fixtures (convergence, policy gates, HITL pauses, proposal promotion). They are not canonical organizational workflow implementations. Reusable approval, procurement, vendor, and planning logic belongs downstream in Organism/domain packs or applications that consume Converge.
 
-Business-shaped examples such as `expense-approval`, `vendor-selection`, and
-`loan-application` are Converge fixtures for kernel behavior: convergence,
-policy gates, HITL pauses, and proposal promotion. They are not the canonical
-organizational workflow implementations. Reusable approval, procurement, vendor,
-and planning logic belongs downstream in Organism/domain packs or application
-layers that consume Converge.
+Recommended reading order, in atelier:
 
-```bash
-just examples
-just example hello-convergence
-just example adaptive-gap-loop
-just example fixed-point-vs-budget
-just example reconciliation-loop
-just example formation-mixed
-just example intent-codec-loop
-just example live-formation
-```
-
-`cargo build --workspace` compiles the examples as part of the workspace build.
-
-If you want the genuinely adaptive loop story rather than a bounded demo, start
-with `adaptive-gap-loop`. It shows suggestors discovering new work, reopening
-the loop, and converging only when the discovered graph is actually closed.
-
-If you want the stop-semantics story, continue with `fixed-point-vs-budget`.
-It runs the same adaptive graph loop twice and shows the real kernel contract:
-fixed point returns `ConvergeResult`, while budget stop returns
-`ConvergeError::BudgetExhausted`. It also uses real Dijkstra frontier planning
-from `converge-optimization`.
-
-If you want a larger data-massaging example that still belongs in Converge,
-continue with `reconciliation-loop`. It takes two noisy ledgers, scores pair
-quality, and uses exact Hungarian assignment from `converge-optimization` to
-produce a one-to-one reconciliation plus explicit residue.
-
-If you want the formation story rather than a single pre-arranged loop, start
-with `intent-codec-loop`. It shows a loose Gherkin-ish DD spec compiled into a
-`FormationRequest` and `ProviderRequest`, then answered by
-`FormationAssemblySuggestor` and `ProviderSelectionSuggestor` inside one real
-engine run.
-
-If you want the fully self-assembling story, continue with `live-formation`.
-It uses the same contract, but starts from direct structured requests instead
-of an intent codec and lets the engine assemble a five-member loop from a
-catalog plus backend pool.
+- `adaptive-gap-loop` — suggestors discovering new work, reopening the loop, converging only when the discovered graph is closed
+- `fixed-point-vs-budget` — the real stop semantics: fixed point returns `ConvergeResult`, budget stop returns `ConvergeError::BudgetExhausted`
+- `reconciliation-loop` — exact Hungarian assignment from `converge-optimization` over two noisy ledgers
+- `intent-codec-loop` — loose Gherkin-ish DD spec compiled into `FormationRequest` and `ProviderRequest`, answered inside one engine run
+- `live-formation` — five-member loop assembled from a catalog plus backend pool, starting from direct structured requests
 
 ## Workspace Commands
 
@@ -267,23 +217,22 @@ crates/
   client/           Canonical remote Rust SDK
   core/             Engine implementation and promotion gate
   provider/         Provider adapters
-  domain/           Built-in domain packs and governed flow logic
-  policy/           Cedar policy engine and policy suggestors
   optimization/     Solver packs and Suggestor adapter
-  analytics/        Analytics and ML suggestors
-  knowledge/        Knowledge base and knowledge suggestors
   experience/       Experience event storage
   runtime/          HTTP and gRPC runtime
   storage/          Object storage abstraction
 ```
 
+Domain packs, policy, analytics, and knowledge moved to extension repos on 2026-05-05 — see [Foundation vs Extensions](#foundation-vs-extensions).
+
 ## Documentation
 
 The knowledge base in `kb/` is the canonical project documentation.
 
+- [Core Ideas](kb/Architecture/Core%20Ideas.md) — durable principles for the next stable period
 - [API Surfaces](kb/Architecture/API%20Surfaces.md)
+- [Extension Topology](kb/Architecture/Extension%20Topology.md) — where extension code lives and why
 - [Embedding Quick Start](kb/Architecture/Embedding%20Quick%20Start.md)
 - [Formation Pattern](kb/Architecture/Formation%20Pattern.md)
 - [Suggestor Contract](kb/Architecture/Suggestor%20Contract.md)
 - [Crate Catalog](kb/Building/Crate%20Catalog.md)
-- [Examples Guide](examples/README.md)

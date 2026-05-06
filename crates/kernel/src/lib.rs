@@ -66,16 +66,17 @@ pub use converge_core::recall::{
 };
 pub use converge_core::{
     AdmissionActor, AdmissionActorKind, AdmissionContent, AdmissionError, AdmissionReceipt,
-    AdmissionRequest, AdmissionSource, ApprovalPointId, BackendId, Budget, BudgetResource, ChainId,
-    ConstraintName, ConstraintValue, ContextSnapshot, ContextState, ConvergeError, ConvergeResult,
-    CorrelationId, Criterion, CriterionEvaluator, CriterionId, CriterionOutcome, CriterionResult,
-    DecisionStep, Engine, EngineHitlPolicy, EventId, EventQuery, ExperienceEvent,
-    ExperienceEventEnvelope, ExperienceEventKind, ExperienceEventObserver, ExperienceRecord,
-    ExperienceStore, ExperienceStoreError, ExperienceStoreResult, HitlPause, IntegrityProof,
-    Invariant, InvariantClass, InvariantResult, LamportClock, MerkleRoot, OverrideTarget, PackId,
-    RunResult, StreamingCallback, SuggestorId, TenantId, TraceLinkId, TruthId, TypesBudgets,
-    TypesIntentId, TypesIntentKind, TypesRootIntent, TypesRunHooks, UnitInterval,
-    UserExperienceEvent, UserExperienceEventEnvelope,
+    AdmissionRequest, AdmissionSource, ApprovalPointId, BackendId, BoundaryKind, BoundaryTarget,
+    Budget, BudgetResource, ChainId, ConstraintName, ConstraintValue, ContextSnapshot,
+    ContextState, ConvergeError, ConvergeResult, CorrectionTarget, CorrelationId, Criterion,
+    CriterionEvaluator, CriterionId, CriterionOutcome, CriterionResult, DecisionStep, Engine,
+    EngineHitlPolicy, EventId, EventQuery, ExperienceEvent, ExperienceEventEnvelope,
+    ExperienceEventKind, ExperienceEventObserver, ExperienceRecord, ExperienceStore,
+    ExperienceStoreError, ExperienceStoreResult, FactContent, FactContentKind, HitlPause,
+    IntegrityProof, Invariant, InvariantClass, InvariantResult, LamportClock, MerkleRoot,
+    OverrideTarget, PackId, RunResult, StreamingCallback, SuggestorId, TenantId, TraceLinkId,
+    TruthId, TypesBudgets, TypesIntentId, TypesIntentKind, TypesRootIntent, TypesRunHooks,
+    UnitInterval, UserExperienceEvent, UserExperienceEventEnvelope,
 };
 pub use converge_pack::{
     AgentEffect, ArtifactId, Context, ContextFact, ContextKey, ProposedFact, Suggestor,

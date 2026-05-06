@@ -9,18 +9,9 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_VERSION: "1.94.0"
-  # Crates that need protoc or external system deps
-  # Note: converge-runtime IS tested now (requires protoc which is installed)
-  EXCLUDES: >-
-    --exclude converge-remote
-    --exclude example-custom-agent
-    --exclude example-meeting-scheduler
-    --exclude example-custom-provider
-    --exclude example-local-inference
-    --exclude example-expense-approval
-    --exclude example-vendor-selection
-    --exclude example-loan-application
-    --exclude example-hello-convergence
+  # No workspace excludes: examples were extracted to atelier 2026-05-05
+  # and converge-runtime is tested in CI (protoc is installed below).
+  EXCLUDES: ""
 
 jobs:
   check:

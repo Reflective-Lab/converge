@@ -36,7 +36,8 @@ use crate::kernel_boundary::{
 use crate::recall::{RecallPolicy, RecallProvenanceEnvelope, RecallQuery};
 use crate::types::{
     ActorId, ArtifactId, BackendId, ChainId, ConstraintName, ContentHash, CorrelationId, DomainId,
-    EventId, FactId, GateId, PolicyId, ProposalId, TenantId, TensionId, Timestamp, TraceLinkId,
+    EventId, FactContent, FactId, GateId, IntentId, PackId, PolicyId, ProposalId, TenantId,
+    TensionId, Timestamp, TraceLinkId,
 };
 
 // ============================================================================
@@ -463,6 +464,44 @@ pub enum OverrideTarget {
     Constraint(ConstraintName),
 }
 
+/// What a user correction applies to.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum CorrectionTarget {
+    Fact { fact_id: FactId },
+    Proposal { proposal_id: ProposalId },
+}
+
+impl CorrectionTarget {
+    /// Stable short label for recall summaries and logs.
+    #[must_use]
+    pub fn kind_label(&self) -> &'static str {
+        match self {
+            Self::Fact { .. } => "fact",
+            Self::Proposal { .. } => "proposal",
+        }
+    }
+}
+
+/// Primitive boundary a human adjusted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BoundaryKind {
+    Authority,
+    Forbidden,
+    Expiry,
+    Reversibility,
+}
+
+/// Scope for a boundary adjustment.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "scope", rename_all = "snake_case")]
+pub enum BoundaryTarget {
+    Pack { pack_id: PackId },
+    Intent { intent_id: IntentId },
+    Global,
+}
+
 /// User-side experience event.
 ///
 /// This is the trust-transfer counterpart to [`ExperienceEvent`]: every variant
@@ -483,11 +522,47 @@ pub enum UserExperienceEvent {
         policy_snapshot_hash: Option<ContentHash>,
         reason: Option<String>,
     },
+    /// A human rejected a paused gate request.
+    UserApprovalRejected {
+        gate_request_id: GateId,
+        actor: ActorId,
+        policy_snapshot_hash: Option<ContentHash>,
+        reason: Option<String>,
+    },
     /// A human issued an override against a fact, proposal, or constraint.
     UserOverrideIssued {
         target: OverrideTarget,
         actor: ActorId,
         policy_snapshot_hash: Option<ContentHash>,
+        reason: String,
+    },
+    /// A human corrected a fact or proposal without rewriting history.
+    ///
+    /// This event ledgers a correction relationship. It does not itself admit
+    /// or promote the corrected content; callers must run corrected content
+    /// through the normal admission and promotion path first.
+    UserCorrection {
+        target: CorrectionTarget,
+        actor: ActorId,
+        policy_snapshot_hash: Option<ContentHash>,
+        original_content: ContentHash,
+        corrected_content: FactContent,
+        reason: String,
+    },
+    /// A human adjusted an authority, forbidden-action, expiry, or reversibility boundary.
+    ///
+    /// This event records what changed; it is not the policy-update channel.
+    /// Callers must update the active policy surface first, then append this
+    /// ledger event. Recall consumers must filter by `target` so pack-scoped
+    /// or intent-scoped boundary changes do not spill into unrelated planning
+    /// runs.
+    UserBoundaryAdjusted {
+        boundary: BoundaryKind,
+        target: BoundaryTarget,
+        actor: ActorId,
+        policy_snapshot_hash: Option<ContentHash>,
+        previous_value: serde_json::Value,
+        new_value: serde_json::Value,
         reason: String,
     },
 }
@@ -687,6 +762,53 @@ mod tests {
         assert_eq!(event.kind(), ExperienceEventKind::PolicySnapshotCaptured);
     }
 
+    #[test]
+    fn user_experience_events_roundtrip_new_bidirectional_variants() {
+        let events = [
+            UserExperienceEvent::UserApprovalRejected {
+                gate_request_id: "gate-1".into(),
+                actor: "operator-1".into(),
+                policy_snapshot_hash: None,
+                reason: Some("not enough evidence".into()),
+            },
+            UserExperienceEvent::UserCorrection {
+                target: CorrectionTarget::Fact {
+                    fact_id: FactId::new("fact-1"),
+                },
+                actor: "operator-1".into(),
+                policy_snapshot_hash: None,
+                original_content: ContentHash::zero(),
+                corrected_content: FactContent::new(
+                    crate::FactContentKind::Claim,
+                    "corrected claim",
+                ),
+                reason: "source was stale".into(),
+            },
+            UserExperienceEvent::UserBoundaryAdjusted {
+                boundary: BoundaryKind::Authority,
+                target: BoundaryTarget::Pack {
+                    pack_id: PackId::new("pack-1"),
+                },
+                actor: "operator-1".into(),
+                policy_snapshot_hash: None,
+                previous_value: serde_json::json!({"limit": 100}),
+                new_value: serde_json::json!({"limit": 50}),
+                reason: "reduce autonomy".into(),
+            },
+        ];
+
+        for event in events {
+            let json = serde_json::to_string(&event).unwrap();
+            let back: UserExperienceEvent = serde_json::from_str(&json).unwrap();
+            assert!(matches!(
+                back,
+                UserExperienceEvent::UserApprovalRejected { .. }
+                    | UserExperienceEvent::UserCorrection { .. }
+                    | UserExperienceEvent::UserBoundaryAdjusted { .. }
+            ));
+        }
+    }
+
     // ── ExperienceStoreError ─────────────────────────────────────────────────
 
     #[test]
@@ -801,6 +923,7 @@ mod tests {
             ExperienceEventKind::BudgetExceeded,
             ExperienceEventKind::PolicySnapshotCaptured,
             ExperienceEventKind::HypothesisResolved,
+            ExperienceEventKind::GateDecisionRecorded,
         ];
         for kind in kinds {
             let json = serde_json::to_string(&kind).unwrap();

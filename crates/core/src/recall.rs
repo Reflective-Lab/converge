@@ -631,6 +631,39 @@ fn record_to_candidate(record: &ExperienceRecord) -> Option<RecallCandidate> {
                 UnitInterval::clamped(0.7),
                 CandidateSourceType::SimilarSuccess,
             )),
+            UserExperienceEvent::UserApprovalRejected { reason, .. } => Some(make_candidate(
+                env.event_id.as_str(),
+                env.occurred_at.as_str(),
+                format!(
+                    "user rejection: {}",
+                    reason.as_deref().unwrap_or("declined")
+                ),
+                UnitInterval::clamped(0.7),
+                CandidateSourceType::AntiPattern,
+            )),
+            UserExperienceEvent::UserCorrection { target, reason, .. } => Some(make_candidate(
+                env.event_id.as_str(),
+                env.occurred_at.as_str(),
+                format!("correction ({}): {reason}", target.kind_label()),
+                UnitInterval::clamped(0.85),
+                CandidateSourceType::Runbook,
+            )),
+            UserExperienceEvent::UserBoundaryAdjusted {
+                boundary,
+                target,
+                reason,
+                ..
+            } => Some(make_candidate(
+                env.event_id.as_str(),
+                env.occurred_at.as_str(),
+                format!(
+                    "{} boundary adjusted on {}: {reason}",
+                    boundary_kind_label(*boundary),
+                    boundary_target_label(target)
+                ),
+                UnitInterval::clamped(0.8),
+                CandidateSourceType::Runbook,
+            )),
         },
         ExperienceRecord::Engine(env) => match &env.event {
             ExperienceEvent::OutcomeRecorded {
@@ -651,6 +684,23 @@ fn record_to_candidate(record: &ExperienceRecord) -> Option<RecallCandidate> {
             )),
             _ => None,
         },
+    }
+}
+
+fn boundary_kind_label(kind: crate::BoundaryKind) -> &'static str {
+    match kind {
+        crate::BoundaryKind::Authority => "authority",
+        crate::BoundaryKind::Forbidden => "forbidden",
+        crate::BoundaryKind::Expiry => "expiry",
+        crate::BoundaryKind::Reversibility => "reversibility",
+    }
+}
+
+fn boundary_target_label(target: &crate::BoundaryTarget) -> String {
+    match target {
+        crate::BoundaryTarget::Pack { pack_id } => format!("pack:{}", pack_id.as_str()),
+        crate::BoundaryTarget::Intent { intent_id } => format!("intent:{}", intent_id.as_str()),
+        crate::BoundaryTarget::Global => "global".to_string(),
     }
 }
 
@@ -681,6 +731,15 @@ fn make_candidate(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        BoundaryKind, BoundaryTarget, ContentHash, CorrectionTarget, ExperienceRecord, FactContent,
+        FactContentKind, UserExperienceEventEnvelope,
+    };
+
+    fn candidate_for_user_event(event: UserExperienceEvent) -> RecallCandidate {
+        let envelope = UserExperienceEventEnvelope::new("evt-user", event);
+        record_to_candidate(&ExperienceRecord::User(envelope)).expect("candidate")
+    }
 
     #[test]
     fn test_recall_policy_enabled() {
@@ -720,6 +779,60 @@ mod tests {
         assert_eq!(query.top_k, 5);
         assert_eq!(query.step_context, Some(DecisionStep::Reasoning));
         assert_eq!(query.tenant_scope, Some("tenant-1".to_string()));
+    }
+
+    #[test]
+    fn recall_maps_rejected_user_approval_to_antipattern() {
+        let candidate = candidate_for_user_event(UserExperienceEvent::UserApprovalRejected {
+            gate_request_id: "gate-1".into(),
+            actor: "operator-1".into(),
+            policy_snapshot_hash: None,
+            reason: Some("risk too high".into()),
+        });
+
+        assert_eq!(candidate.summary, "user rejection: risk too high");
+        assert_eq!(candidate.confidence, UnitInterval::clamped(0.7));
+        assert_eq!(candidate.source_type, CandidateSourceType::AntiPattern);
+    }
+
+    #[test]
+    fn recall_maps_user_correction_to_runbook() {
+        let candidate = candidate_for_user_event(UserExperienceEvent::UserCorrection {
+            target: CorrectionTarget::Fact {
+                fact_id: "fact-1".into(),
+            },
+            actor: "operator-1".into(),
+            policy_snapshot_hash: None,
+            original_content: ContentHash::zero(),
+            corrected_content: FactContent::new(FactContentKind::Claim, "corrected"),
+            reason: "source was stale".into(),
+        });
+
+        assert_eq!(candidate.summary, "correction (fact): source was stale");
+        assert_eq!(candidate.confidence, UnitInterval::clamped(0.85));
+        assert_eq!(candidate.source_type, CandidateSourceType::Runbook);
+    }
+
+    #[test]
+    fn recall_maps_boundary_adjustment_to_scoped_runbook() {
+        let candidate = candidate_for_user_event(UserExperienceEvent::UserBoundaryAdjusted {
+            boundary: BoundaryKind::Authority,
+            target: BoundaryTarget::Pack {
+                pack_id: "loan-pack".into(),
+            },
+            actor: "operator-1".into(),
+            policy_snapshot_hash: None,
+            previous_value: serde_json::json!({"limit": 100}),
+            new_value: serde_json::json!({"limit": 50}),
+            reason: "manual review needed".into(),
+        });
+
+        assert_eq!(
+            candidate.summary,
+            "authority boundary adjusted on pack:loan-pack: manual review needed"
+        );
+        assert_eq!(candidate.confidence, UnitInterval::clamped(0.8));
+        assert_eq!(candidate.source_type, CandidateSourceType::Runbook);
     }
 
     #[test]

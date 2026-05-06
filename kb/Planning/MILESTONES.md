@@ -24,12 +24,15 @@ Canonical plan: [[Planning/v3.8 Foundation]].
       ([[Architecture/Extension Topology]], 2026-05-05).
 - [x] Extract knowledge to **mnemos** extension repo (2026-05-05).
 - [x] Extract analytics to **prism** extension repo (2026-05-05).
-- [ ] Extract provider implementations to **manifold** extension repo —
+- [ ] Extract provider/tool implementations to **manifold** extension repo —
       DEFERRED. The `llm/selection.rs` harness imports concrete vendor
       backend types and is itself imported by
       `crates/runtime/src/execution/packs.rs` (`ChatBackendSelectionConfig`).
       Clean extraction needs the selection harness refactored to be
       vendor-agnostic via dyn-dispatch first. Treat as a dedicated workstream.
+- [x] Extract reusable storage adapters to **manifold** extension repo:
+      local/S3/GCS object-store builders, SurrealDB/LanceDB experience stores,
+      and the generic LanceDB vector adapter (2026-05-05).
 - [x] Extract Cedar policy engine to **arbiter** extension repo (2026-05-05).
 - [x] Move `crates/domain` and `examples/` to the **atelier** showcase repo
       (`~/dev/atelier`) on 2026-05-05; single workspace, will also receive
@@ -44,10 +47,14 @@ Canonical plan: [[Planning/v3.8 Foundation]].
       2026-05-05).
 - [x] Land ADR-006 authority boundary before Organism builds the Truth Document
       to IntentPacket bridge.
+- [x] Implement bidirectional user-side `ExperienceStore` variants needed by
+      Organism #12: approval rejection, correction, and boundary adjustment,
+      with recall-prior consumption.
 - [ ] Add release-grade security audit, coverage, performance profiling, and
       soak commands.
-- [ ] Run KB sanity cleanup and lift the 5-8 core ideas that define the next
-      stable period.
+- [x] Run KB sanity cleanup and lift the 5-8 core ideas that define the next
+      stable period (Core Ideas page lifted 2026-05-05; cleanup follow-up
+      2026-05-06 — see [[LOG]]).
 
 ## Moved: OR-Tools Native Solver Wiring → ferrox
 Moved: 2026-04-22 — C++ FFI dependency doesn't belong in a pure Rust platform crate.
@@ -100,7 +107,7 @@ that Converge can consume without a C++ toolchain dependency.
 
 - [ ] Classify every currently publishable crate as canonical, transitional, or private
 - [ ] Set `publish = false` on crates that are not deliberately supported external contracts
-- [ ] Split library concerns from server and CLI concerns in crates such as `converge-policy` (knowledge already extracted to mnemos)
+- [ ] Split library concerns from server and CLI concerns in remaining foundation crates that bundle transport, CLI, or service shells (knowledge, analytics, policy, and domain are already extracted)
 - [ ] Remove unnecessary provider coupling from library crates where trait boundaries already suffice
 - [ ] Add a CI guard that fails on accidental expansion of the publishable surface
 - [ ] Reconcile `Cargo.toml` manifests with `kb/Architecture/API Surfaces.md` and `kb/Architecture/Crate Map.md`

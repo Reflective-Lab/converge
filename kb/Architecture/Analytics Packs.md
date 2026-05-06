@@ -34,7 +34,7 @@ in formations via `SolverSuggestor<P>`.
 ```rust
 use converge_kernel::{Budget, ContextKey, ContextState, Engine};
 use converge_optimization::suggestor::SolverSuggestor;
-use converge_analytics::AnomalyDetectionPack;
+use prism::AnomalyDetectionPack;
 
 let mut engine = Engine::with_budget(Budget { max_cycles: 5, max_facts: 100 });
 engine.register_suggestor(SolverSuggestor::new(
@@ -55,7 +55,7 @@ let result = engine.run(ctx).await?;
 ### Factory functions
 
 ```rust
-use converge_analytics::suggestor;
+use prism::suggestor;
 
 engine.register_suggestor(suggestor::anomaly_detection());
 engine.register_suggestor(suggestor::forecasting());

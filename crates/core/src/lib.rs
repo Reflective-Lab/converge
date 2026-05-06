@@ -240,10 +240,11 @@ pub use engine::{
 pub use error::ConvergeError;
 pub use eval::{Eval, EvalId, EvalOutcome, EvalRegistry, EvalResult};
 pub use experience_store::{
-    ArtifactKind, ArtifactQuery, BudgetResource, ContractResultSnapshot, EventQuery,
-    ExperienceEvent, ExperienceEventEnvelope, ExperienceEventKind, ExperienceRecord,
-    ExperienceStore, ExperienceStoreError, ExperienceStoreResult, HypothesisOutcome,
-    OverrideTarget, PolicySnapshot, TimeRange, UserExperienceEvent, UserExperienceEventEnvelope,
+    ArtifactKind, ArtifactQuery, BoundaryKind, BoundaryTarget, BudgetResource,
+    ContractResultSnapshot, CorrectionTarget, EventQuery, ExperienceEvent, ExperienceEventEnvelope,
+    ExperienceEventKind, ExperienceRecord, ExperienceStore, ExperienceStoreError,
+    ExperienceStoreResult, HypothesisOutcome, OverrideTarget, PolicySnapshot, TimeRange,
+    UserExperienceEvent, UserExperienceEventEnvelope,
 };
 pub use integrity::{IntegrityProof, LamportClock, MerkleRoot, TrackedContext};
 pub use invariant::{Invariant, InvariantClass, InvariantError, InvariantResult, Violation};

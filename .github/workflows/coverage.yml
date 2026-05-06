@@ -10,17 +10,9 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_VERSION: "1.94.0"
-  EXCLUDES: >-
-    --exclude converge-remote
-    --exclude converge-runtime
-    --exclude example-custom-agent
-    --exclude example-meeting-scheduler
-    --exclude example-custom-provider
-    --exclude example-local-inference
-    --exclude example-expense-approval
-    --exclude example-vendor-selection
-    --exclude example-loan-application
-    --exclude example-hello-convergence
+  # converge-runtime excluded from coverage (HTTP/gRPC server, dominated by
+  # transport plumbing; covered by integration tests instead).
+  EXCLUDES: "--exclude converge-runtime"
 
 jobs:
   coverage:
