@@ -254,8 +254,8 @@ coverage-ci:
 #
 # Purpose: capture a comparable v3.8 perf baseline.
 # Runs Criterion across crates that ship benches (core, optimization).
-# If a baseline named PERF_BASELINE (default "v3.8.0") already exists,
-# subsequent runs --baseline against it; otherwise --save-baseline.
+# Saves a baseline named PERF_BASELINE (default "v3.8.0"). Set
+# PERF_MODE=compare to compare against an existing baseline instead.
 # Output:
 #   target/criterion/                       (per-bench HTML + raw data)
 #   kb/Baselines/latest-baseline.json       (extracted summary)
@@ -264,19 +264,30 @@ performance-profile:
     #!/usr/bin/env bash
     set -euo pipefail
     name="${PERF_BASELINE:-v3.8.0}"
-    crates=(converge-core converge-optimization)
-    mode_flag="--save-baseline"
-    if [ -d "target/criterion" ]; then
-        # If any bench already has the baseline saved, switch to compare mode.
-        existing="$(find target/criterion -mindepth 2 -maxdepth 3 -type d -name "${name}" -print -quit 2>/dev/null || true)"
-        if [ -n "${existing}" ]; then
-            mode_flag="--baseline"
-        fi
-    fi
+    benches=(
+        "converge-core:engine_bench:"
+        "converge-optimization:assignment:"
+        "converge-optimization:graph:"
+        "converge-optimization:cp_comparison:sat"
+    )
+    mode="${PERF_MODE:-save}"
+    case "${mode}" in
+        save) mode_flag="--save-baseline" ;;
+        compare) mode_flag="--baseline" ;;
+        *)
+            echo "PERF_MODE must be 'save' or 'compare' (got '${mode}')" >&2
+            exit 2
+            ;;
+    esac
     echo "performance-profile: ${mode_flag} ${name}"
-    for c in "${crates[@]}"; do
-        echo "── ${c} ──"
-        cargo bench -p "${c}" -- "${mode_flag}" "${name}"
+    for target in "${benches[@]}"; do
+        IFS=":" read -r crate bench features <<< "${target}"
+        echo "── ${crate}/${bench} ──"
+        if [ -n "${features}" ]; then
+            cargo bench -p "${crate}" --features "${features}" --bench "${bench}" -- "${mode_flag}" "${name}"
+        else
+            cargo bench -p "${crate}" --bench "${bench}" -- "${mode_flag}" "${name}"
+        fi
     done
     if [ -f scripts/extract-criterion-baseline.py ]; then
         python3 scripts/extract-criterion-baseline.py || \

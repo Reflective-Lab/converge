@@ -34,6 +34,9 @@ serde_test = "1.0"
 trybuild = "1.0"
 criterion = { version = "0.8", default-features = false, features = ["cargo_bench_support"] }
 
+[lib]
+bench = false
+
 [[bench]]
 name = "engine_bench"
 harness = false

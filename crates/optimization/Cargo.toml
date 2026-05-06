@@ -55,6 +55,9 @@ default = []
 sat = ["dep:varisat"]
 full = ["sat"]
 
+[lib]
+bench = false
+
 [[bench]]
 name = "assignment"
 harness = false
