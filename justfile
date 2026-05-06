@@ -521,7 +521,6 @@ deps:
     @echo "---"
     @echo "Internal workspace crates:"
     @echo "  converge-core"
-    @echo "  converge-provider-adapters"
     @echo "  converge-optimization"
     @echo "  converge-experience"
     @echo "  converge-runtime"

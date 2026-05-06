@@ -69,10 +69,9 @@ until their own connector or pack work is scoped.
 ### Provider Contract Naming — CLOSED
 
 The provider contract now owns the real crate name: `converge-provider`.
-Concrete in-repo implementations live in the non-publishable
-`converge-provider-adapters` staging crate until they drain into Manifold.
-No foundation crate depends on that staging crate. This closes the old
-`converge-provider-api` inversion: contracts get domain names;
+Generic provider/tool implementations live in Manifold, and the
+`converge-provider-adapters` staging crate has been removed. This closes the
+old `converge-provider-api` inversion: contracts get domain names;
 implementations get adapter-qualified names.
 
 ### Merge Order Documentation (Axiom 6) — CLOSED
@@ -92,16 +91,12 @@ replace its custom persisted-fact reconstruction with `ContextSnapshot`.
 
 ## Open
 
-### High: External Tool and Provider Implementations Still Sit In-Repo
+### External Tool and Provider Implementations Still Sit In-Repo — CLOSED
 
-HTTP fetch, feed parsing, search providers, LLM adapters, API-key handling, and
-third-party SDK churn still live beside the Converge kernel workspace. This
-keeps volatile external I/O too close to the correctness-first core.
-
-**Resolution:** Move provider and external tool implementations from
-`converge-provider-adapters` to adapter crates in Manifold. Keep only stable
-port contracts in the Converge foundation. See
-[[Planning/Manifold Provider Tool Migration]].
+HTTP fetch, feed parsing, search providers, LLM adapters, API-key handling,
+embedding/reranking, vector helpers, and OpenAPI/GraphQL tools moved to
+Manifold. The Converge workspace no longer contains `converge-provider-adapters`.
+See [[Planning/Manifold Provider Tool Migration]].
 
 ### High: Extension Implementations Share the Foundation Release Cycle
 

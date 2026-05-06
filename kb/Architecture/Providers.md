@@ -39,11 +39,10 @@ Providers are the adapter implementations that plug into [[Architecture/Ports|po
 `converge-provider` is the published provider/capability contract. It owns the
 real provider domain name.
 
-`converge-provider-adapters` is the current non-publishable in-repo adapter
-staging crate for the remaining non-LLM adapter families, but it is not the
-long-lived implementation home. LLM chat adapters and the model catalog have
-moved to Manifold. Generic adapter implementations carry adapter-qualified
-names. The clean provider name belongs to the contract.
+Generic provider/tool implementations live in Manifold. The former
+`converge-provider-adapters` staging crate has been removed. Generic adapter
+implementations carry adapter-qualified names. The clean provider name belongs
+to the contract.
 
 Products or Runway supply already-constructed backend handles through
 `ChatBackendRegistry`. The registry is a contract surface; adapter crates create

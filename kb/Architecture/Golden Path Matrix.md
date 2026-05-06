@@ -25,7 +25,7 @@ The goal is simple: **make the right thing easy to use**.
 | Need | Start here | Add when needed | Avoid by default |
 |---|---|---|---|
 | Author packs and invariants | `converge-pack` | `converge-model` for governed result types | `converge-core` |
-| Consume provider capability contracts | `converge-provider` | `converge-provider-adapters` for temporary ready-made adapters | `converge-core` |
+| Consume provider capability contracts | `converge-provider` | Manifold for ready-made generic adapters | `converge-core` |
 | Embed governed execution in-process | `converge-kernel` | `converge-model`, `converge-pack` | `converge-core`, `converge-runtime` |
 | Read governed semantic outputs | `converge-model` | `converge-kernel` if you also execute | `converge-core` |
 | Call a deployed runtime | `converge-client` | `converge-protocol` for typed wire access | runtime internals |
@@ -35,7 +35,7 @@ Rules:
 
 - `converge-core` is the constitutional engine crate. It is not the default next-layer import.
 - `converge-provider` is the canonical capability contract for chat and routing vocabulary.
-- `converge-provider-adapters` is the temporary implementation layer for ready-made adapters, env helpers, and provider registry behavior.
+- Manifold is the implementation layer for ready-made generic adapters, env helpers, and provider registry behavior.
 
 ## Organism Layer
 

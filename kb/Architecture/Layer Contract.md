@@ -37,7 +37,7 @@ Product apps wire the experience, artifacts, and writeback.
 - Experience events emitted from governed execution.
 - Public kernel/model/pack/provider contracts that upper layers can embed.
   The provider contract crate is `converge-provider`; adapter implementations
-  carry qualified names such as `converge-provider-adapters`.
+  carry qualified names in Manifold.
 
 ## Converge Must Not Own
 

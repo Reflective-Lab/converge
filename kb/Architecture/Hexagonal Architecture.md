@@ -72,9 +72,10 @@ The dependency arrow always points inward. `converge-pack` and
 `converge-provider` are the current leaf contracts (zero internal deps).
 ADR-007 is applied: contracts get real domain names and implementations add
 adapter qualifiers. `converge-core` depends on `converge-pack`.
-`converge-provider-adapters` depends on `converge-pack` +
-`converge-provider`. If you find yourself importing an adapter from a contract
-crate, you've broken the architecture. See [[Architecture/Purity Rules]].
+Generic provider/tool implementations live in Manifold and import Converge
+contracts; Converge does not import Manifold. If you find yourself importing an
+adapter from a contract crate, you've broken the architecture. See
+[[Architecture/Purity Rules]].
 
 ## Driving vs Driven
 

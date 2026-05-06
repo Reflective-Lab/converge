@@ -23,7 +23,6 @@ versions, dependency versions, lints, and build profiles.
 | Crate | Role |
 |---|---|
 | `converge-core` | Engine implementation, promotion gate, integrity tracking |
-| `converge-provider-adapters` | Temporary non-publishable provider adapter staging |
 | `converge-optimization` | Solver packs and `SolverSuggestor` |
 | `converge-experience` | Experience event storage |
 | `converge-runtime` | HTTP and gRPC runtime |
@@ -44,8 +43,8 @@ versions, dependency versions, lints, and build profiles.
 - Policy suggestors and Cedar engine live in **arbiter** (`~/dev/extensions/arbiter`).
 - Source-specific connector ports live in **embassy** (`~/dev/extensions/embassy`).
 - Provider vendor adapters live in **manifold**; the in-repo
-  `converge-provider-adapters` crate is only staging while the physical move
-  completes (see [[Planning/Manifold Provider Tool Migration]]).
+  `converge-provider-adapters` staging crate was removed after the physical
+  move completed (see [[Planning/Manifold Provider Tool Migration]]).
 - Storage contracts stay in the foundation; concrete database and object-store
   adapters are extraction candidates. Runway assembles and operates them.
 - See [[Architecture/Extension Topology]],

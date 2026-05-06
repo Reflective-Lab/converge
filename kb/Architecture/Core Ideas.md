@@ -45,10 +45,9 @@ governance becomes advisory. See [[Architecture/ADRs/ADR-006-promotion-authority
 
 A long-lived contract crate owns the clean domain name. Implementation crates
 add qualifiers like `http`, `openai`, `surreal`, or `runtime`. The
-`converge-provider` contract now owns the clean provider name; the temporary
-in-repo implementation crate is `converge-provider-adapters`. The contract
-must not import unrelated value types from neighboring crates just to borrow
-vocabulary.
+`converge-provider` contract now owns the clean provider name; generic
+provider/tool implementations live in Manifold. The contract must not import
+unrelated value types from neighboring crates just to borrow vocabulary.
 
 **Cost of violating:** every rename later breaks downstream pins, the contract
 crate accretes incidental dependencies, and the support boundary becomes

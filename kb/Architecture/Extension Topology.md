@@ -64,17 +64,15 @@ Provider/tool contracts own the clean domain names. Adapter implementations
 carry qualifiers that describe what they implement.
 
 For the 3.8.x line, `converge-provider` is the published provider contract.
-`converge-provider-adapters` is a temporary non-publishable in-repo staging
-crate, not the long-lived implementation home. LLM chat implementations have
-already moved to Manifold. The remaining generic adapter implementations drain
-to Manifold and use names such as `OpenAiChatAdapter`, `BraveSearchAdapter`,
-`HttpFeedAdapter`, and `OpenApiToolAdapter`.
+Generic provider/tool implementations live in Manifold and use names such as
+`OpenAiChatAdapter`, `BraveSearchAdapter`, `HttpFeedAdapter`, and
+`OpenApiToolAdapter`. The former `converge-provider-adapters` staging crate
+has been removed.
 
 The Converge-side dependency break is in place: runtime and kernel no longer
-depend on `converge-provider-adapters`, and `converge-provider` owns the
-host-supplied `ChatBackendRegistry` contract. The remaining work is the
-physical move for search/fetch/feed/tool adapters plus downstream proof. See
-[[Planning/Manifold Provider Tool Migration]].
+depend on adapter implementations, and `converge-provider` owns the
+host-supplied `ChatBackendRegistry` contract. See [[Planning/Manifold Provider
+Tool Migration]].
 
 ## Embassy vs Manifold
 

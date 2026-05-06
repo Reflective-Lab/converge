@@ -25,15 +25,14 @@ surfaces.
 | Crate | What it does |
 |---|---|
 | `converge-core` | Engine implementation, context state, promotion gate, integrity tracking |
-| `converge-provider-adapters` | Temporary non-publishable in-repo provider adapters during Manifold migration |
 | `converge-optimization` | Solver packs and `SolverSuggestor` |
 | `converge-experience` | Experience event storage |
 | `converge-runtime` | HTTP and gRPC runtime |
 | `converge-storage` | Object storage abstraction |
 
 Some internal crates are publishable for controlled reuse. That still does not
-make them part of the stable public contract. Adapter staging crates such as
-`converge-provider-adapters` are not publishable foundation crates.
+make them part of the stable public contract. Generic adapter implementations
+live outside this workspace in Manifold.
 
 ## Adding a Dependency
 

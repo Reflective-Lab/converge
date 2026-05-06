@@ -16,8 +16,8 @@ and tool **adapter implementations**.
 The 3.8.x published contract crate is `converge-provider`. That is the real
 domain name for the API. Implementations add adapter qualifiers.
 
-`converge-provider-adapters` is therefore not a long-term foundation crate. It
-is a temporary non-publishable in-repo adapter staging crate to drain into
+`converge-provider-adapters` was therefore not a long-term foundation crate. It
+has been removed after draining its generic adapter implementations into
 Manifold.
 
 ## Target Dependency Shape
@@ -35,11 +35,9 @@ products / runway          # runtime assembly, credentials, environment wiring
 Converge runtime must not import Manifold. Products or Runway wire adapters
 into a runtime.
 
-Interim state: LLM chat adapters have moved to Manifold. The remaining
-`converge-provider-adapters` crate holds non-LLM staging adapters
-(search/fetch/feed/tools/retrieval) until this plan drains them into Manifold.
-It is not part of the target dependency shape, not a default workspace member,
-and not a publishable foundation crate.
+Current state: generic adapter implementations live in Manifold. The
+`converge-provider-adapters` crate has been removed from the Converge
+workspace.
 
 ## Adapter Naming Rule
 
@@ -69,19 +67,19 @@ The first blocker was the foundation importing adapter selection:
   `ResolvedChatBackend` live in `converge-provider`. The registry holds
   already-constructed handles supplied by host assembly.
 
-The LLM coupling inside the staging crate is closed:
+The staging crate coupling is closed:
 
 - `crates/provider-adapters/src/llm` has been removed.
 - `crates/provider-adapters/src/model_selection.rs` and the model catalog
   config have been removed.
 - live chat examples and live LLM endpoint probes have moved to Manifold.
+- search/fetch/feed, embedding/reranker/vector, and OpenAPI/GraphQL tool
+  adapters have moved to Manifold.
 - `/Users/kpernyer/dev/extensions/manifold/crates/manifold/src/llm` compiles
   behind Manifold's `llm-all` feature against the local Converge 3.8.1 patch.
 
-The remaining coupling is non-LLM staging code. Moving search/fetch/feed/tool
-adapters next should preserve the same direction: Manifold constructs handles,
-products or Runway register them, and Converge selects only through
-`converge-provider`.
+The direction is now explicit: Manifold constructs handles, products or Runway
+register them, and Converge selects only through `converge-provider`.
 
 ## Migration Slices
 
@@ -104,13 +102,13 @@ products or Runway register them, and Converge selects only through
    adapter `ProviderRegistry`; products or deployment assembly must supply
    adapters.
 
-4. **Move adapters to Manifold.**
+4. **Move adapters to Manifold. — CLOSED**
    Move concrete modules out of `crates/provider-adapters` into Manifold:
    LLM adapters first, then search/fetch/feed, then OpenAPI/GraphQL tools.
    Manifold imports `converge-provider` and implements the contracts.
-   LLM adapters, registry config, live examples, and live LLM tests are moved
-   and verified in Manifold. The next slices are search/fetch/feed and tool
-   adapters.
+   LLM adapters, registry config, live examples, live tests, search/fetch/feed,
+   embedding/reranker/vector, and OpenAPI/GraphQL tool adapters are moved to
+   Manifold.
 
 5. **Downstream proof.**
    Add compile-pass examples/tests showing:
@@ -118,9 +116,8 @@ products or Runway register them, and Converge selects only through
    internals, and a product/runtime assembly can register Manifold adapters
    without Converge depending on Manifold.
 
-6. **Retire staging crate.**
-   Once all generic adapters are out, either empty/deprecate
-   `converge-provider-adapters` for the 3.8 line. Do not leave Converge with a
+6. **Retire staging crate. — CLOSED**
+   `converge-provider-adapters` has been removed. Converge no longer carries a
    mixed contract and implementation crate.
 
 ## Explicit Non-Goals
@@ -139,18 +136,17 @@ products or Runway register them, and Converge selects only through
   provider selection. ✓
 - `converge-kernel` no longer imports `converge-provider-adapters` for
   `ProviderSelectionSuggestor`. ✓
-- `converge-provider-adapters` is non-publishable and excluded from default
-  workspace members. ✓
+- `converge-provider-adapters` is removed from the workspace. ✓
 - `converge-provider` exposes a host-supplied chat registry that returns
   already-registered handles. ✓
 - Concrete LLM adapter types are no longer defined in the Converge foundation. ✓
 - Concrete search/fetch/feed/tool adapter types are no longer defined in the
-  Converge foundation.
+  Converge foundation. ✓
 - Manifold compiles against published Converge contracts.
 - Compile-pass tests prove the dependency direction:
   `converge-provider <- manifold <- product/runtime assembly`.
 - KB pages describe `converge-provider` as the contract and
-  `converge-provider-adapters` as the temporary non-LLM implementation holder.
+  Manifold as the generic implementation holder.
 
 See also: [[Architecture/ADRs/ADR-007-provider-tool-contracts]],
 [[Architecture/ADRs/ADR-008-extension-crate-boundaries]],

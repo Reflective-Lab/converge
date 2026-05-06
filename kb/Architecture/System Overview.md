@@ -57,7 +57,6 @@ crates/
   protocol/       generated converge.v1 wire contract
   client/         canonical remote Rust SDK
   core/           engine implementation and promotion path
-  provider-adapters/ temporary in-repo provider adapters
   optimization/   solver packs and Suggestor adapter
   experience/     experience event storage
   runtime/        HTTP and gRPC runtime

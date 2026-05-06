@@ -47,17 +47,15 @@ It is the stable Rust package that downstreams import for `ChatBackend`,
 provider selection DTOs.
 
 The clean long-lived domain name belongs to the contract, not to adapter
-implementations. Therefore the temporary in-repo implementation staging crate
-is named `converge-provider-adapters`. It is non-publishable, excluded from
-default workspace members, and will be emptied or retired as generic adapters
-move to `manifold`.
+implementations. The temporary in-repo implementation staging crate was
+`converge-provider-adapters`. It was non-publishable and has now been removed
+after generic adapters moved to `manifold`.
 
 Target end state:
 
 - `converge-provider` is the clean provider/capability contract name.
-- `converge-provider-adapters` remains only a temporary in-repo implementation
-  holder until generic adapters move to Manifold. Foundation crates do not
-  depend on it.
+- `converge-provider-adapters` is retired; foundation crates do not depend on
+  adapter implementations.
 - Generic adapter implementations live in `manifold` with implementation
   qualifiers such as `OpenAiChatAdapter`, `AnthropicChatAdapter`,
   `BraveSearchAdapter`, `HttpFetchAdapter`, `HttpFeedAdapter`,
@@ -72,7 +70,7 @@ The implementation move is tracked as the manifold provider/tool migration.
 - Feed, fetch, search, chat, embedding, and tool execution contracts should be
   reviewed as ports before new implementations are added.
 - `converge-provider` must remain contract-only. Adapter code belongs in
-  `converge-provider-adapters` temporarily, then Manifold.
+  Manifold.
 - Provider extraction is not only packaging cleanup; it is a security and
   correctness boundary.
 

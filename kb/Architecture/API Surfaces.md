@@ -80,8 +80,8 @@ Status:
 - concrete implementations use adapter-qualified names in Manifold
 - host assembly registers already-constructed backend handles through the
   provider registry contract
-- `converge-provider-adapters` is a non-publishable staging crate during
-  migration; foundation APIs do not depend on it
+- the former `converge-provider-adapters` staging crate has been removed;
+  generic implementations live in Manifold
 
 ### `converge-model`
 

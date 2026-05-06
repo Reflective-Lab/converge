@@ -26,17 +26,16 @@ Canonical plan: [[Planning/v3.8 Foundation]].
       ([[Architecture/Extension Topology]], 2026-05-05).
 - [x] Extract knowledge to **mnemos** extension repo (2026-05-05).
 - [x] Extract analytics to **prism** extension repo (2026-05-05).
-- [ ] Extract provider/tool implementations to **manifold** extension repo —
-      STARTED. The foundation no longer depends on the adapter staging crate:
+- [x] Extract provider/tool implementations to **manifold** extension repo —
+      The foundation no longer depends on the adapter staging crate:
       `ChatBackendSelectionConfig` is in `converge-provider`,
       `ProviderSelectionSuggestor` is in `converge-kernel`, and
       `converge-runtime` depends on the provider contract only. The
       host-supplied `ChatBackendRegistry` boundary is also in the provider
-      contract. LLM chat adapters, the model catalog, live chat examples, and
-      live LLM endpoint probes have moved to Manifold behind `llm-all`; the
-      Converge staging crate now holds only the remaining non-LLM adapter
-      families. Remaining work is search/fetch/feed/tool migration and
-      downstream proof.
+      contract. LLM chat adapters, search/fetch/feed adapters,
+      embedding/reranker/vector adapters, OpenAPI/GraphQL tool adapters, model
+      catalogs, examples, and live endpoint probes have moved to Manifold. The
+      `converge-provider-adapters` staging crate has been removed.
       Plan: [[Planning/Manifold Provider Tool Migration]].
 - [x] Extract reusable storage adapters to **manifold** extension repo:
       local/S3/GCS object-store builders, SurrealDB/LanceDB experience stores,

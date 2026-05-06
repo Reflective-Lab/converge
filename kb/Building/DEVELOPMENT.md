@@ -41,7 +41,6 @@ crates/
 ├── protocol/      # Generated wire contract (converge.v1)
 ├── client/        # Canonical remote Rust SDK
 ├── core/          # Convergence engine (implementation)
-├── provider-adapters/ # Temporary in-repo LLM/search/tool adapters
 ├── experience/    # Event-sourced audit store
 ├── optimization/  # Native optimization and constraint solving
 ├── storage/       # Object storage abstraction

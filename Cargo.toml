@@ -8,7 +8,6 @@ members = [
     "crates/client",
     "crates/core",
     "crates/provider",
-    "crates/provider-adapters",
     "crates/experience",
     "crates/optimization",
     "crates/runtime",
