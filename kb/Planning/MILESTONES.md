@@ -56,8 +56,11 @@ Canonical plan: [[Planning/v3.8 Foundation]].
 - [x] Implement bidirectional user-side `ExperienceStore` variants needed by
       Organism #12: approval rejection, correction, and boundary adjustment,
       with recall-prior consumption.
-- [ ] Add release-grade security audit, coverage, performance profiling, and
-      soak commands.
+- [x] Add release-grade security audit, coverage, performance profiling, and
+      soak commands (`just security-audit` / `coverage` / `performance-profile`
+      / `soak`; CI green on b1c0009; pre-existing stability.yml YAML
+      validation error fixed; 80% coverage floor enforced in
+      `coverage.yml` per Extension Release Checklist).
 - [x] Run KB sanity cleanup and lift the 5-8 core ideas that define the next
       stable period (Core Ideas page lifted 2026-05-05; cleanup follow-up
       2026-05-06 — see [[LOG]]).
