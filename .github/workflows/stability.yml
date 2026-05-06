@@ -167,7 +167,7 @@ jobs:
   live-endpoints:
     name: Live Provider Tests
     runs-on: ubuntu-latest
-    if: secrets.OPENAI_API_KEY != ''
+    if: ${{ secrets.OPENAI_API_KEY != '' }}
     steps:
       - uses: actions/checkout@v5
       - name: Install protoc
