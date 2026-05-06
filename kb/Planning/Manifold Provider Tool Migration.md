@@ -75,8 +75,9 @@ The staging crate coupling is closed:
 - live chat examples and live LLM endpoint probes have moved to Manifold.
 - search/fetch/feed, embedding/reranker/vector, and OpenAPI/GraphQL tool
   adapters have moved to Manifold.
-- `/Users/kpernyer/dev/extensions/manifold/crates/manifold/src/llm` compiles
-  behind Manifold's `llm-all` feature against the local Converge 3.8.1 patch.
+- `/Users/kpernyer/dev/extensions/manifold-adapters/crates/manifold/src/llm`
+  compiles behind Manifold's `llm-all` feature against the local Converge
+  3.8.1 patch.
 
 The direction is now explicit: Manifold constructs handles, products or Runway
 register them, and Converge selects only through `converge-provider`.

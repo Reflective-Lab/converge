@@ -34,9 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **BREAKING**: Provider contract crate renamed from `converge-provider-api`
-  to `converge-provider`. Ready-made in-repo adapters moved to
-  `converge-provider-adapters` until the Manifold extraction drains them out
-  of the foundation workspace.
+  to `converge-provider`. Ready-made generic adapters moved out of the
+  foundation workspace and now live in Manifold.
 - **BREAKING**: `ContextView` removed — use `Context` (the trait). The concrete implementation is now `ContextState`.
 - **BREAKING**: Consumers using `converge_core::ContextView` must change to `converge_core::Context`.
 

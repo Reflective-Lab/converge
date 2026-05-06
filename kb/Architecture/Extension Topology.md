@@ -48,7 +48,7 @@ families, promote the contract upstream. Keep the implementation downstream.
 | Extension | Home | Owns |
 |---|---|---|
 | `embassy` | `/Users/kpernyer/dev/extensions/embassy` | External-party connector ports and adapters where the foreign system identity is part of the contract. LinkedIn is the first example. |
-| `manifold` | `/Users/kpernyer/dev/extensions/manifold` | Generic provider/tool adapters where the vendor should be hidden behind capabilities: LLM, search, fetch, feed, embeddings, and external tool backends. |
+| `manifold-adapters` | `/Users/kpernyer/dev/extensions/manifold-adapters` | Generic provider/tool adapters where the vendor should be hidden behind capabilities: LLM, search, fetch, feed, embeddings, and external tool backends. |
 | `mnemos` | `/Users/kpernyer/dev/extensions/mnemos` | Knowledge, recall, retrieval, vector stores, and memory suggestors. |
 | `prism` | `/Users/kpernyer/dev/extensions/prism` | Analytics, ML pipelines, feature extraction, inference, training, and monitoring suggestors. |
 | `arbiter` | `/Users/kpernyer/dev/extensions/arbiter` | Policy engines, Cedar wiring, policy suggestors, and authorization implementation. |

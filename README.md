@@ -128,7 +128,7 @@ Every loop participant is a `Suggestor`. There are no side-car pipeline traits f
 | Policy and governance | `PolicyGateSuggestor`, `FlowGateSuggestor` | [`arbiter`](https://github.com/Reflective-Lab/arbiter) extension |
 | Analytics / ML | `FeatureAgent`, training and inference suggestors | [`prism`](https://github.com/Reflective-Lab/prism) extension |
 | Knowledge | retrieval and store suggestors | [`mnemos`](https://github.com/Reflective-Lab/mnemos) extension |
-| Generic providers and tools | LLM, search, fetch, feed, embedding, OpenAPI/GraphQL adapters | [`manifold`](https://github.com/Reflective-Lab/manifold) extension |
+| Generic providers and tools | LLM, search, fetch, feed, embedding, OpenAPI/GraphQL adapters | [`manifold-adapters`](https://github.com/Reflective-Lab/manifold-adapters) extension |
 | Source-specific connectors | LinkedIn, Stripe, OCR, ... | [`embassy`](https://github.com/Reflective-Lab/embassy) extension |
 | Native solvers | OR-Tools, CP-SAT, ... | [`ferrox`](https://github.com/Reflective-Lab/ferrox) extension |
 | Custom LLMs and tools | any crate implementing `Suggestor` | your crate |
@@ -197,7 +197,7 @@ SDKs.
 | [`mnemos`](https://github.com/Reflective-Lab/mnemos) | Knowledge retrieval and storage suggestors | 2026-05-05 |
 | [`prism`](https://github.com/Reflective-Lab/prism) | Analytics and ML suggestors (feature, training, inference, monitoring) | 2026-05-05 |
 | [`arbiter`](https://github.com/Reflective-Lab/arbiter) | Cedar policy engine and policy suggestors | 2026-05-05 |
-| [`manifold`](https://github.com/Reflective-Lab/manifold) | Generic provider/tool adapters: LLM, search, fetch, feed, embeddings, external tools | in progress |
+| [`manifold-adapters`](https://github.com/Reflective-Lab/manifold-adapters) | Generic provider/tool adapters: LLM, search, fetch, feed, embeddings, external tools | active |
 | [`embassy`](https://github.com/Reflective-Lab/embassy) | Source-specific connector ports (LinkedIn, ...) | 2026-05-05 |
 | [`ferrox`](https://github.com/Reflective-Lab/ferrox) | Native solver bridge (OR-Tools / CP-SAT) | relocated 2026-05-05 |
 
