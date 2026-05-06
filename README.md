@@ -261,6 +261,7 @@ Domain packs, policy, analytics, and knowledge moved to extension repos on 2026-
 
 The knowledge base in `kb/` is the canonical project documentation.
 
+- [Developer Guide](kb/Building/Developer%20Guide.md) — end-to-end guide for Converge 3.8.1 developers
 - [Core Ideas](kb/Architecture/Core%20Ideas.md) — durable principles for the next stable period
 - [API Surfaces](kb/Architecture/API%20Surfaces.md)
 - [Extension Topology](kb/Architecture/Extension%20Topology.md) — where extension code lives and why
