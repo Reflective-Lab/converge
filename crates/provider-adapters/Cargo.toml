@@ -6,9 +6,9 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "LLM provider adapter implementations for Converge"
+description = "Temporary non-LLM adapter staging for Converge"
 documentation = "https://docs.rs/converge-provider-adapters"
-keywords = ["llm", "ai", "provider", "converge"]
+keywords = ["adapter", "provider", "converge"]
 categories = ["api-bindings", "web-programming"]
 
 [dependencies]
@@ -35,36 +35,16 @@ zeroize = { workspace = true, optional = true }
 tokio.workspace = true
 
 [features]
-default = ["anthropic", "gemini", "openai", "openrouter", "mistral", "arcee", "writer", "minmax", "kong", "staik", "registry", "brave", "tavily", "feed"]
+default = ["brave", "tavily", "feed"]
 
 # Private convenience feature: any provider that needs HTTP pulls this in
 _http = ["dep:reqwest"]
 
-# Providers
-anthropic = ["_http"]
-gemini = ["_http"]
-openai = ["_http"]
-ollama = ["_http"]
+# Search, feed, embedding, and retrieval adapters still staged here.
 qwen = ["_http"]
-deepseek = ["_http"]
-mistral = ["_http"]
-openrouter = ["_http"]
-perplexity = ["_http"]
-grok = ["_http"]
-kimi = ["_http"]
-kong = ["_http"]
-staik = ["_http"]
-arcee = ["_http"]
-writer = ["_http"]
-minmax = ["_http"]
-baidu = ["_http", "dep:urlencoding"]
-zhipu = ["_http"]
-apertus = ["_http"]
 brave = ["_http", "dep:urlencoding"]
 tavily = ["_http"]
 feed = ["_http", "dep:quick-xml"]
-# Registry and Matchmaking
-registry = []
 
 # Stores
 qdrant = []

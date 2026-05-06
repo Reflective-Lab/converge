@@ -40,9 +40,10 @@ Providers are the adapter implementations that plug into [[Architecture/Ports|po
 real provider domain name.
 
 `converge-provider-adapters` is the current non-publishable in-repo adapter
-staging crate, but it is not the long-lived implementation home. Generic
-adapter implementations move to Manifold and carry adapter-qualified names.
-The clean provider name belongs to the contract.
+staging crate for the remaining non-LLM adapter families, but it is not the
+long-lived implementation home. LLM chat adapters and the model catalog have
+moved to Manifold. Generic adapter implementations carry adapter-qualified
+names. The clean provider name belongs to the contract.
 
 Products or Runway supply already-constructed backend handles through
 `ChatBackendRegistry`. The registry is a contract surface; adapter crates create
@@ -52,9 +53,10 @@ See [[Planning/Manifold Provider Tool Migration]] for the extraction sequence.
 
 ## Chat Backends
 
-### Cloud (moving from `converge-provider-adapters` to Manifold)
+### Cloud (Manifold)
 
-Current live remote chat adapters implement `ChatBackend` and are exposed through `DynChatBackend` where runtime polymorphism is needed:
+Current live remote chat adapters live in Manifold, implement `ChatBackend`,
+and are exposed through `DynChatBackend` where runtime polymorphism is needed:
 
 | Backend | Models | Data Sovereignty | Key Capabilities |
 |---|---|---|---|

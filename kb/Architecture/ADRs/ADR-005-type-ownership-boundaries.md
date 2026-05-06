@@ -29,7 +29,8 @@ If a type appears in two crates, one must re-export from the other. No copy-past
 | `converge-kernel` | — (curated re-exports only) | `converge-core`, `converge-pack` |
 | `converge-protocol` | Generated `converge.v1` types | — |
 | `converge-client` | `ConvergeClient`, `ClientError`, `StoreObserver` | `converge-protocol` |
-| `converge-provider` | Provider impls (Anthropic, OpenAI, Gemini, Mistral, Brave, Tavily), `ModelSelector`, `ProviderRegistry` | `converge-core::traits::*`, `converge-provider::*` |
+| `converge-provider` | Provider contracts, capability routing, chat registry, selection DTOs | none |
+| `manifold` | Generic provider impls (LLM chat, storage, search/fetch/feed/tools as migrated), model catalog | `converge-provider`, other Converge contracts |
 | `converge-experience` | `InMemoryExperienceStore`, `StoreObserver`, store impls | `converge-core::ExperienceStore` |
 | `converge-llm` | `LlmBackend` (local inference), `LlmRouter`, `ProviderAgent`, `LlmAgentConfig`, `LlmError` (kernel), `FinishReason` (inference), `KernelProposal` | `converge-core::kernel_boundary::*`, `converge-core::prompt::*` |
 

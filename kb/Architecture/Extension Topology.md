@@ -65,14 +65,15 @@ carry qualifiers that describe what they implement.
 
 For the 3.8.x line, `converge-provider` is the published provider contract.
 `converge-provider-adapters` is a temporary non-publishable in-repo staging
-crate, not the long-lived implementation home. Generic adapter
-implementations drain to Manifold and use names such as `OpenAiChatAdapter`,
-`BraveSearchAdapter`, `HttpFeedAdapter`, and `OpenApiToolAdapter`.
+crate, not the long-lived implementation home. LLM chat implementations have
+already moved to Manifold. The remaining generic adapter implementations drain
+to Manifold and use names such as `OpenAiChatAdapter`, `BraveSearchAdapter`,
+`HttpFeedAdapter`, and `OpenApiToolAdapter`.
 
 The Converge-side dependency break is in place: runtime and kernel no longer
 depend on `converge-provider-adapters`, and `converge-provider` owns the
 host-supplied `ChatBackendRegistry` contract. The remaining work is the
-physical adapter move plus downstream proof. See
+physical move for search/fetch/feed/tool adapters plus downstream proof. See
 [[Planning/Manifold Provider Tool Migration]].
 
 ## Embassy vs Manifold

@@ -184,9 +184,10 @@ converge-provider  <-  manifold  <-  products / runway
 ```
 
 `converge-provider` is the API. Adapter implementations use qualified names
-and live in Manifold. The temporary `crates/provider-adapters` crate remains
-only as a non-publishable staging area while that move completes; neither
-`converge-runtime` nor `converge-kernel` depends on it.
+and live in Manifold. LLM chat adapters and their model catalog have moved
+there. The temporary `crates/provider-adapters` crate remains only as a
+non-publishable staging area for the remaining non-LLM adapter families;
+neither `converge-runtime` nor `converge-kernel` depends on it.
 Host assembly supplies already-constructed handles through
 `ChatBackendRegistry`; Converge selects handles, it does not instantiate vendor
 SDKs.
@@ -249,7 +250,7 @@ crates/
   protocol/         Canonical generated wire contract
   client/           Canonical remote Rust SDK
   core/             Engine implementation and promotion gate
-  provider-adapters/ Temporary non-publishable provider adapter staging
+  provider-adapters/ Temporary non-publishable non-LLM adapter staging
   optimization/     Solver packs and Suggestor adapter
   experience/       Experience event storage
   runtime/          HTTP and gRPC runtime

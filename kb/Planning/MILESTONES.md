@@ -32,8 +32,10 @@ Canonical plan: [[Planning/v3.8 Foundation]].
       `ProviderSelectionSuggestor` is in `converge-kernel`, and
       `converge-runtime` depends on the provider contract only. The
       host-supplied `ChatBackendRegistry` boundary is also in the provider
-      contract. The first LLM adapter copy compiles in Manifold behind
-      `llm-all`; remaining work is staging cleanup, other adapter families, and
+      contract. LLM chat adapters, the model catalog, live chat examples, and
+      live LLM endpoint probes have moved to Manifold behind `llm-all`; the
+      Converge staging crate now holds only the remaining non-LLM adapter
+      families. Remaining work is search/fetch/feed/tool migration and
       downstream proof.
       Plan: [[Planning/Manifold Provider Tool Migration]].
 - [x] Extract reusable storage adapters to **manifold** extension repo:

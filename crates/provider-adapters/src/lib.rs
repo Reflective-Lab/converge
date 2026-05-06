@@ -11,20 +11,20 @@
 #![allow(clippy::unused_self)]
 #![allow(clippy::needless_pass_by_value)]
 
-//! Capability adapters for the Converge runtime.
+//! Temporary capability adapter staging for the Converge runtime.
 //!
 //! > **Providers produce observations, never decisions.**
 //! > **Converge converges; providers adapt.**
 //!
-//! This crate provides capability adapters (providers) that connect Converge
-//! workflows to external systems. Each provider implements
-//! [`ChatBackend`](converge_provider::ChatBackend) for LLM completions,
-//! or other capability traits for embedding, search, etc.
+//! This crate only contains adapter families that have not yet moved to their
+//! extension repository. The LLM chat adapters and model-selection catalog now
+//! live in Manifold. Converge keeps the provider contracts in
+//! `converge-provider`; implementation crates import those contracts.
 //!
 //! # What Is a Provider?
 //!
 //! A provider is an **adapter** that:
-//! - Implements capability traits (`ChatBackend`, `Embedding`, `VectorRecall`, etc.)
+//! - Implements capability traits (`Embedding`, `VectorRecall`, search, feed, etc.)
 //! - Returns observations (not facts, not decisions)
 //! - Includes provenance metadata for tracing
 //! - Is stateless (no hidden lifecycle state)
@@ -34,46 +34,14 @@
 //! - Orchestration (no workflows, no scheduling)
 //! - Domain logic (business rules live downstream in packs and products)
 //!
-//! # Available Backends
-//!
-//! ## LLM Backends (ChatBackend implementations)
-//! - [`AnthropicBackend`] - Claude API (Anthropic)
-//! - [`OpenAiBackend`] - GPT-4, GPT-3.5 (OpenAI)
-//! - [`OpenRouterBackend`] - Any model via OpenRouter (openrouter.ai)
-//! - [`GeminiBackend`] - Gemini Pro (Google)
-//! - [`MistralBackend`] - Mistral chat completions (Mistral AI)
-//!
-//! ## Structured Output
-//!
-//! All live chat backends accept [`ResponseFormat::Json`](converge_provider::ResponseFormat::Json),
-//! but providers do not enforce it identically at request time:
-//! - OpenAI and Mistral use native `response_format` API fields
-//! - Gemini uses native `response_mime_type`
-//! - Anthropic uses the documented system-instruction JSON pattern
-//!
-//! All live chat backends then apply a shared response contract before returning content:
-//! - `Json`, `Yaml`, and `Toml` outputs are validated centrally
-//! - trivial outer code fences are stripped for those machine formats
-//! - a provider that returns prose for a structured request fails with
-//!   [`LlmError::ResponseFormatMismatch`](converge_provider::LlmError::ResponseFormatMismatch)
-//!
-//! Anthropic's instruction-based JSON handling is provider-native and correct for Claude.
-//! The difference is enforcement strength at request time, not post-response correctness.
-
 // Secret management (SecretProvider trait, EnvSecretProvider default)
 pub mod secret;
 
 // Core contract types
 pub mod contract;
 
-// LLM Backend implementations (ChatBackend trait from converge-provider)
-pub mod llm;
-
 // Capability registry
 mod capability_registry;
-
-// Model selection
-mod model_selection;
 
 // Search providers
 #[cfg(feature = "brave")]
@@ -92,8 +60,6 @@ pub mod tools;
 // Capability providers
 #[cfg(feature = "_http")]
 pub mod embedding;
-#[cfg(feature = "registry")]
-pub mod registry_loader;
 #[cfg(feature = "_http")]
 pub mod reranker;
 pub mod vector;
@@ -103,36 +69,9 @@ pub use capability_registry::{
     CapabilityRegistry, CapabilityRequirements, SearchProviderMeta, WebSearchRequirements,
 };
 
-// Re-exports: model selection
-pub use model_selection::{
-    FitnessBreakdown, ModelMetadata, ModelSelector, ProviderRegistry, RejectionReason,
-    SelectionResult, is_brave_available, is_provider_available,
-};
-
 // Re-exports: secret management
 pub use secret::{
     EnvSecretProvider, SecretError, SecretProvider, SecretString, StaticSecretProvider,
-};
-
-// Re-exports: LLM backends
-#[cfg(feature = "anthropic")]
-pub use llm::AnthropicBackend;
-#[cfg(feature = "gemini")]
-pub use llm::GeminiBackend;
-#[cfg(feature = "kong")]
-pub use llm::KongBackend;
-#[cfg(feature = "mistral")]
-pub use llm::MistralBackend;
-#[cfg(feature = "openai")]
-pub use llm::OpenAiBackend;
-#[cfg(feature = "openrouter")]
-pub use llm::OpenRouterBackend;
-#[cfg(feature = "staik")]
-pub use llm::StaikBackend;
-pub use llm::{
-    ChatBackendSelectionConfig, ChatBackendSelectionConfigError, ResilientChatBackend,
-    SelectedChatBackend, select_chat_backend, select_chat_backend_with_secret_provider,
-    select_healthy_chat_backend, select_healthy_chat_backend_with_secret_provider,
 };
 
 // Re-exports: search providers

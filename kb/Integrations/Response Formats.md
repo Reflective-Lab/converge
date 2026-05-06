@@ -106,8 +106,8 @@ On failure, the system retries with:
 ## Running the matrix test
 
 ```bash
-cd converge
-OPENROUTER_API_KEY=sk-or-v1-... cargo run --example format_matrix
+cd ~/dev/extensions/manifold
+OPENROUTER_API_KEY=sk-or-v1-... cargo run --features openrouter --example format_matrix
 ```
 
 See also: [[MCP Tools]], [[External Services]]

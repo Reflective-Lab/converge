@@ -35,10 +35,11 @@ products / runway          # runtime assembly, credentials, environment wiring
 Converge runtime must not import Manifold. Products or Runway wire adapters
 into a runtime.
 
-Interim state: `converge-provider-adapters` holds today's in-repo
-OpenAI/Anthropic/search/tool adapters until this plan drains them into
-Manifold. It is not part of the target dependency shape, not a default
-workspace member, and not a publishable foundation crate.
+Interim state: LLM chat adapters have moved to Manifold. The remaining
+`converge-provider-adapters` crate holds non-LLM staging adapters
+(search/fetch/feed/tools/retrieval) until this plan drains them into Manifold.
+It is not part of the target dependency shape, not a default workspace member,
+and not a publishable foundation crate.
 
 ## Adapter Naming Rule
 
@@ -68,20 +69,19 @@ The first blocker was the foundation importing adapter selection:
   `ResolvedChatBackend` live in `converge-provider`. The registry holds
   already-constructed handles supplied by host assembly.
 
-The remaining coupling is inside the staging crate:
+The LLM coupling inside the staging crate is closed:
 
-- `crates/provider-adapters/src/llm/selection.rs` imports concrete vendor
-  backend types such as `AnthropicBackend`, `OpenAiBackend`, `GeminiBackend`,
-  and `MistralBackend`.
-- The first physical LLM copy is present in
-  `/Users/kpernyer/dev/extensions/manifold/crates/manifold/src/llm` and
-  compiles behind Manifold's `llm-all` feature against the local Converge
-  3.8.1 patch. This is intentional short-term duplication until staging is
-  removed or converted to a compatibility facade.
+- `crates/provider-adapters/src/llm` has been removed.
+- `crates/provider-adapters/src/model_selection.rs` and the model catalog
+  config have been removed.
+- live chat examples and live LLM endpoint probes have moved to Manifold.
+- `/Users/kpernyer/dev/extensions/manifold/crates/manifold/src/llm` compiles
+  behind Manifold's `llm-all` feature against the local Converge 3.8.1 patch.
 
-That is now staging-only coupling. Moving vendor backends next should preserve
-the same registry contract: Manifold constructs handles, products or Runway
-register them, and Converge selects only through `converge-provider`.
+The remaining coupling is non-LLM staging code. Moving search/fetch/feed/tool
+adapters next should preserve the same direction: Manifold constructs handles,
+products or Runway register them, and Converge selects only through
+`converge-provider`.
 
 ## Migration Slices
 
@@ -108,8 +108,9 @@ register them, and Converge selects only through `converge-provider`.
    Move concrete modules out of `crates/provider-adapters` into Manifold:
    LLM adapters first, then search/fetch/feed, then OpenAPI/GraphQL tools.
    Manifold imports `converge-provider` and implements the contracts.
-   LLM adapters are copied and verified in Manifold; the next cleanup is
-   deleting or facading the in-repo staging definitions.
+   LLM adapters, registry config, live examples, and live LLM tests are moved
+   and verified in Manifold. The next slices are search/fetch/feed and tool
+   adapters.
 
 5. **Downstream proof.**
    Add compile-pass examples/tests showing:
@@ -142,13 +143,14 @@ register them, and Converge selects only through `converge-provider`.
   workspace members. ✓
 - `converge-provider` exposes a host-supplied chat registry that returns
   already-registered handles. ✓
-- Concrete LLM/search/fetch/feed/tool adapter types are no longer defined in
-  the Converge foundation.
+- Concrete LLM adapter types are no longer defined in the Converge foundation. ✓
+- Concrete search/fetch/feed/tool adapter types are no longer defined in the
+  Converge foundation.
 - Manifold compiles against published Converge contracts.
 - Compile-pass tests prove the dependency direction:
   `converge-provider <- manifold <- product/runtime assembly`.
 - KB pages describe `converge-provider` as the contract and
-  `converge-provider-adapters` as the temporary implementation holder.
+  `converge-provider-adapters` as the temporary non-LLM implementation holder.
 
 See also: [[Architecture/ADRs/ADR-007-provider-tool-contracts]],
 [[Architecture/ADRs/ADR-008-extension-crate-boundaries]],

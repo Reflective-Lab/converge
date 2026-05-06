@@ -150,8 +150,8 @@ impl JobExecutorBuilder {
 
     /// Use real LLM providers based on available API keys.
     ///
-    /// This will use the `ProviderRegistry` to select the best available
-    /// provider (Anthropic, OpenAI, etc.) based on environment variables.
+    /// Host assembly supplies concrete chat handles through the
+    /// `ChatBackendRegistry`; Converge selects handles, never vendor SDKs.
     ///
     /// Falls back to deterministic agents if no API keys are available.
     pub fn with_real_llm(mut self) -> Self {

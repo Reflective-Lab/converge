@@ -27,10 +27,7 @@ const MALFORMED_PREFIX: &str = "provider-request-error:";
 /// # Construction
 ///
 /// ```rust,ignore
-/// let backends: Vec<Arc<dyn Backend>> = vec![
-///     Arc::new(AnthropicBackend::from_env()),
-///     Arc::new(KongBackend::from_env()),
-/// ];
+/// let backends: Vec<Arc<dyn Backend>> = product_extension_backends();
 ///
 /// engine.register_suggestor(ProviderSelectionSuggestor::new(backends));
 /// ```
