@@ -4,7 +4,6 @@
 # Run: cargo deny check  (or: just deny)
 
 [advisories]
-# Scope for unmaintained crate checks
 unmaintained = "workspace"
 yanked = "warn"
 # Transitive advisories with no fix available — not in our code paths:
