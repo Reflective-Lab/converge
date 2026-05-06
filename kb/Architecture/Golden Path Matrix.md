@@ -15,7 +15,7 @@ The goal is simple: **make the right thing easy to use**.
 | Layer | Purpose | Public surface | Typical consumers |
 |---|---|---|---|
 | Providers | External capabilities | provider SDKs behind adapter traits | adapter maintainers, controlled product integrations |
-| Converge | Governance, authority, convergence, promotion | `converge-pack`, `converge-provider-api`, `converge-model`, `converge-kernel`, `converge-client`, `converge-protocol` | Organism, Axiom, Helm, Wolfgang, hackathon, other apps |
+| Converge | Governance, authority, convergence, promotion | `converge-pack`, `converge-provider`, `converge-model`, `converge-kernel`, `converge-client`, `converge-protocol` | Organism, Axiom, Helm, Wolfgang, hackathon, other apps |
 | Organism | Intent interpretation, planning, debate, simulation, reusable organizational workflows | `organism-pack`, `organism-runtime`, `organism-intelligence`, `organism-notes`, `organism-domain` | Helm and other apps that need reusable reasoning above Converge |
 | Axiom | Truth authoring, validation, simulation, compilation | Axiom CLI/library + produced WASM/manifests | Helm, truth authors, CI pipelines |
 | Helm | Operator-facing control surface | product UI and app APIs | humans |
@@ -25,17 +25,17 @@ The goal is simple: **make the right thing easy to use**.
 | Need | Start here | Add when needed | Avoid by default |
 |---|---|---|---|
 | Author packs and invariants | `converge-pack` | `converge-model` for governed result types | `converge-core` |
-| Consume provider capability contracts | `converge-provider-api` | `converge-provider` for ready-made adapters | `converge-core` |
+| Consume provider capability contracts | `converge-provider` | `converge-provider-adapters` for temporary ready-made adapters | `converge-core` |
 | Embed governed execution in-process | `converge-kernel` | `converge-model`, `converge-pack` | `converge-core`, `converge-runtime` |
 | Read governed semantic outputs | `converge-model` | `converge-kernel` if you also execute | `converge-core` |
 | Call a deployed runtime | `converge-client` | `converge-protocol` for typed wire access | runtime internals |
-| Implement provider adapters | `converge-provider-api` | `converge-provider` if contributing inside Converge | app-local vendor SDK code spread across repos |
+| Implement provider adapters | `converge-provider` | `converge-provider` if contributing inside Converge | app-local vendor SDK code spread across repos |
 
 Rules:
 
 - `converge-core` is the constitutional engine crate. It is not the default next-layer import.
-- `converge-provider-api` is the current canonical capability contract for chat and routing vocabulary, but its name is transitional under ADR-007.
-- `converge-provider` is the current implementation layer for ready-made adapters, env helpers, and provider registry behavior.
+- `converge-provider` is the canonical capability contract for chat and routing vocabulary.
+- `converge-provider-adapters` is the temporary implementation layer for ready-made adapters, env helpers, and provider registry behavior.
 
 ## Organism Layer
 
@@ -56,7 +56,7 @@ Rules:
 
 | Need | Start here | Add when needed | Avoid by default |
 |---|---|---|---|
-| Validate and compile truths | Axiom CLI/library | `converge-provider-api` + `converge-provider` for live LLM-backed validation | `converge-core` |
+| Validate and compile truths | Axiom CLI/library | `converge-provider` + `converge-provider` for live LLM-backed validation | `converge-core` |
 | Consume Axiom output in Converge | produced WASM + manifest ABI | `converge-model` for truth metadata if needed | direct dependence on Axiom internals from runtime code |
 
 Rules:
@@ -70,7 +70,7 @@ Rules:
 | Need | Start here | Add when needed | Avoid by default |
 |---|---|---|---|
 | Operator-facing truth authoring and validation | Axiom | Organism for reusable reasoning, Converge for execution | direct lower-layer internals |
-| Governed execution in a product | `converge-kernel` or `converge-client` | `converge-model`, `converge-pack`, `converge-provider-api`, `converge-provider` | `converge-core` |
+| Governed execution in a product | `converge-kernel` or `converge-client` | `converge-model`, `converge-pack`, `converge-provider`, `converge-provider` | `converge-core` |
 | Reusable reasoning above execution | `organism-pack` + `organism-runtime` | `organism-domain`, `organism-intelligence`, `organism-notes` | Organism phase crates |
 
 Rules:
@@ -84,17 +84,17 @@ Rules:
 | Consumer | Golden path |
 |---|---|
 | Organism | `converge-pack` + `converge-kernel` + `converge-model` + `converge-client` |
-| Axiom | `converge-provider-api` + `converge-provider` |
+| Axiom | `converge-provider` + `converge-provider` |
 | Helms | Axiom + `organism-pack`/`organism-runtime` + `converge-kernel`/`converge-model`/`converge-pack` |
-| Wolfgang | `converge-kernel` + `converge-model` + `converge-provider-api` + `converge-provider`; Organism only when a reusable capability clearly beats product-local code |
-| Hackathon participant-facing code | `converge-pack` + `converge-kernel` + `converge-provider-api` + `converge-provider` + `organism-pack`/`organism-runtime` |
+| Wolfgang | `converge-kernel` + `converge-model` + `converge-provider` + `converge-provider`; Organism only when a reusable capability clearly beats product-local code |
+| Hackathon participant-facing code | `converge-pack` + `converge-kernel` + `converge-provider` + `converge-provider` + `organism-pack`/`organism-runtime` |
 
 ## Hard Rule
 
 Each layer should expose the **smallest stable surface** that the next layer
 needs.
 
-- Do not make apps learn `converge-core` when `converge-kernel` or `converge-provider-api` is enough.
+- Do not make apps learn `converge-core` when `converge-kernel` or `converge-provider` is enough.
 - Do not make Organism consumers learn phase crates when `organism-pack` or `organism-runtime` is enough.
 - Do not make Helm consumers learn architecture internals when Axiom or product APIs are enough.
 

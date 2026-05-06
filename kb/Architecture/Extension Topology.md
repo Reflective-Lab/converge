@@ -10,6 +10,10 @@ extensions. These repositories keep implementation-heavy, SDK-facing, or
 source-specific code outside the foundation while still depending on stable
 Converge contracts.
 
+> Every extension repo must satisfy
+> [[Standards/Extension Release Checklist]] before it ships in a Converge
+> release line.
+
 ## Decision
 
 Converge keeps universal contracts. Extensions implement those contracts, and
@@ -53,6 +57,23 @@ families, promote the contract upstream. Keep the implementation downstream.
 Storage adapters follow the same rule. Reusable Rust adapters live under
 extensions; operational service wiring lives in Runway or product repositories.
 See [[Architecture/Storage Boundary]].
+
+## Provider and Tool Naming
+
+Provider/tool contracts own the clean domain names. Adapter implementations
+carry qualifiers that describe what they implement.
+
+For the 3.8.x line, `converge-provider` is the published provider contract.
+`converge-provider-adapters` is a temporary non-publishable in-repo staging
+crate, not the long-lived implementation home. Generic adapter
+implementations drain to Manifold and use names such as `OpenAiChatAdapter`,
+`BraveSearchAdapter`, `HttpFeedAdapter`, and `OpenApiToolAdapter`.
+
+The Converge-side dependency break is in place: runtime and kernel no longer
+depend on `converge-provider-adapters`, and `converge-provider` owns the
+host-supplied `ChatBackendRegistry` contract. The remaining work is the
+physical adapter move plus downstream proof. See
+[[Planning/Manifold Provider Tool Migration]].
 
 ## Embassy vs Manifold
 

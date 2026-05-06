@@ -13,7 +13,7 @@ treated as a stable dependency.
 Depend on the smallest public contract that satisfies the job:
 
 - authoring packs or invariants: `converge-pack`
-- routing providers or chat backends: `converge-provider-api`
+- routing providers or chat backends: `converge-provider`
 - reading governed semantic outputs: `converge-model`
 - embedding the engine: `converge-kernel`
 - calling a remote runtime from Rust: `converge-client`
@@ -53,7 +53,7 @@ Status:
 - persistence uses `ContextSnapshot` rather than fact constructors
 - semantic identifiers, hashes, and timestamps are typed contract values, not string conventions
 
-### `converge-provider-api` (Transitional Name)
+### `converge-provider`
 
 Purpose:
 - backend identity, capability routing, chat contracts, and selection criteria
@@ -69,13 +69,19 @@ Key surface:
 - `ResponseFormat`
 - `BackendSelector`
 - `SelectionCriteria`
+- `ChatBackendSelectionConfig`
+- `ChatBackendRegistry`
+- `RegisteredChatBackend`
+- `ResolvedChatBackend`
 
 Status:
 - canonical provider capability contract
-- naming drift: the contract has the `-api` suffix while the implementation
-  crate has the clean `converge-provider` name. v3.8 uses the rule that
-  contracts get the real domain names and implementations carry adapter
-  qualifiers.
+- owns the real provider domain name
+- concrete implementations use adapter-qualified names in Manifold
+- host assembly registers already-constructed backend handles through the
+  provider registry contract
+- `converge-provider-adapters` is a non-publishable staging crate during
+  migration; foundation APIs do not depend on it
 
 ### `converge-model`
 
@@ -122,7 +128,7 @@ Formation support is intentionally split across the canonical surfaces:
   - `SuggestorRole`
   - `SuggestorCapability`
   - `SuggestorProfile`
-- `converge-provider-api`
+- `converge-provider`
   - `ProviderRequest`
   - `ProviderAssignment`
   - `CapabilityAssignment`
@@ -135,7 +141,7 @@ That split is deliberate: structure lives in the semantic crates, but runnable
 machinery is easy to find from the embedding surface.
 
 The public split is enforced with consumer-style compile-pass tests in
-`converge-model`, `converge-provider-api`, and `converge-kernel`.
+`converge-model`, `converge-provider`, and `converge-kernel`.
 
 ### `converge-protocol`
 
@@ -168,7 +174,7 @@ Status:
 |---|---|
 | Pack authors | `converge-pack`, optionally `converge-model` |
 | Embedded applications | `converge-kernel`, optionally `converge-model` |
-| Provider adapters | `converge-provider-api` |
+| Provider adapters | `converge-provider` |
 | Remote Rust consumers | `converge-client`, optionally `converge-protocol` |
 | Non-Rust consumers | protobuf/gRPC `converge.v1` |
 

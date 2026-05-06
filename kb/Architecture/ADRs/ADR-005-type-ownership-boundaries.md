@@ -23,13 +23,13 @@ If a type appears in two crates, one must re-export from the other. No copy-past
 | Crate | Owns | Re-exports from |
 |---|---|---|
 | `converge-pack` | `Suggestor`, `Context`, `ContextKey`, `AgentEffect`, `Fact`, `ProposedFact`, `ValidationError` | — |
-| `converge-provider-api` | `Backend`, `BackendKind`, `Capability`, `BackendError`, `BackendSelector`, `BackendRequirements` | — |
+| `converge-provider` | `Backend`, `BackendKind`, `Capability`, `BackendError`, `BackendSelector`, `BackendRequirements` | — |
 | `converge-core` | `Engine`, `ConvergeResult`, `Budget`, `ExperienceStore`, `ExperienceEvent`, `CriterionEvaluator`, `CriterionResult`, `Invariant`, `InvariantClass`, `InvariantResult`, `ChatBackend`, `DynChatBackend`, `EmbedBackend`, `DynEmbedBackend`, `ChatRequest`, `ChatResponse`, `ChatMessage`, `ChatRole`, `ToolDefinition`, `ToolCall`, `ResponseFormat`, `LlmError`, `TokenUsage`, `AgentRequirements`, `ReplayTrace`, `BackendRequest`, `BackendResponse`, `IntentId`, `RootIntent`, `AgentPrompt`, `PromptFormat` | `converge-pack::*` |
 | `converge-model` | — (curated re-exports only) | `converge-core`, `converge-pack` |
 | `converge-kernel` | — (curated re-exports only) | `converge-core`, `converge-pack` |
 | `converge-protocol` | Generated `converge.v1` types | — |
 | `converge-client` | `ConvergeClient`, `ClientError`, `StoreObserver` | `converge-protocol` |
-| `converge-provider` | Provider impls (Anthropic, OpenAI, Gemini, Mistral, Brave, Tavily), `ModelSelector`, `ProviderRegistry` | `converge-core::traits::*`, `converge-provider-api::*` |
+| `converge-provider` | Provider impls (Anthropic, OpenAI, Gemini, Mistral, Brave, Tavily), `ModelSelector`, `ProviderRegistry` | `converge-core::traits::*`, `converge-provider::*` |
 | `converge-experience` | `InMemoryExperienceStore`, `StoreObserver`, store impls | `converge-core::ExperienceStore` |
 | `converge-llm` | `LlmBackend` (local inference), `LlmRouter`, `ProviderAgent`, `LlmAgentConfig`, `LlmError` (kernel), `FinishReason` (inference), `KernelProposal` | `converge-core::kernel_boundary::*`, `converge-core::prompt::*` |
 
@@ -58,7 +58,7 @@ Any PR adding a `pub struct`, `pub enum`, or `pub trait` to a publishable crate 
 ## Enforcement
 
 1. **Code review**: PRs adding `pub trait` or `pub struct` to publishable crates must declare ownership
-2. **Compile/API tests**: public crates use the canonical owner for each surface (`converge-provider-api` for chat contracts, `converge-pack` for authoring contracts); no local copies of request/response types
+2. **Compile/API tests**: public crates use the canonical owner for each surface (`converge-provider` for chat contracts, `converge-pack` for authoring contracts); no local copies of request/response types
 3. **`just lint` must pass**: no `#[allow(deprecated)]` without a tracking comment
 
 ## Consequences

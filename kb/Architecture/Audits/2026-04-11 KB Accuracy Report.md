@@ -44,7 +44,7 @@ source: mixed
 | 2 | `converge-protocol` crate | Added to Crate Catalog |
 | 3 | `converge-client` crate | Added to Crate Catalog |
 | 4 | `converge-pack` crate | Added to Crate Catalog |
-| 5 | `converge-provider-api` crate | Added to Crate Catalog |
+| 5 | `converge-provider` crate | Added to Crate Catalog |
 | 6 | `converge-model` crate | Added to Crate Catalog |
 | 7 | `converge-kernel` crate | Added to Crate Catalog |
 | 8 | API Surfaces document | Created |

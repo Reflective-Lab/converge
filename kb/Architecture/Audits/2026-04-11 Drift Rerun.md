@@ -49,7 +49,7 @@ HITL remains explicit in types and runtime flow. The pause/approve/reject lifecy
 ### Hexagonal Boundaries
 **Status:** Clean
 
-The public crate split holds: `converge-pack` and `converge-provider-api` are leaf contracts, and the external client/protocol surfaces remain separated from core/runtime internals.
+The public crate split holds: `converge-pack` and `converge-provider` are leaf contracts, and the external client/protocol surfaces remain separated from core/runtime internals.
 
 ## Remaining Drift
 

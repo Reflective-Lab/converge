@@ -40,7 +40,7 @@ Converge defines six canonical external contracts:
 These contracts map to the following canonical public crates:
 
 - `converge-pack`
-- `converge-provider-api`
+- `converge-provider`
 - `converge-model`
 - `converge-kernel`
 - `converge-protocol`

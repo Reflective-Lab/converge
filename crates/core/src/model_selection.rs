@@ -4,11 +4,11 @@
 //! Transitional re-exports for provider selection vocabulary.
 //!
 //! The canonical ownership of backend and model-selection vocabulary now lives in
-//! `converge-provider-api`. `converge-core` re-exports these types during the
+//! `converge-provider`. `converge-core` re-exports these types during the
 //! migration so existing downstreams can keep compiling while moving to the
 //! narrower provider contract.
 
-pub use converge_provider_api::selection::{
+pub use converge_provider::selection::{
     AgentRequirements, BackendRequirements, BackendSelector, ComplianceLevel, CostClass, CostTier,
     DataSovereignty, Jurisdiction, LatencyClass, ModelSelectorTrait, RequiredCapabilities,
     SelectionCriteria, TaskComplexity,

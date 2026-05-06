@@ -7,6 +7,10 @@
 //! Consumers embed the kernel here; they author packs in `converge-pack`
 //! and use `converge-model` for shared semantic types.
 
+mod provider_selection;
+
+pub use provider_selection::ProviderSelectionSuggestor;
+
 pub mod formation {
     //! Grouped offering API for self-assembling formations.
     //!
@@ -15,6 +19,7 @@ pub mod formation {
     //! - authoring in `converge-pack`
     //! - runnable machinery in `converge-kernel`
 
+    pub use crate::ProviderSelectionSuggestor;
     pub use converge_model::formation::{
         DeliberatedFormationTemplate, FormationCatalog, FormationKind, FormationPlan,
         FormationRequest, FormationTemplate, FormationTemplateMetadata, FormationTemplateQuery,
@@ -23,8 +28,7 @@ pub mod formation {
         SuggestorRole,
     };
     pub use converge_optimization::suggestors::FormationAssemblySuggestor;
-    pub use converge_provider::ProviderSelectionSuggestor;
-    pub use converge_provider_api::{
+    pub use converge_provider::{
         Capability, CapabilityAssignment, CostClass, LatencyClass, ProviderAssignment,
         ProviderRequest,
     };

@@ -27,7 +27,7 @@ Goal:
 - make the six Converge public crates the obvious and easiest import path
 
 Work:
-- finish capability-contract ownership under `converge-provider-api`
+- finish capability-contract ownership under `converge-provider`
 - remove downstream doc/examples that still teach `converge-core` as the first import path
 - keep `converge-kernel`, `converge-model`, and `converge-pack` as the first surfaces for execution, reading, and authoring
 
@@ -54,7 +54,7 @@ Goal:
 - make Axiom clearly the truth-definition and validation layer, not an accidental Converge-internals consumer
 
 Work:
-- keep Axiom on `converge-provider-api` + `converge-provider` for live validation
+- keep Axiom on `converge-provider` + `converge-provider` for live validation
 - tighten the artifact boundary from Axiom to Converge
 - document Helm as the operator-facing surface above Axiom
 

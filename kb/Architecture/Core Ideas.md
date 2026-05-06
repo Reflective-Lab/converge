@@ -44,10 +44,11 @@ governance becomes advisory. See [[Architecture/ADRs/ADR-006-promotion-authority
 ## 3. Contracts get the real names; implementations carry adapter words
 
 A long-lived contract crate owns the clean domain name. Implementation crates
-add qualifiers like `http`, `openai`, `surreal`, or `runtime`. The current
-`converge-provider-api` suffix is transitional drift, not the target. The
-contract must not import unrelated value types from neighboring crates just to
-borrow vocabulary.
+add qualifiers like `http`, `openai`, `surreal`, or `runtime`. The
+`converge-provider` contract now owns the clean provider name; the temporary
+in-repo implementation crate is `converge-provider-adapters`. The contract
+must not import unrelated value types from neighboring crates just to borrow
+vocabulary.
 
 **Cost of violating:** every rename later breaks downstream pins, the contract
 crate accretes incidental dependencies, and the support boundary becomes

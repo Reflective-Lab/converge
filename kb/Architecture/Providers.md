@@ -34,9 +34,25 @@ Providers are the adapter implementations that plug into [[Architecture/Ports|po
 > Runway operates databases but does not own the reusable contract. See
 > [[Architecture/Storage Boundary]].
 
+## Naming and Location
+
+`converge-provider` is the published provider/capability contract. It owns the
+real provider domain name.
+
+`converge-provider-adapters` is the current non-publishable in-repo adapter
+staging crate, but it is not the long-lived implementation home. Generic
+adapter implementations move to Manifold and carry adapter-qualified names.
+The clean provider name belongs to the contract.
+
+Products or Runway supply already-constructed backend handles through
+`ChatBackendRegistry`. The registry is a contract surface; adapter crates create
+the handles, Converge selects among them.
+
+See [[Planning/Manifold Provider Tool Migration]] for the extraction sequence.
+
 ## Chat Backends
 
-### Cloud (converge-provider)
+### Cloud (moving from `converge-provider-adapters` to Manifold)
 
 Current live remote chat adapters implement `ChatBackend` and are exposed through `DynChatBackend` where runtime polymorphism is needed:
 

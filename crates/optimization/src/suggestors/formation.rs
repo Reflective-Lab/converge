@@ -229,7 +229,7 @@ mod tests {
     use converge_core::{ContextState, Engine};
     use converge_model::formation::{SuggestorCapability, SuggestorRole};
     use converge_pack::ContextKey;
-    use converge_provider_api::{CostClass, LatencyClass};
+    use converge_provider::{CostClass, LatencyClass};
 
     fn snapshot(name: &str, role: SuggestorRole, caps: &[SuggestorCapability]) -> ProfileSnapshot {
         ProfileSnapshot {

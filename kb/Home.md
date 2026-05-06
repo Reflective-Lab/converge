@@ -16,6 +16,7 @@ Knowledge base for the Converge platform — a correctness-first, context-driven
 
 ## Philosophy
 
+- [[Philosophy/Why We Build]] — the worldview behind Converge and friends: structure relocates from upfront instructions to runtime guardrails
 - [[Philosophy/Why Converge]] — the problem and the promise
 - [[Philosophy/Nine Axioms]] — the inviolable rules
 - [[Philosophy/What Converge Is Not]] — drift prevention, anti-patterns
@@ -104,6 +105,10 @@ Knowledge base for the Converge platform — a correctness-first, context-driven
 - [[Workflow/Working with Claude]] — skills vs Justfile
 - [[Workflow/Working with Codex]] — plain-language workflow equivalents
 - [[Workflow/Working with Gemini]] — native tools + shared scripts
+
+## Standards
+
+- [[Standards/Extension Release Checklist]] — the engineering bar every extension repo must meet
 
 ## Planning
 

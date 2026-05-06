@@ -35,20 +35,16 @@ See [examples/README.md](examples/README.md) for the full list.
 ```
 crates/
 ├── pack/          # Canonical pack authoring contract
-├── provider-api/  # Provider capability contract; transitional name
+├── provider/      # Canonical provider capability contract
 ├── model/         # Curated semantic model surface
 ├── kernel/        # Curated in-process embedding API
 ├── protocol/      # Generated wire contract (converge.v1)
 ├── client/        # Canonical remote Rust SDK
 ├── core/          # Convergence engine (implementation)
-├── provider/      # LLM backends (Anthropic, OpenAI, Gemini, Ollama, ...)
-├── domain/        # Built-in domain packs and governed flow logic
+├── provider-adapters/ # Temporary in-repo LLM/search/tool adapters
 ├── experience/    # Event-sourced audit store
-├── knowledge/     # Vector knowledge base
 ├── optimization/  # Native optimization and constraint solving
 ├── storage/       # Object storage abstraction
-├── policy/        # Cedar policy engine
-├── analytics/     # ML/analytics agents
 └── runtime/       # HTTP/gRPC execution service
 ```
 
@@ -162,18 +158,15 @@ just security-audit
 Publishable crates in dependency order (see [ADR-001](kb/Architecture/ADRs/ADR-001-canonical-public-crates.md)):
 
 1. `converge-pack`
-2. `converge-provider-api`
-3. `converge-core`
-4. `converge-policy`
+2. `converge-provider`
+3. `converge-protocol`
+4. `converge-core`
 5. `converge-model`
-6. `converge-kernel`
-7. `converge-protocol`
-8. `converge-client`
-9. `converge-storage`
-10. `converge-provider`
-11. `converge-experience`
-12. `converge-optimization`
-13. `converge-domain`
+6. `converge-storage`
+7. `converge-experience`
+8. `converge-optimization`
+9. `converge-kernel`
+10. `converge-client`
 
 ```bash
 # Validate readiness

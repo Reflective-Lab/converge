@@ -9,7 +9,7 @@ use converge_kernel::{
         SuggestorCapability, SuggestorProfile, SuggestorRole,
     },
 };
-use converge_provider_api::{Backend, BackendKind};
+use converge_provider::{Backend, BackendKind};
 
 struct AnalysisProfile;
 

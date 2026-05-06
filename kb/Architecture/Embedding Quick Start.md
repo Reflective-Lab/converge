@@ -158,7 +158,7 @@ use converge_kernel::{
     },
     ContextKey, Engine,
 };
-use converge_provider_api::Backend;
+use converge_provider::Backend;
 ```
 
 The structured contract begins at:

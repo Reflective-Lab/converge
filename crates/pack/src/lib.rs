@@ -15,7 +15,7 @@
 //! - [`PackSuggestor`] for bridging Pack to Suggestor
 //!
 //! Provider selection and backend capability routing do not live here.
-//! Those contracts belong to `converge-provider-api`.
+//! Those contracts belong to `converge-provider`.
 
 mod agent;
 pub mod context;

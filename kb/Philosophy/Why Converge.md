@@ -39,4 +39,4 @@ A Converge run either:
 
 There is no silent failure. There is no hallucinated confidence. The system tells you what it knows and what it doesn't.
 
-See also: [[Philosophy/Nine Axioms]], [[Philosophy/What Converge Is Not]]
+See also: [[Philosophy/Why We Build]] — the worldview behind the platform · [[Philosophy/Nine Axioms]] · [[Philosophy/What Converge Is Not]]

@@ -11,7 +11,7 @@ These six crates are the supported external API surfaces.
 | Crate | What it does |
 |---|---|
 | `converge-pack` | Author packs, suggestors, invariants, and proposal-only effects |
-| `converge-provider-api` | Backend identity, capability routing, and chat contracts; transitional name |
+| `converge-provider` | Backend identity, capability routing, and chat contracts |
 | `converge-model` | Curated semantic types shared across consumers |
 | `converge-kernel` | In-process embedding API |
 | `converge-protocol` | Generated `converge.v1` wire types |
@@ -25,16 +25,15 @@ surfaces.
 | Crate | What it does |
 |---|---|
 | `converge-core` | Engine implementation, context state, promotion gate, integrity tracking |
-| `converge-provider` | Provider adapters and routing implementations |
-| `converge-domain` | Built-in domain packs: trust, money, delivery, data_metrics, plus example domain agents |
-| `converge-policy` | Cedar policy engine and policy suggestors |
+| `converge-provider-adapters` | Temporary non-publishable in-repo provider adapters during Manifold migration |
 | `converge-optimization` | Solver packs and `SolverSuggestor` |
 | `converge-experience` | Experience event storage |
 | `converge-runtime` | HTTP and gRPC runtime |
 | `converge-storage` | Object storage abstraction |
 
 Some internal crates are publishable for controlled reuse. That still does not
-make them part of the stable public contract.
+make them part of the stable public contract. Adapter staging crates such as
+`converge-provider-adapters` are not publishable foundation crates.
 
 ## Adding a Dependency
 
@@ -64,11 +63,10 @@ For provider adapters:
 
 ```toml
 [dependencies]
-converge-provider-api = "3"
+converge-provider = "3"
 ```
 
-ADR-007 records the naming correction: the provider contract should eventually
-own the clean domain name, while concrete implementations use adapter-qualified
-names.
+ADR-007 records the naming rule: the provider contract owns the clean domain
+name, while concrete implementations use adapter-qualified names.
 
 See also: [[Architecture/API Surfaces]], [[Architecture/Crate Map]]

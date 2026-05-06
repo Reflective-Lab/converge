@@ -71,7 +71,7 @@ HITL gate is well-designed: `HitlPolicy` with kind/confidence/agent-based gating
 
 **Purity Rules:** converge-core Cargo.toml is clean — no tokio, reqwest, axum, rand, rayon. However, `SystemTime::now()` introduces non-determinism without an external dependency.
 
-**Hexagonal Boundaries:** No inward dependency violations. converge-pack has zero internal deps. converge-provider-api has zero internal deps. converge-core depends only on converge-pack. The hexagonal boundary is maintained.
+**Hexagonal Boundaries:** No inward dependency violations. converge-pack has zero internal deps. converge-provider has zero internal deps. converge-core depends only on converge-pack. The hexagonal boundary is maintained.
 
 **"What Converge Is Not" Patterns:** No workflow, actor, event-driven, or chatbot patterns found in core or domain code.
 

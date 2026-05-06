@@ -7,8 +7,8 @@ members = [
     "crates/kernel",
     "crates/client",
     "crates/core",
-    "crates/provider-api",
     "crates/provider",
+    "crates/provider-adapters",
     "crates/experience",
     "crates/optimization",
     "crates/runtime",
@@ -21,7 +21,6 @@ default-members = [
     "crates/kernel",
     "crates/client",
     "crates/core",
-    "crates/provider-api",
     "crates/provider",
     "crates/experience",
     "crates/optimization",
@@ -43,7 +42,6 @@ converge-protocol = { path = "crates/protocol", version = "3.8.1" }
 converge-kernel = { path = "crates/kernel", version = "3.8.1" }
 converge-client = { path = "crates/client", version = "3.8.1" }
 converge-core = { path = "crates/core", version = "3.8.1" }
-converge-provider-api = { path = "crates/provider-api", version = "3.8.1" }
 converge-provider = { path = "crates/provider", version = "3.8.1" }
 converge-experience = { path = "crates/experience", version = "3.8.1" }
 converge-optimization = { path = "crates/optimization", version = "3.8.1" }

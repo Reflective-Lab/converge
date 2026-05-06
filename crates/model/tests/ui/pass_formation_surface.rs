@@ -3,7 +3,7 @@ use converge_model::{
     FormationTemplateMetadata, ProfileSnapshot, RoleAssignment, StaticFormationTemplate,
     SuggestorCapability, SuggestorRole,
 };
-use converge_provider_api::{CostClass, LatencyClass};
+use converge_provider::{CostClass, LatencyClass};
 
 fn main() {
     let request = FormationRequest {

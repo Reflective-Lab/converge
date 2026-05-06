@@ -3,12 +3,12 @@
 
 //! LLM capability traits.
 //!
-//! The canonical chat contract now lives in `converge-provider-api`. `converge-core`
+//! The canonical chat contract now lives in `converge-provider`. `converge-core`
 //! re-exports that surface during the migration so downstreams can move without
 //! a flag day. Embedding remains here for now.
 
 use super::error::{CapabilityError, ErrorCategory};
-pub use converge_provider_api::chat::{
+pub use converge_provider::chat::{
     BoxFuture, ChatBackend, ChatMessage, ChatRequest, ChatResponse, ChatRole, DynChatBackend,
     FinishReason, LlmError, ResponseFormat, TokenUsage, ToolCall, ToolDefinition,
 };

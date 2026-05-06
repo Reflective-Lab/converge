@@ -15,7 +15,7 @@ output mutation now lives on `AgentEffectBuilder`. Engine promotes through
 through `AgentEffect`.
 
 ### Crate Boundary Split — CLOSED
-Split into `converge-pack` (authoring) and `converge-provider-api` (capability routing). The old compatibility facade is gone from the current workspace.
+Split into `converge-pack` (authoring) and `converge-provider` (capability routing). The old compatibility facade is gone from the current workspace.
 
 ### Provenance Gap — CLOSED
 `Fact` now carries read-only promotion metadata (actor, validation summary, evidence refs, trace link, timestamps). The engine projects governed facts with full audit trail into the public type.
@@ -66,6 +66,15 @@ Remaining LinkedIn mentions in social URL parsing and domain-pack registry
 entries are different layers and should not be folded into the port migration
 until their own connector or pack work is scoped.
 
+### Provider Contract Naming — CLOSED
+
+The provider contract now owns the real crate name: `converge-provider`.
+Concrete in-repo implementations live in the non-publishable
+`converge-provider-adapters` staging crate until they drain into Manifold.
+No foundation crate depends on that staging crate. This closes the old
+`converge-provider-api` inversion: contracts get domain names;
+implementations get adapter-qualified names.
+
 ### Merge Order Documentation (Axiom 6) — CLOSED
 Live docs now match the implementation: core merges in registration order by `SuggestorId`.
 
@@ -83,25 +92,16 @@ replace its custom persisted-fact reconstruction with `ContextSnapshot`.
 
 ## Open
 
-### High: Provider Contract Naming Is Backwards
-
-The stable provider contract is named `converge-provider-api`, while the
-implementation crate owns the clean `converge-provider` name. That inverts the
-long-term naming rule: contracts get domain names; implementations add adapter
-or implementation qualifiers.
-
-**Resolution:** Decide the v3.8 extraction path for provider/tool contracts and
-adapters. Treat the current `converge-provider-api` name as transitional.
-
 ### High: External Tool and Provider Implementations Still Sit In-Repo
 
 HTTP fetch, feed parsing, search providers, LLM adapters, API-key handling, and
 third-party SDK churn still live beside the Converge kernel workspace. This
 keeps volatile external I/O too close to the correctness-first core.
 
-**Resolution:** Move provider and external tool implementations to adapter
-crates or a separate repository. Keep only stable port contracts in the
-Converge foundation.
+**Resolution:** Move provider and external tool implementations from
+`converge-provider-adapters` to adapter crates in Manifold. Keep only stable
+port contracts in the Converge foundation. See
+[[Planning/Manifold Provider Tool Migration]].
 
 ### High: Extension Implementations Share the Foundation Release Cycle
 
@@ -142,6 +142,7 @@ Core still sources wall-clock time internally through both `SystemTime::now()` a
 
 `RetryPolicy` with `jitter_percent` lives in `converge-core`. This is an execution concern.
 
-**Resolution:** Move to `converge-provider` or `converge-provider-api`.
+**Resolution:** Move to `converge-provider` if it is a contract concern, or
+to Manifold if it is adapter/runtime behavior.
 
 See also: [[Philosophy/Nine Axioms]], [[Architecture/API Surfaces]]

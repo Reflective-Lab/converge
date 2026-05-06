@@ -182,4 +182,4 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: cargo test -p converge-provider --test live_endpoints -- --include-ignored
+        run: cargo test -p converge-provider-adapters --test live_endpoints -- --include-ignored

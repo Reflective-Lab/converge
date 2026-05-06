@@ -69,13 +69,12 @@ You author packs against `converge-pack`. Your suggestor receives a `&dyn Contex
 ### For Contributors
 
 The dependency arrow always points inward. `converge-pack` and
-`converge-provider-api` are the current leaf contracts (zero internal deps).
-`converge-provider-api` is transitional naming drift under ADR-007: contracts
-should get the real domain names and implementations should add adapter
-qualifiers. `converge-core` depends on `converge-pack`. `converge-provider`
-depends on `converge-pack` + `converge-provider-api`. If you find yourself
-importing an adapter from a contract crate, you've broken the architecture. See
-[[Architecture/Purity Rules]].
+`converge-provider` are the current leaf contracts (zero internal deps).
+ADR-007 is applied: contracts get real domain names and implementations add
+adapter qualifiers. `converge-core` depends on `converge-pack`.
+`converge-provider-adapters` depends on `converge-pack` +
+`converge-provider`. If you find yourself importing an adapter from a contract
+crate, you've broken the architecture. See [[Architecture/Purity Rules]].
 
 ## Driving vs Driven
 

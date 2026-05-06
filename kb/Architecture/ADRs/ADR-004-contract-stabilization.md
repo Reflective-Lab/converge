@@ -30,7 +30,7 @@ The Converge public contract is now treated as stable and strict.
 
 ### Hard rules
 
-1. `converge-pack`, `converge-provider-api`, `converge-model`,
+1. `converge-pack`, `converge-provider`, `converge-model`,
    `converge-kernel`, `converge-protocol`, and `converge-client` are the
    canonical public crates.
 2. `converge-core` remains an implementation crate and must not expose

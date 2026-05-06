@@ -26,11 +26,11 @@ These are the public contract. Every port is a trait. Every trait is `Send + Syn
 
 `accepts()` is synchronous and pure. `execute()` is async but runtime-agnostic.
 
-## Provider Routing Ports (`converge-provider-api`)
+## Provider Routing Ports (`converge-provider`)
 
-`converge-provider-api` is the current provider contract crate name. ADR-007
-marks that name as transitional; the port ownership is stable, but the final
-crate naming should put the clean domain name on the contract.
+`converge-provider` is the provider contract crate. ADR-007 records the naming
+rule: contracts get real domain names, while implementations carry
+adapter-qualified names.
 
 | Port | Purpose | Key Methods |
 |---|---|---|

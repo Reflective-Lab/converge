@@ -234,7 +234,7 @@ compiler and the vendor-selection wedge.
   separate catalogs
 - Suggestor descriptors include reads, output keys, domain tags, capabilities,
   provider needs, cost/latency hints, and confidence range
-- Provider descriptors use public `converge-provider-api` vocabulary rather
+- Provider descriptors use public `converge-provider` vocabulary rather
   than internal Converge registries
 
 ### 2. Organism Compiles Formations

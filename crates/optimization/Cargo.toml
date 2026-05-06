@@ -43,7 +43,7 @@ serde_json.workspace = true
 varisat = { workspace = true, optional = true }
 
 [dev-dependencies]
-converge-provider-api.workspace = true
+converge-provider.workspace = true
 criterion = { version = "0.8" }
 proptest.workspace = true
 rand.workspace = true

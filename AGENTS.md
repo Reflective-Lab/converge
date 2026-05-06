@@ -36,7 +36,7 @@ Mantra for public surfaces:
 | Crate | Purpose |
 |---|---|
 | `converge-pack` | Author packs, suggestors, invariants |
-| `converge-provider-api` | Backend identity, capability routing |
+| `converge-provider` | Backend identity, capability routing |
 | `converge-model` | Curated semantic types |
 | `converge-kernel` | In-process embedding API |
 | `converge-protocol` | Generated `converge.v1` wire types |
@@ -105,7 +105,7 @@ The kernel is pure. No I/O, no persistence, no hidden background work, and no no
 Async trait boundaries are allowed when they stay runtime-agnostic. Executor ownership, task spawning, and network/runtime coupling stay outside `converge-core`.
 
 The hexagonal boundary is enforced by crate dependencies:
-- `converge-pack` and `converge-provider-api` are leaves (zero internal deps)
+- `converge-pack` and `converge-provider` are leaves (zero internal deps)
 - `converge-core` depends on `converge-pack`
 - Adapters depend on contracts, never the reverse
 

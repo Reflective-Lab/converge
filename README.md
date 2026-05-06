@@ -28,6 +28,23 @@ Everything that participates in the loop does so through one trait: `Suggestor`.
 └─────────────────────────────────────────────┘
 ```
 
+## A New World
+
+For decades software ran on a hard constraint: machines need explicit, unambiguous instructions. Every layer above the metal — languages, frameworks, runtimes — existed to remove ambiguity from human intent *before* execution.
+
+That floor has shifted. Models and orchestration can now interpret intent, generate candidate actions, evaluate them against constraints, and iterate at runtime. The opportunity is not to remove structure but to **relocate** it — out of hardcoded instructions and into constraints, guardrails, contracts, promotion gates, and evaluation loops.
+
+Converge and the platform around it provide that relocated structure:
+
+- **Converge** — the convergence kernel: promotion gates, invariants, HITL pauses, integrity proof. The *whether*.
+- **Organism** — formation assembly, intent decomposition, debate. The *how*.
+- **Axiom** — truth definitions and projections. The *what is true*.
+- **Helms** — operator control surfaces. The *what is shown*.
+
+Together they let intent become a governed decision *at runtime*, safely — with provenance, authority, and an honest stop reason on every run. A new world built on adaptive ceilings collapses without a deterministic floor; Converge is that floor. Convergence-as-fixed-point, kernel-gated `Fact` construction, and HITL at irreversibles are how this stack stays trustworthy when the layers above are intent-driven and probabilistic.
+
+The bigger picture is the shift from *tools that capture inputs* to *systems that produce defensible outcomes* — see [kb/Philosophy/Why We Build](kb/Philosophy/Why%20We%20Build.md) for the full thesis, including how this reshapes SaaS and the way organizations need to rethink architecture and ownership.
+
 ## What Converge Guarantees
 
 - Suggestors propose. The engine promotes.
@@ -111,6 +128,7 @@ Every loop participant is a `Suggestor`. There are no side-car pipeline traits f
 | Policy and governance | `PolicyGateSuggestor`, `FlowGateSuggestor` | [`arbiter`](https://github.com/Reflective-Lab/arbiter) extension |
 | Analytics / ML | `FeatureAgent`, training and inference suggestors | [`prism`](https://github.com/Reflective-Lab/prism) extension |
 | Knowledge | retrieval and store suggestors | [`mnemos`](https://github.com/Reflective-Lab/mnemos) extension |
+| Generic providers and tools | LLM, search, fetch, feed, embedding, OpenAPI/GraphQL adapters | [`manifold`](https://github.com/Reflective-Lab/manifold) extension |
 | Source-specific connectors | LinkedIn, Stripe, OCR, ... | [`embassy`](https://github.com/Reflective-Lab/embassy) extension |
 | Native solvers | OR-Tools, CP-SAT, ... | [`ferrox`](https://github.com/Reflective-Lab/ferrox) extension |
 | Custom LLMs and tools | any crate implementing `Suggestor` | your crate |
@@ -145,7 +163,7 @@ Six crates define the supported external API. Semver promises apply to these sur
 | Crate | Purpose |
 |---|---|
 | [`converge-pack`](crates/pack) | Author packs, suggestors, invariants |
-| [`converge-provider-api`](crates/provider-api) | Backend identity, capability routing, and provider selection payloads |
+| [`converge-provider`](crates/provider) | Backend identity, capability routing, and provider selection payloads |
 | [`converge-model`](crates/model) | Curated semantic types, including formation semantics |
 | [`converge-kernel`](crates/kernel) | In-process embedding API and grouped formation machinery |
 | [`converge-protocol`](crates/protocol) | Generated `converge.v1` wire types |
@@ -159,12 +177,27 @@ Foundation owns universal contracts and the convergence kernel. Implementation-h
 
 The dependency arrow is one-way: **foundation contracts ← extensions ← products**. Foundation never imports an extension.
 
+Provider/tool dependencies follow the same rule:
+
+```text
+converge-provider  <-  manifold  <-  products / runway
+```
+
+`converge-provider` is the API. Adapter implementations use qualified names
+and live in Manifold. The temporary `crates/provider-adapters` crate remains
+only as a non-publishable staging area while that move completes; neither
+`converge-runtime` nor `converge-kernel` depends on it.
+Host assembly supplies already-constructed handles through
+`ChatBackendRegistry`; Converge selects handles, it does not instantiate vendor
+SDKs.
+
 | Repo | Contains | Extracted |
 |---|---|---|
 | [`atelier`](https://github.com/Reflective-Lab/atelier) | Showcase: domain packs (trust, money, delivery, data_metrics) plus worked examples | 2026-05-05 |
 | [`mnemos`](https://github.com/Reflective-Lab/mnemos) | Knowledge retrieval and storage suggestors | 2026-05-05 |
 | [`prism`](https://github.com/Reflective-Lab/prism) | Analytics and ML suggestors (feature, training, inference, monitoring) | 2026-05-05 |
 | [`arbiter`](https://github.com/Reflective-Lab/arbiter) | Cedar policy engine and policy suggestors | 2026-05-05 |
+| [`manifold`](https://github.com/Reflective-Lab/manifold) | Generic provider/tool adapters: LLM, search, fetch, feed, embeddings, external tools | in progress |
 | [`embassy`](https://github.com/Reflective-Lab/embassy) | Source-specific connector ports (LinkedIn, ...) | 2026-05-05 |
 | [`ferrox`](https://github.com/Reflective-Lab/ferrox) | Native solver bridge (OR-Tools / CP-SAT) | relocated 2026-05-05 |
 
@@ -210,13 +243,13 @@ just size-audit        # converge-runtime / converge-kernel packaging baseline
 ```text
 crates/
   pack/             Canonical pack authoring contract
-  provider-api/     Canonical provider capability contract
+  provider/         Canonical provider capability contract
   model/            Curated semantic model surface
   kernel/           Canonical in-process embedding API
   protocol/         Canonical generated wire contract
   client/           Canonical remote Rust SDK
   core/             Engine implementation and promotion gate
-  provider/         Provider adapters
+  provider-adapters/ Temporary non-publishable provider adapter staging
   optimization/     Solver packs and Suggestor adapter
   experience/       Experience event storage
   runtime/          HTTP and gRPC runtime

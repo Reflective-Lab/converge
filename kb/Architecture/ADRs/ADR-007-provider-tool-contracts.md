@@ -8,10 +8,11 @@ source: codex
 
 ## Context
 
-The current workspace gives the implementation crate the clean name
-`converge-provider` while the stable contract is named `converge-provider-api`.
-That is backwards for long-lived architecture. The clean name should identify
-the domain contract; implementation crates should say what they implement.
+The previous workspace shape gave the implementation crate the clean name
+`converge-provider` while the stable contract was named
+`converge-provider-api`. That was backwards for long-lived architecture. The
+clean name should identify the domain contract; implementation crates should
+say what they implement.
 
 Provider and tool integrations also carry volatile concerns: HTTP clients,
 redirect behavior, SSRF policy, API keys, SDK churn, retries, rate limits, and
@@ -33,16 +34,45 @@ For provider and tool boundaries:
 - external provider/tool implementations should move to adapter crates or a
   separate repository as part of the v3.8 foundation work
 
-The current `converge-provider-api` name is transitional. The v3.8 migration
-plan should either rename/re-home the contract or document a compatibility
-path toward the naming rule.
+The contract crate must own `converge-provider`. Any in-repo implementation
+holder must use an adapter-qualified name.
+
+## v3.8.1 Resolution
+
+The naming rule is settled in code.
+
+The 3.8.x line treats `converge-provider` as the published provider contract.
+It is the stable Rust package that downstreams import for `ChatBackend`,
+`Backend`, `Capability`, `BackendRequirements`, `BackendSelector`, and
+provider selection DTOs.
+
+The clean long-lived domain name belongs to the contract, not to adapter
+implementations. Therefore the temporary in-repo implementation staging crate
+is named `converge-provider-adapters`. It is non-publishable, excluded from
+default workspace members, and will be emptied or retired as generic adapters
+move to `manifold`.
+
+Target end state:
+
+- `converge-provider` is the clean provider/capability contract name.
+- `converge-provider-adapters` remains only a temporary in-repo implementation
+  holder until generic adapters move to Manifold. Foundation crates do not
+  depend on it.
+- Generic adapter implementations live in `manifold` with implementation
+  qualifiers such as `OpenAiChatAdapter`, `AnthropicChatAdapter`,
+  `BraveSearchAdapter`, `HttpFetchAdapter`, `HttpFeedAdapter`,
+  `OpenApiToolAdapter`, and `GraphQlToolAdapter`.
+- Source-specific connector ports live in `embassy`, not `manifold`, when the
+  external party is part of the semantic contract.
+
+The implementation move is tracked as the manifold provider/tool migration.
 
 ## Consequences
 
 - Feed, fetch, search, chat, embedding, and tool execution contracts should be
   reviewed as ports before new implementations are added.
-- `converge-provider` should not remain both the clean domain name and the
-  implementation crate.
+- `converge-provider` must remain contract-only. Adapter code belongs in
+  `converge-provider-adapters` temporarily, then Manifold.
 - Provider extraction is not only packaging cleanup; it is a security and
   correctness boundary.
 

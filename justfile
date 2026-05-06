@@ -296,7 +296,7 @@ doc-open:
 # ── Publish ────────────────────────────────────────────────────────────
 
 # Publishable crates in dependency order
-_publishable := "converge-pack converge-provider-api converge-core converge-model converge-kernel converge-protocol converge-client converge-storage converge-provider converge-experience converge-optimization"
+_publishable := "converge-pack converge-provider converge-protocol converge-core converge-model converge-storage converge-experience converge-optimization converge-kernel converge-client"
 
 # Dry-run publish to crates.io (validates readiness)
 publish-dry-run:
@@ -513,7 +513,7 @@ size-audit:
 deps:
     @echo "Canonical public crates:"
     @echo "  converge-pack"
-    @echo "  converge-provider-api"
+    @echo "  converge-provider"
     @echo "  converge-model"
     @echo "  converge-kernel"
     @echo "  converge-protocol"
@@ -521,7 +521,7 @@ deps:
     @echo "---"
     @echo "Internal workspace crates:"
     @echo "  converge-core"
-    @echo "  converge-provider"
+    @echo "  converge-provider-adapters"
     @echo "  converge-optimization"
     @echo "  converge-experience"
     @echo "  converge-runtime"

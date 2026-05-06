@@ -58,11 +58,16 @@ All major entities in the Converge knowledge base, organized by category.
 
 - [CHANGELOG](History/CHANGELOG.md) — release notes
 
+## Standards
+
+- [Extension Release Checklist](Standards/Extension%20Release%20Checklist.md) — engineering bar every extension repo must meet
+
 ## Planning
 
 - [Milestones](Planning/MILESTONES.md)
 - [Authority Slice](Planning/Authority%20Slice.md) — ADR-006 implementation slice
 - [Formation Business Strategy](Planning/Formation%20Business%20Strategy.md)
+- [Manifold Provider Tool Migration](Planning/Manifold%20Provider%20Tool%20Migration.md) — provider/tool adapter extraction plan
 - [Organism Formation Compiler Milestone Draft](Planning/Organism%20Formation%20Compiler%20Milestone%20Draft.md)
 - [Layer API Hardening](Planning/LAYER-API-HARDENING.md)
 
@@ -84,7 +89,8 @@ All major entities in the Converge knowledge base, organized by category.
 - [Convergence Explained](Philosophy/Convergence%20Explained.md)
 - [Nine Axioms](Philosophy/Nine%20Axioms.md)
 - [What Converge Is Not](Philosophy/What%20Converge%20Is%20Not.md)
-- [Why Converge](Philosophy/Why%20Converge.md)
+- [Why Converge](Philosophy/Why%20Converge.md) — the problem and the promise
+- [Why We Build](Philosophy/Why%20We%20Build.md) — the worldview: relocating structure from upfront instructions to runtime guardrails
 
 ## Governance
 

@@ -88,47 +88,221 @@ impl<P: Pack> Suggestor for PackSuggestor<P> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fact::{
+        ContextFact, FactActor, FactActorKind, FactLocalTrace, FactPromotionRecord, FactTraceLink,
+        FactValidationSummary,
+    };
+    use crate::gate::{
+        GateError, GateResult, KernelTraceLink, PromotionGate, ProposedPlan, ReplayEnvelope,
+        SolverReport,
+    };
+    use crate::pack::{InvariantDef, InvariantResult, PackSolveResult};
+    use crate::types::{ContentHash, Timestamp};
+    use std::collections::HashMap;
+
+    /// Pack double whose behaviour is configured per test.
+    struct ConfigurablePack {
+        name: &'static str,
+        outcome: PackOutcome,
+    }
+
+    #[derive(Clone)]
+    enum PackOutcome {
+        /// Returns a successful solve with this confidence.
+        Solved(f64),
+        /// Returns a Pack::solve error.
+        Errored,
+    }
+
+    impl Pack for ConfigurablePack {
+        fn name(&self) -> &'static str {
+            self.name
+        }
+        fn version(&self) -> &'static str {
+            "0.1.0"
+        }
+        fn validate_inputs(&self, _: &serde_json::Value) -> GateResult<()> {
+            Ok(())
+        }
+        fn invariants(&self) -> &[InvariantDef] {
+            &[]
+        }
+        fn solve(&self, spec: &ProblemSpec) -> GateResult<PackSolveResult> {
+            match self.outcome {
+                PackOutcome::Errored => Err(GateError::invalid_input("intentional test failure")),
+                PackOutcome::Solved(conf) => {
+                    let plan = ProposedPlan::from_payload(
+                        format!("plan-{}", spec.problem_id),
+                        self.name,
+                        "solved",
+                        &serde_json::json!({"value": 42}),
+                        conf,
+                        KernelTraceLink::audit_only(format!("trace-{}", spec.problem_id)),
+                    )
+                    .expect("payload");
+                    let report = SolverReport::optimal(
+                        format!("{}-v1", self.name),
+                        0.0,
+                        ReplayEnvelope::minimal(spec.seed()),
+                    );
+                    Ok(PackSolveResult::new(plan, report))
+                }
+            }
+        }
+        fn check_invariants(&self, _: &ProposedPlan) -> GateResult<Vec<InvariantResult>> {
+            Ok(vec![])
+        }
+        fn evaluate_gate(&self, _: &ProposedPlan, _: &[InvariantResult]) -> PromotionGate {
+            PromotionGate::auto_promote("ok")
+        }
+    }
+
+    /// Minimal Context implementation for unit-testing the adapter.
+    struct MockContext {
+        facts: HashMap<ContextKey, Vec<ContextFact>>,
+    }
+
+    impl MockContext {
+        fn empty() -> Self {
+            Self {
+                facts: HashMap::new(),
+            }
+        }
+        fn with_seed_content(content: &str) -> Self {
+            let mut ctx = Self::empty();
+            ctx.facts.insert(
+                ContextKey::Seeds,
+                vec![ContextFact::new_projection(
+                    ContextKey::Seeds,
+                    "seed-1",
+                    content,
+                    FactPromotionRecord::new_projection(
+                        "projection-test",
+                        ContentHash::zero(),
+                        FactActor::new_projection("test", FactActorKind::System),
+                        FactValidationSummary::default(),
+                        Vec::new(),
+                        FactTraceLink::Local(FactLocalTrace::new_projection(
+                            "trace", "span", None, true,
+                        )),
+                        Timestamp::epoch(),
+                    ),
+                    Timestamp::epoch(),
+                )],
+            );
+            ctx
+        }
+        fn with_existing_output(self) -> Self {
+            // Mark the output key as present by inserting a placeholder fact.
+            let mut me = self;
+            me.facts.insert(
+                ContextKey::Strategies,
+                vec![ContextFact::new_projection(
+                    ContextKey::Strategies,
+                    "strat-1",
+                    "{}",
+                    FactPromotionRecord::new_projection(
+                        "projection-test",
+                        ContentHash::zero(),
+                        FactActor::new_projection("test", FactActorKind::System),
+                        FactValidationSummary::default(),
+                        Vec::new(),
+                        FactTraceLink::Local(FactLocalTrace::new_projection(
+                            "trace", "span", None, true,
+                        )),
+                        Timestamp::epoch(),
+                    ),
+                    Timestamp::epoch(),
+                )],
+            );
+            me
+        }
+    }
+
+    impl Context for MockContext {
+        fn has(&self, key: ContextKey) -> bool {
+            self.facts.get(&key).is_some_and(|v| !v.is_empty())
+        }
+        fn get(&self, key: ContextKey) -> &[ContextFact] {
+            self.facts.get(&key).map_or(&[], Vec::as_slice)
+        }
+    }
+
+    fn solver(outcome: PackOutcome) -> PackSuggestor<ConfigurablePack> {
+        PackSuggestor::new(
+            ConfigurablePack {
+                name: "test-pack",
+                outcome,
+            },
+            ContextKey::Seeds,
+            ContextKey::Strategies,
+        )
+    }
 
     #[test]
     fn pack_suggestor_constructed() {
-        // Basic construction test -- full integration tests live in downstream crates
-        struct DummyPack;
-        impl Pack for DummyPack {
-            fn name(&self) -> &'static str {
-                "dummy"
-            }
-            fn version(&self) -> &'static str {
-                "0.1.0"
-            }
-            fn validate_inputs(&self, _: &serde_json::Value) -> crate::gate::GateResult<()> {
-                Ok(())
-            }
-            fn invariants(&self) -> &[crate::pack::InvariantDef] {
-                &[]
-            }
-            fn solve(
-                &self,
-                _: &ProblemSpec,
-            ) -> crate::gate::GateResult<crate::pack::PackSolveResult> {
-                Err(crate::gate::GateError::invalid_input("not implemented"))
-            }
-            fn check_invariants(
-                &self,
-                _: &crate::gate::ProposedPlan,
-            ) -> crate::gate::GateResult<Vec<crate::pack::InvariantResult>> {
-                Ok(vec![])
-            }
-            fn evaluate_gate(
-                &self,
-                _: &crate::gate::ProposedPlan,
-                _: &[crate::pack::InvariantResult],
-            ) -> crate::gate::PromotionGate {
-                crate::gate::PromotionGate::auto_promote("ok")
-            }
-        }
-
-        let s = PackSuggestor::new(DummyPack, ContextKey::Seeds, ContextKey::Strategies);
-        assert_eq!(s.name(), "dummy");
+        let s = solver(PackOutcome::Solved(0.9));
+        assert_eq!(s.name(), "test-pack");
         assert_eq!(s.dependencies(), &[ContextKey::Seeds]);
+    }
+
+    #[test]
+    fn accepts_when_input_present_and_output_missing() {
+        let s = solver(PackOutcome::Solved(0.9));
+        let ctx = MockContext::with_seed_content("{\"x\":1}");
+        assert!(s.accepts(&ctx));
+    }
+
+    #[test]
+    fn rejects_when_input_missing() {
+        let s = solver(PackOutcome::Solved(0.9));
+        let ctx = MockContext::empty();
+        assert!(!s.accepts(&ctx));
+    }
+
+    #[test]
+    fn rejects_when_output_already_present() {
+        let s = solver(PackOutcome::Solved(0.9));
+        let ctx = MockContext::with_seed_content("{\"x\":1}").with_existing_output();
+        assert!(!s.accepts(&ctx));
+    }
+
+    #[tokio::test]
+    async fn execute_with_empty_context_returns_empty_effect() {
+        let s = solver(PackOutcome::Solved(0.9));
+        let ctx = MockContext::empty();
+        let effect = s.execute(&ctx).await;
+        assert_eq!(effect.proposals().len(), 0);
+    }
+
+    #[tokio::test]
+    async fn execute_with_invalid_json_seed_returns_empty_effect() {
+        let s = solver(PackOutcome::Solved(0.9));
+        let ctx = MockContext::with_seed_content("not valid json {{{{");
+        let effect = s.execute(&ctx).await;
+        assert_eq!(effect.proposals().len(), 0);
+    }
+
+    #[tokio::test]
+    async fn execute_with_pack_solve_error_returns_empty_effect() {
+        let s = solver(PackOutcome::Errored);
+        let ctx = MockContext::with_seed_content("{\"x\":1}");
+        let effect = s.execute(&ctx).await;
+        assert_eq!(effect.proposals().len(), 0);
+    }
+
+    #[tokio::test]
+    async fn execute_with_successful_solve_emits_proposal_with_carried_confidence() {
+        let s = solver(PackOutcome::Solved(0.42));
+        let ctx = MockContext::with_seed_content("{\"x\":1}");
+        let effect = s.execute(&ctx).await;
+        assert_eq!(effect.proposals().len(), 1);
+        let proposal = &effect.proposals()[0];
+        assert_eq!(proposal.key(), ContextKey::Strategies);
+        assert!(
+            (proposal.confidence() - 0.42).abs() < 1e-6,
+            "confidence must propagate from plan, got {}",
+            proposal.confidence()
+        );
     }
 }

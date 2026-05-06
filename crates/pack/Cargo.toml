@@ -24,6 +24,7 @@ strum = ["dep:strum"]
 
 [dev-dependencies]
 proptest.workspace = true
+tokio = { workspace = true, features = ["macros", "rt"] }
 trybuild.workspace = true
 
 [lints]

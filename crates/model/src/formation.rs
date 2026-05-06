@@ -6,7 +6,7 @@
 pub use converge_core::{FormationKind, ScoringWeights};
 
 use converge_pack::ContextKey;
-use converge_provider_api::{CostClass, LatencyClass};
+use converge_provider::{CostClass, LatencyClass};
 use serde::{Deserialize, Serialize};
 
 /// Describes the shape and operating envelope of a suggestor.

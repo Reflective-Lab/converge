@@ -33,6 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **700+ new tests** across all modules: property tests, negative tests, edge cases, serde roundtrips, async path tests with mocked LLM backends.
 
 ### Changed
+- **BREAKING**: Provider contract crate renamed from `converge-provider-api`
+  to `converge-provider`. Ready-made in-repo adapters moved to
+  `converge-provider-adapters` until the Manifold extraction drains them out
+  of the foundation workspace.
 - **BREAKING**: `ContextView` removed — use `Context` (the trait). The concrete implementation is now `ContextState`.
 - **BREAKING**: Consumers using `converge_core::ContextView` must change to `converge_core::Context`.
 
@@ -46,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Formation template catalog semantics in `converge-model` and the grouped `converge-kernel::formation` surface for downstream formation builders.
 - HITL gate decisions as `ExperienceEvent::GateDecisionRecorded`, including experience summaries and store-level query coverage.
 - Optional `correlation_id` fields on `FormationDecision` and `FormationOutcome` so upper layers can join formation choices, runs, and outcomes.
-- Optional `BackendRequirements` on `ProviderRequest` so formation planners can express role-scoped backend needs through `converge-provider-api`.
+- Optional `BackendRequirements` on `ProviderRequest` so formation planners can express role-scoped backend needs through `converge-provider`.
 - Organism formation-builder KB notes covering formation compilation, business wedge strategy, and the vendor-selection milestone draft.
 
 ### Changed
@@ -64,7 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [3.4.0] - 2026-04-19
 
 ### Added
-- **Narrowed downstream surface**: Provider capability contracts (`ChatBackend`, `ModelSelector`, `ChatRequest`/`ChatResponse`) moved from `converge-core` to `converge-provider-api`. Downstream consumers (`organism`, `helms`, `wolfgang`, `hackathon`) now depend on the lightweight API crate instead of pulling in the full engine.
+- **Narrowed downstream surface**: Provider capability contracts (`ChatBackend`, `ModelSelector`, `ChatRequest`/`ChatResponse`) moved from `converge-core` to `converge-provider`. Downstream consumers (`organism`, `helms`, `wolfgang`, `hackathon`) now depend on the lightweight API crate instead of pulling in the full engine.
 - **Integrity as contract** (breaking: `ConvergeResult` has new required `integrity` field):
   - `Engine::run` now wraps `Context` in `TrackedContext` internally. Every `add_fact` ticks a Lamport clock and records a SHA-256 content hash.
   - `ConvergeResult.integrity: IntegrityProof` — merkle root, clock time, fact count.
@@ -175,7 +179,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [3.0.0] - 2026-04-10
 
 ### Added
-- **ADR-001**: 6 canonical public crates (`converge-pack`, `converge-provider-api`, `converge-model`, `converge-kernel`, `converge-protocol`, `converge-client`)
+- **ADR-001**: 6 canonical public crates (`converge-pack`, `converge-provider`, `converge-model`, `converge-kernel`, `converge-protocol`, `converge-client`)
 - **ADR-002**: Single truth pipeline (`Observation -> DraftProposal -> ValidatedProposal -> Fact`)
 - **ADR-003**: Pack authoring contract (`Suggestor`, `Validator`, `Invariant`, `CriterionEvaluator`, `Pack`)
 - **ADR-004**: Contract stabilization and regression gate freeze
@@ -183,7 +187,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `kb/Architecture/System Overview.md` as canonical architecture reference
 
 ### Changed
-- `converge-traits` deprecated — replaced by `converge-pack` and `converge-provider-api`
+- `converge-traits` deprecated — replaced by `converge-pack` and `converge-provider`
 - `converge-remote` demoted to compatibility CLI — replaced by `converge-client`
 - Rust edition 2024, rust-version 1.94
 

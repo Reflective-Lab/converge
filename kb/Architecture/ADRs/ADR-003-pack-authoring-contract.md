@@ -42,7 +42,7 @@ The intended authoring roles are:
 4. pack code must not construct authoritative facts
 5. pack code must not depend on runtime, storage, network, or application crates
 6. pack code may depend on `converge-model` for semantic types and
-   `converge-provider-api` only when provider routing requirements are part of the
+   `converge-provider` only when provider routing requirements are part of the
    pack's boundary
 
 ### Transitional note

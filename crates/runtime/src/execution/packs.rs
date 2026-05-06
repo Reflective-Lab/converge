@@ -9,9 +9,9 @@
 
 use converge_core::Engine;
 use converge_core::model_selection::SelectionCriteria;
-use converge_provider::{ChatBackendSelectionConfig, ProviderRegistry};
+use converge_provider::ChatBackendSelectionConfig;
 use serde::{Deserialize, Serialize};
-use tracing::{info, warn};
+use tracing::warn;
 
 use crate::error::RuntimeError;
 
@@ -112,35 +112,13 @@ impl LlmConfig {
         config
     }
 
-    /// Creates a ProviderRegistry based on this configuration.
+    /// Returns whether runtime should use real host-supplied LLM adapters.
     ///
-    /// If `use_mock` is true, returns None (callers should use mock agents instead).
-    /// Otherwise, creates a registry from environment variables.
+    /// Runtime no longer constructs provider registries itself. Products or
+    /// deployment assembly register adapters from Manifold or another extension.
     #[must_use]
-    pub fn create_registry(&self) -> Option<ProviderRegistry> {
-        if self.use_mock {
-            info!("Mock LLM mode enabled - LLM agents will use mock providers");
-            return None;
-        }
-
-        let registry = ProviderRegistry::from_env();
-        let available = registry.available_providers();
-
-        if available.is_empty() {
-            warn!(
-                "No LLM API keys found. Set ANTHROPIC_API_KEY, OPENAI_API_KEY, or other provider keys. \
-                 Using deterministic agents only."
-            );
-            return None;
-        }
-
-        info!(
-            criteria = ?self.criteria,
-            provider_override = self.provider_override.as_deref(),
-            providers = ?available,
-            "LLM provider registry initialized"
-        );
-        Some(registry)
+    pub fn use_real_llm(&self) -> bool {
+        !self.use_mock
     }
 }
 
@@ -209,8 +187,7 @@ mod tests {
     fn test_llm_config_mock_returns_none() {
         let mut config = LlmConfig::default();
         config.use_mock = true;
-        let registry = config.create_registry();
-        assert!(registry.is_none());
+        assert!(!config.use_real_llm());
     }
 
     #[test]

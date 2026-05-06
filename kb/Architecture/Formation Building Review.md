@@ -115,7 +115,7 @@ should build its own compilation step.
 
 ## Per-Role Provider Routing
 
-The provider API already has rich routing vocabulary (`crates/provider-api/
+The provider API already has rich routing vocabulary (`crates/provider/
 src/selection.rs`) including cost class, latency class, data sovereignty,
 compliance, replay, offline, and modality. But the formation path only uses
 `id + required_capabilities`.
@@ -128,7 +128,7 @@ reasoning model available. One provider assignment per formation is wrong.
 
 Do not bind Organism to the current internal capability registry as if it
 were already the final public contract. Keep upper-layer routing centered on
-`converge-provider-api` surfaces while the provider/capability contract is
+`converge-provider` surfaces while the provider/capability contract is
 still being realigned.
 
 ## FormationCompiler: The Highest-Leverage Addition

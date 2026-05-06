@@ -17,19 +17,25 @@ Canonical plan: [[Planning/v3.8 Foundation]].
       exposed through public Cargo feature unification.
 - [x] Harden feed/web fetch against SSRF, unsafe redirects, and unbounded body
       or timeout limits.
-- [ ] Decide provider/tool extraction and apply the naming rule: contracts get
-      real names, implementations carry adapter qualifiers.
+- [x] Decide provider/tool extraction and apply the naming rule: contracts get
+      real names, implementations carry adapter qualifiers
+      ([[Architecture/ADRs/ADR-007-provider-tool-contracts]],
+      [[Planning/Manifold Provider Tool Migration]], 2026-05-06).
 - [x] Classify providers, analytics, policy, knowledge, connectors, and solvers
       as foundation contracts versus extension implementations
       ([[Architecture/Extension Topology]], 2026-05-05).
 - [x] Extract knowledge to **mnemos** extension repo (2026-05-05).
 - [x] Extract analytics to **prism** extension repo (2026-05-05).
 - [ ] Extract provider/tool implementations to **manifold** extension repo —
-      DEFERRED. The `llm/selection.rs` harness imports concrete vendor
-      backend types and is itself imported by
-      `crates/runtime/src/execution/packs.rs` (`ChatBackendSelectionConfig`).
-      Clean extraction needs the selection harness refactored to be
-      vendor-agnostic via dyn-dispatch first. Treat as a dedicated workstream.
+      STARTED. The foundation no longer depends on the adapter staging crate:
+      `ChatBackendSelectionConfig` is in `converge-provider`,
+      `ProviderSelectionSuggestor` is in `converge-kernel`, and
+      `converge-runtime` depends on the provider contract only. The
+      host-supplied `ChatBackendRegistry` boundary is also in the provider
+      contract. The first LLM adapter copy compiles in Manifold behind
+      `llm-all`; remaining work is staging cleanup, other adapter families, and
+      downstream proof.
+      Plan: [[Planning/Manifold Provider Tool Migration]].
 - [x] Extract reusable storage adapters to **manifold** extension repo:
       local/S3/GCS object-store builders, SurrealDB/LanceDB experience stores,
       and the generic LanceDB vector adapter (2026-05-05).
@@ -85,11 +91,12 @@ that Converge can consume without a C++ toolchain dependency.
 ## Planned: v3.5 — Capability Contract Realignment
 **Target:** 2026-07-15 | **Epic:** E1, E2, E3
 
-**Theme:** Make `converge-provider-api` the live provider and capability contract so sibling repos can consume stable capability types without importing `converge-core` internals.
+**Theme:** Make `converge-provider` the live provider and capability contract so sibling repos can consume stable capability types without importing `converge-core` internals.
 
-- [ ] Promote `converge-provider-api` from identity-only contract to the canonical capability surface
+- [ ] Promote `converge-provider` from identity-only contract to the canonical capability surface
 - [ ] Move or re-home chat and embed traits, request and response types, and selection vocabulary under one canonical owner
-- [ ] Collapse duplicate provider taxonomies across `converge-core`, `converge-provider-api`, and `converge-provider`
+- [ ] Collapse duplicate provider taxonomies across `converge-core`,
+      `converge-provider`, and adapter crates
 - [ ] Keep `converge-core` focused on engine, truth pipeline, governance, and deterministic execution
 - [ ] Migrate `axiom` off direct `converge-core` imports for capability-facing concerns
 - [ ] Add regression proof that downstreams can select and call providers without importing `converge-core`
@@ -120,7 +127,7 @@ that Converge can consume without a C++ toolchain dependency.
 ## Planned: v3.7 — Curated Facades & Downstream Proof
 **Target:** 2026-09-15 | **Epic:** E1, E2, E3
 
-**Theme:** Make `converge-kernel`, `converge-model`, and `converge-provider-api` the obvious consumer entry points and prove them against real sibling repos.
+**Theme:** Make `converge-kernel`, `converge-model`, and `converge-provider` the obvious consumer entry points and prove them against real sibling repos.
 
 - [ ] Curate `converge-kernel` so the embedding API is deliberate rather than a raw re-export dump
 - [ ] Curate `converge-model` so downstreams read governed semantic types without internal `Types*` leakage
@@ -181,7 +188,7 @@ Completed: 2026-04-12
 ## Completed: v3.0 — Contract Stabilization
 Completed: 2026-04-11
 
-- [x] ADR-001: Canonical public crates (pack, provider-api, model, kernel, protocol, client)
+- [x] ADR-001: Canonical public crates (pack, provider, model, kernel, protocol, client)
 - [x] ADR-002: Single truth pipeline
 - [x] ADR-003: Pack authoring contract
 - [x] ADR-004: Contract stabilization and freeze

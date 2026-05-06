@@ -51,13 +51,13 @@ Lattice.
 ```text
 crates/
   pack/           canonical pack authoring contract
-  provider-api/   provider capability contract; transitional name
+  provider/       provider capability contract
   model/          curated semantic model surface
   kernel/         canonical embedding API
   protocol/       generated converge.v1 wire contract
   client/         canonical remote Rust SDK
   core/           engine implementation and promotion path
-  provider/       provider adapters
+  provider-adapters/ temporary in-repo provider adapters
   optimization/   solver packs and Suggestor adapter
   experience/     experience event storage
   runtime/        HTTP and gRPC runtime
@@ -68,14 +68,14 @@ crates/
 
 At a high level:
 
-- `converge-pack`, `converge-provider-api`, and `converge-protocol` are the leaf contracts.
+- `converge-pack`, `converge-provider`, and `converge-protocol` are the leaf contracts.
 - `converge-core` builds on `converge-pack`.
 - `converge-kernel` and `converge-model` sit above the engine implementation.
 - Provider, domain, policy, and optimization crates depend on contracts and the engine implementation as needed.
 - Analytics suggestors live in the **prism** extension repo and depend on the same contracts.
 - Knowledge suggestors live in the **mnemos** extension repo and depend on the same contracts.
 
-`converge-provider-api` is the current provider contract name, but v3.8 treats
+`converge-provider` is the current provider contract name, but v3.8 treats
 that as naming drift: stable contracts should get the real domain names and
 implementations should add adapter qualifiers.
 
@@ -152,7 +152,7 @@ context readers see `ContextFact`, and the engine owns promotion.
 The supported external API consists of:
 
 - `converge-pack`
-- `converge-provider-api`
+- `converge-provider`
 - `converge-model`
 - `converge-kernel`
 - `converge-protocol`
