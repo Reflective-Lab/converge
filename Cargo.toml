@@ -125,7 +125,7 @@ tiktoken-rs = "0.5"
 tokio = { version = "1.48", features = ["full", "macros", "sync"] }
 trybuild = "1"
 tokio-stream = { version = "0.1", features = ["net", "sync"] }
-toml = "0.8"
+toml = "1.1"
 tonic = { version = "0.12", features = ["tls"] }
 tonic-build = "0.12"
 tower = "0.5"
