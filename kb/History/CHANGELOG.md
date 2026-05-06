@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.8.1] - 2026-05-06
+
+First release of the v3.8 line. Foundation has been refocused around the
+authority slice; ML, analytics, policy, generic provider adapters, and
+domain packs now live in dedicated extension repos.
+
 ### Removed
 - **BREAKING**: `converge-knowledge` extracted to the **mnemos** extension repo
   (`~/dev/extensions/mnemos`). Foundation no longer ships vector storage,
@@ -24,24 +30,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   repo (`~/dev/extensions/arbiter`). Cedar policy engine, policy suggestors,
   and ed25519-signed delegation tokens now live in arbiter. Foundation
   `converge-pack` keeps the gate trait and authorization vocabulary.
-
-### Added
-- **Optimization Suggestor adapter**: `SolverSuggestor<P: Pack>` wraps all 11 optimization domain packs as first-class Suggestors. Every solver participates in the convergence loop via `register_suggestor_in_pack`.
-- **Policy Suggestor adapters**: `PolicyGateSuggestor`, `DelegationVerifySuggestor`, `FlowGateSuggestor` bridge Cedar policy evaluation into the convergence loop.
-- **Compile-fail contract tests** (7): Prove at compile time that wrong API usage is impossible — no Fact construction without kernel authority, no orphan `Agent` trait, no `register_in_pack`, immutable facts, closed ContextKey enum.
-- **CI/CD infrastructure**: Pre-commit hooks, GitHub Actions (CI/Security/Coverage), dependabot auto-merge, self-hosted coverage badges across converge, organism, and axiom repos.
-- **700+ new tests** across all modules: property tests, negative tests, edge cases, serde roundtrips, async path tests with mocked LLM backends.
+- **BREAKING**: `converge-provider-adapters` (LLM, search, tool, embedding,
+  reranker, vector adapters) extracted to the **manifold** extension repo.
+  Foundation no longer ships ready-made vendor adapters; downstream
+  consumers depend on `manifold` directly.
+- 3,469 lines of dead code: orphaned `consensus/` module, broken `billing/`
+  module, orphaned `stress_tests.rs`.
+- `ContextView` alias (use `Context` directly).
 
 ### Changed
 - **BREAKING**: Provider contract crate renamed from `converge-provider-api`
-  to `converge-provider`. Ready-made generic adapters moved out of the
-  foundation workspace and now live in Manifold.
-- **BREAKING**: `ContextView` removed — use `Context` (the trait). The concrete implementation is now `ContextState`.
-- **BREAKING**: Consumers using `converge_core::ContextView` must change to `converge_core::Context`.
+  to `converge-provider`. Generic adapter implementations moved to Manifold.
+- **BREAKING**: `ContextView` removed — use `Context` (the trait); the
+  concrete implementation is now `ContextState`. Consumers using
+  `converge_core::ContextView` must change to `converge_core::Context`.
 
-### Removed
-- 3,469 lines of dead code: orphaned `consensus/` module, broken `billing/` module, orphaned `stress_tests.rs`.
-- `ContextView` alias (use `Context` directly).
+### Added
+- **Optimization Suggestor adapter**: `SolverSuggestor<P: Pack>` wraps all
+  11 optimization domain packs as first-class Suggestors. Every solver
+  participates in the convergence loop via `register_suggestor_in_pack`.
+- **Policy Suggestor adapters**: `PolicyGateSuggestor`,
+  `DelegationVerifySuggestor`, `FlowGateSuggestor` bridge Cedar policy
+  evaluation into the convergence loop.
+- **Pack typing primitives**: `UnitInterval` governance primitive,
+  `Fact::parse_content` / `ProposedFact::parse_content` typed
+  deserialization, `AgentEffect::push` / `extend` for incremental
+  composition.
+- **Compile-fail contract tests** (7): prove at compile time that wrong
+  API usage is impossible — no Fact construction without kernel authority,
+  no orphan `Agent` trait, no `register_in_pack`, immutable facts, closed
+  `ContextKey` enum.
+- **CI/CD infrastructure**: pre-commit hooks, GitHub Actions
+  (CI / Security / Coverage / Stability), dependabot auto-merge,
+  self-hosted coverage badges across converge, organism, and axiom.
+- **700+ new tests** across all modules: property tests, negative tests,
+  edge cases, serde roundtrips, async paths with mocked LLM backends.
+- `performance-profile` justfile recipe: per-bench targets with optional
+  features and explicit `PERF_MODE` (save|compare).
+
+### Fixed
+- `[lib] bench = false` on `converge-core` and `converge-optimization` so
+  `cargo bench --bench NAME` no longer also runs the lib unittest binary
+  in bench mode (which rejects `--save-baseline`).
+- Stability workflow: install `protoc` on bench-compile / bench-run / soak
+  jobs; remove the dead `live-endpoints` job; bump `cargo-deny-action` to
+  v2 (matches the modern config schema); allow `0BSD` license
+  (vec_mut_scan via `--all-features`).
+- Dependabot auto-merge: drop the approval step. Branch protection on
+  `main` does not require reviews, and `GITHUB_TOKEN` is not permitted
+  to approve PRs — the step blocked every dependabot PR.
+
+### Dependencies
+- `firestore` 0.45.1 → 0.48.0
+- `metrics-exporter-prometheus` 0.16.2 → 0.18.3
+- `reqwest` 0.12.28 → 0.13.3 (major)
+- `toml` 0.8.23 → 1.1.2+spec-1.1.0 (major; tracks TOML 1.1 spec)
+- `schneegans/dynamic-badges-action` 1.7.0 → 1.8.0
 
 ## [3.7.3] - 2026-04-23
 
