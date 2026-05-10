@@ -49,7 +49,7 @@ converge-storage = { path = "crates/storage", version = "3.8.1", default-feature
 
 # Shared dependencies
 anyhow = "1"
-async-nats = "0.47"
+async-nats = "0.48"
 async-stream = "0.3"
 async-trait = "0.1"
 axum = { version = "0.8", features = ["macros"] }
