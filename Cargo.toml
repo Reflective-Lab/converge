@@ -122,7 +122,7 @@ strum = { version = "0.28", features = ["derive"] }
 tempfile = "3"
 thiserror = "2"
 tiktoken-rs = "0.5"
-tokio = { version = "1.48", features = ["full", "macros", "sync"] }
+tokio = { version = "1.52", features = ["full", "macros", "sync"] }
 trybuild = "1"
 tokio-stream = { version = "0.1", features = ["net", "sync"] }
 toml = "1.1"
