@@ -394,8 +394,9 @@ mod tests {
         let fact = result.to_fact(None);
         assert_eq!(fact.key(), ContextKey::Evaluations);
         assert!(fact.id().starts_with("eval:test_eval"));
-        assert!(fact.content().contains("Pass"));
-        assert!(fact.content().contains("0.85"));
+        let text = fact.text().unwrap_or_default();
+        assert!(text.contains("Pass"));
+        assert!(text.contains("0.85"));
     }
 
     #[test]

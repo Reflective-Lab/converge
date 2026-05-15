@@ -9,6 +9,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::fact::{ContextFact, ProposedFact};
+use crate::formation::FormationKind;
 
 /// Typed keys for the shared context namespace.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -64,6 +65,18 @@ pub trait Context: Send + Sync {
     fn count(&self, key: ContextKey) -> usize {
         self.get(key).len()
     }
+
+    /// The kind of formation orchestrating this suggestor's current
+    /// execution, if any. `None` means the suggestor is running outside
+    /// a formation harness (e.g., the engine's default registration
+    /// path); fall back to standalone behavior.
+    ///
+    /// Formation harnesses that orchestrate inner suggestors override
+    /// this on the context they pass down. Suggestors that don't care
+    /// about formation context can ignore this method entirely.
+    fn formation_kind(&self) -> Option<FormationKind> {
+        None
+    }
 }
 
 #[cfg(test)]
@@ -115,7 +128,7 @@ mod tests {
     fn count_reflects_facts() {
         use crate::fact::{
             FactActor, FactActorKind, FactLocalTrace, FactPromotionRecord, FactTraceLink,
-            FactValidationSummary,
+            FactValidationSummary, TextPayload,
         };
         use crate::types::{ContentHash, Timestamp};
 
@@ -134,7 +147,7 @@ mod tests {
             vec![ContextFact::new_projection(
                 ContextKey::Seeds,
                 "f1",
-                "a",
+                TextPayload::new("a"),
                 record,
                 Timestamp::epoch(),
             )],

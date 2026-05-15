@@ -9,7 +9,9 @@
 
 mod provider_selection;
 
-pub use provider_selection::ProviderSelectionSuggestor;
+pub use provider_selection::{
+    ProviderAssignmentPayload, ProviderRequestPayload, ProviderSelectionSuggestor,
+};
 
 pub mod formation {
     //! Grouped offering API for self-assembling formations.
@@ -19,7 +21,9 @@ pub mod formation {
     //! - authoring in `converge-pack`
     //! - runnable machinery in `converge-kernel`
 
-    pub use crate::ProviderSelectionSuggestor;
+    pub use crate::{
+        ProviderAssignmentPayload, ProviderRequestPayload, ProviderSelectionSuggestor,
+    };
     pub use converge_model::formation::{
         DeliberatedFormationTemplate, FormationCatalog, FormationKind, FormationPlan,
         FormationRequest, FormationTemplate, FormationTemplateMetadata, FormationTemplateQuery,
@@ -83,8 +87,8 @@ pub use converge_core::{
     UnitInterval, UserExperienceEvent, UserExperienceEventEnvelope,
 };
 pub use converge_pack::{
-    AgentEffect, ArtifactId, Context, ContextFact, ContextKey, ProposedFact, Suggestor,
-    ValidationError,
+    AgentEffect, ArtifactId, Context, ContextFact, ContextKey, FactPayload, ProposedFact,
+    ProvenanceSource, Suggestor, TextPayload, ValidationError,
 };
 
 // Experience-side surface (artifact lifecycle, replay traces).

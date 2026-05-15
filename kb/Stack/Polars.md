@@ -9,7 +9,7 @@ Polars is used for data analytics and metrics computation within the LLM and ana
 ## Role in Converge
 
 Polars is the foundation of the **prism** extension's analytics pipelines
-(`~/dev/extensions/prism`, formerly `converge-analytics`). Foundation no
+(`~/dev/reflective/stack/mosaic-extensions/prism`, formerly `converge-analytics`). Foundation no
 longer ships Polars-backed pack code. The runway `converge-llm` bridge
 module converts analysis dataframes into state injections for agent
 prompts.

@@ -12,7 +12,7 @@ use crate::chat::LlmError;
 use crate::error::BackendError;
 
 /// Requirements for generic backend selection.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BackendRequirements {
     pub kind: BackendKind,
     pub required_capabilities: Vec<Capability>,
@@ -261,7 +261,7 @@ impl ChatBackendSelectionConfigError {
 }
 
 /// Structured request for provider selection inside a convergence loop.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ProviderRequest {
     /// Stable request identifier used for idempotency.
     pub id: String,
@@ -278,7 +278,7 @@ pub struct ProviderRequest {
 }
 
 /// Structured result of provider selection.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ProviderAssignment {
     /// The request this assignment answers.
     pub request_id: String,

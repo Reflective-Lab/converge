@@ -4,8 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::error::{GateError, GateResult};
 use super::{
-    ConstraintSpec, DeterminismSpec, KernelTraceLink, ObjectiveSpec, ProvenanceEnvelope,
-    SolveBudgets,
+    AuditEnvelope, ConstraintSpec, DeterminismSpec, KernelTraceLink, ObjectiveSpec, SolveBudgets,
 };
 use crate::types::UnitInterval;
 
@@ -29,8 +28,8 @@ pub struct ProblemSpec {
     pub budgets: SolveBudgets,
     /// Determinism requirements
     pub determinism: DeterminismSpec,
-    /// Provenance for audit trail
-    pub provenance: ProvenanceEnvelope,
+    /// Audit trail metadata (input hash, correlation, submitter).
+    pub provenance: AuditEnvelope,
 }
 
 impl ProblemSpec {
@@ -80,7 +79,7 @@ pub struct ProblemSpecBuilder {
     inputs: serde_json::Value,
     budgets: SolveBudgets,
     determinism: DeterminismSpec,
-    provenance: ProvenanceEnvelope,
+    provenance: AuditEnvelope,
 }
 
 impl ProblemSpecBuilder {
@@ -94,7 +93,7 @@ impl ProblemSpecBuilder {
             inputs: serde_json::Value::Null,
             budgets: SolveBudgets::default(),
             determinism: DeterminismSpec::default(),
-            provenance: ProvenanceEnvelope::default(),
+            provenance: AuditEnvelope::default(),
         }
     }
 
@@ -148,7 +147,7 @@ impl ProblemSpecBuilder {
     }
 
     /// Set provenance
-    pub fn provenance(mut self, prov: ProvenanceEnvelope) -> Self {
+    pub fn provenance(mut self, prov: AuditEnvelope) -> Self {
         self.provenance = prov;
         self
     }

@@ -11,7 +11,9 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use converge_pack::{DomainId, GateId, PolicyVersionId, PrincipalId, ResourceId, ResourceKind};
+use converge_pack::{
+    DomainId, FactPayload, GateId, PolicyVersionId, PrincipalId, ResourceId, ResourceKind,
+};
 
 /// Action being attempted against a converging flow.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -86,7 +88,8 @@ impl FlowPhase {
 }
 
 /// Principal facts projected from the flow host or application runtime.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct FlowGatePrincipal {
     pub id: PrincipalId,
     pub authority: AuthorityLevel,
@@ -95,7 +98,8 @@ pub struct FlowGatePrincipal {
 }
 
 /// Resource facts projected from the current flow state.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct FlowGateResource {
     pub id: ResourceId,
     pub kind: ResourceKind,
@@ -104,7 +108,8 @@ pub struct FlowGateResource {
 }
 
 /// Decision-relevant facts projected from the flow state.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct FlowGateContext {
     pub commitment_type: Option<String>,
     pub amount: Option<i64>,
@@ -113,12 +118,18 @@ pub struct FlowGateContext {
 }
 
 /// Canonical input to an authorization decision for a flow gate.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct FlowGateInput {
     pub principal: FlowGatePrincipal,
     pub resource: FlowGateResource,
     pub action: FlowAction,
     pub context: FlowGateContext,
+}
+
+impl FactPayload for FlowGateInput {
+    const FAMILY: &'static str = "converge.flow_gate.input";
+    const VERSION: u16 = 1;
 }
 
 /// Neutral outcome of a flow gate authorization decision.
@@ -138,11 +149,17 @@ impl FlowGateOutcome {
 }
 
 /// Full gate decision with rationale and source attribution.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct FlowGateDecision {
     pub outcome: FlowGateOutcome,
     pub reason: Option<String>,
     pub source: Option<String>,
+}
+
+impl FactPayload for FlowGateDecision {
+    const FAMILY: &'static str = "converge.flow_gate.decision";
+    const VERSION: u16 = 1;
 }
 
 impl FlowGateDecision {

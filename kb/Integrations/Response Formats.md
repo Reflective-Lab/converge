@@ -106,7 +106,7 @@ On failure, the system retries with:
 ## Running the matrix test
 
 ```bash
-cd ~/dev/extensions/manifold-adapters
+cd ~/dev/reflective/stack/mosaic-extensions/manifold-adapters
 OPENROUTER_API_KEY=sk-or-v1-... cargo run --features openrouter --example format_matrix
 ```
 

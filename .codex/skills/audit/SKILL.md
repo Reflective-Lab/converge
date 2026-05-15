@@ -12,7 +12,7 @@ Weekly Converge repo review.
 2. If `cargo-deny` is installed, run `just deny`; otherwise note that it was unavailable.
 3. Run `just check`, `just test`, and `just lint`, or explain what you skipped.
 4. Read `AGENTS.md`, `CODEX.md`, and the relevant `kb/` workflow pages for drift.
-5. Read `MILESTONES.md` and `~/dev/work/EPIC.md` for milestone risk.
+5. Read `MILESTONES.md` and `~/dev/reflective/stack/bedrock-platform/EPIC.md` for milestone risk.
 6. Update the relevant `kb/` page if you learn something that should persist.
 7. Report findings, ordered by severity.
 

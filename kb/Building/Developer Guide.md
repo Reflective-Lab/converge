@@ -1,13 +1,13 @@
 ---
 tags: [building, guide]
 source: mixed
-version: 3.8.1
-date: 2026-05-06
+version: 3.9.0
+date: 2026-05-15
 ---
-# Developer Guide for Converge 3.8.1
+# Developer Guide for Converge 3.9.0
 
 This guide is the practical entry point for developers building against
-Converge 3.8.1 or changing the Converge foundation itself.
+Converge 3.9.0 or changing the Converge foundation itself.
 
 Converge is a correctness-first, context-driven multi-suggestor runtime. The
 kernel owns convergence, proposal promotion, invariants, HITL pauses, and run
@@ -16,7 +16,7 @@ connectors, vendor SDK wiring, or application deployment.
 
 ## Version Baseline
 
-Converge 3.8.1 uses:
+Converge 3.9.0 uses:
 
 | Item | Value |
 |---|---|
@@ -61,8 +61,8 @@ For an embedded application:
 
 ```toml
 [dependencies]
-converge-kernel = "3.8.1"
-converge-model = "3.8.1"
+converge-kernel = "3.9.0"
+converge-model = "3.9.0"
 async-trait = "0.1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
@@ -71,31 +71,43 @@ For a reusable pack:
 
 ```toml
 [dependencies]
-converge-pack = "3.8.1"
+converge-pack = "3.9.0"
 ```
 
 For provider or tool adapters:
 
 ```toml
 [dependencies]
-converge-provider = "3.8.1"
+converge-provider = "3.9.0"
 ```
 
 For a remote Rust client:
 
 ```toml
 [dependencies]
-converge-client = "3.8.1"
+converge-client = "3.9.0"
 ```
 
 ## First Embedded Run
 
 ```rust
 use converge_kernel::{
-    AgentEffect, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+    AgentEffect, Context, ContextKey, ContextState, Engine, ProvenanceSource, Suggestor,
+    TextPayload,
 };
 
 struct SeedSuggestor;
+
+#[derive(Clone, Copy)]
+struct SeedProvenance;
+
+impl ProvenanceSource for SeedProvenance {
+    fn as_str(&self) -> &'static str {
+        "suggestor:seed"
+    }
+}
+
+const SEED_PROVENANCE: SeedProvenance = SeedProvenance;
 
 #[async_trait::async_trait]
 impl Suggestor for SeedSuggestor {
@@ -111,13 +123,16 @@ impl Suggestor for SeedSuggestor {
         !ctx.has(ContextKey::Seeds)
     }
 
+    fn provenance(&self) -> &'static str {
+        SEED_PROVENANCE.as_str()
+    }
+
     async fn execute(&self, _ctx: &dyn Context) -> AgentEffect {
         AgentEffect::with_proposal(
-            ProposedFact::new(
+            SEED_PROVENANCE.proposed_fact(
                 ContextKey::Seeds,
                 "seed:observation-1",
-                "Monthly active users grew 15%",
-                "suggestor:seed",
+                TextPayload::new("Monthly active users grew 15%"),
             )
             .with_confidence(0.95),
         )
@@ -201,35 +216,61 @@ Facts are partitioned by `ContextKey`. Common keys include:
 Normal consumers construct `ProposedFact`, not `Fact`:
 
 ```rust
-let proposal = ProposedFact::new(
+use converge_pack::{ContextKey, FactPayload, ProvenanceSource};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct VendorEvaluation {
+    score: f64,
+}
+
+impl FactPayload for VendorEvaluation {
+    const FAMILY: &'static str = "example.vendor_evaluation";
+    const VERSION: u16 = 1;
+}
+
+#[derive(Clone, Copy)]
+struct ExampleProvenance;
+
+impl ProvenanceSource for ExampleProvenance {
+    fn as_str(&self) -> &'static str {
+        "suggestor:vendor-evaluator"
+    }
+}
+
+const EXAMPLE_PROVENANCE: ExampleProvenance = ExampleProvenance;
+
+let proposal = EXAMPLE_PROVENANCE.proposed_fact(
     ContextKey::Evaluations,
     "evaluation:vendor-1",
-    serde_json::json!({ "score": 0.82 }).to_string(),
-    "suggestor:vendor-evaluator",
+    VendorEvaluation { score: 0.82 },
 )
 .with_confidence(0.82);
 ```
 
-For structured JSON payloads:
+Serialized materialization happens at borders through the wire shape:
 
 ```rust
-let proposal = ProposedFact::from_json_payload(
-    ContextKey::Evaluations,
-    "evaluation:vendor-1",
-    &payload,
-    "suggestor:vendor-evaluator",
-)?;
+let wire = proposal.to_wire()?;
+let mut registry = converge_pack::PayloadRegistry::new();
+registry.register::<VendorEvaluation>();
+let restored = converge_pack::ProposedFact::from_wire(wire, &registry)?;
 ```
 
 Confidence is method-based and clamped by the type:
 
 ```rust
-use converge_pack::{CONFIDENCE_STEP_MAJOR, CONFIDENCE_STEP_MINOR};
+use converge_pack::{CONFIDENCE_STEP_MAJOR, CONFIDENCE_STEP_MINOR, TextPayload};
 
-let proposal = ProposedFact::new(ContextKey::Hypotheses, "h:1", "supported", "suggestor:analyst")
-    .with_confidence(0.5)
-    .adjust_confidence(CONFIDENCE_STEP_MAJOR)
-    .adjust_confidence(CONFIDENCE_STEP_MINOR);
+let proposal = EXAMPLE_PROVENANCE.proposed_fact(
+    ContextKey::Hypotheses,
+    "h:1",
+    TextPayload::new("supported"),
+)
+.with_confidence(0.5)
+.adjust_confidence(CONFIDENCE_STEP_MAJOR)
+.adjust_confidence(CONFIDENCE_STEP_MINOR);
 ```
 
 Add `converge-pack` directly when you want the authoring-only confidence step
@@ -327,7 +368,7 @@ Use `run()` when the host wants a completed `ConvergeResult` or an error. Use
 - `ChatBackendSelectionConfig` and `SelectionCriteria`
 
 Concrete vendor implementations do not live in this foundation workspace in
-3.8.1. Generic adapters such as LLM chat, search, fetch, feed, embeddings,
+3.9.0. Generic adapters such as LLM chat, search, fetch, feed, embeddings,
 OpenAPI tools, and GraphQL tools live in Manifold. Source-specific connector
 ports live in Embassy. Policy implementations live in Arbiter. Knowledge lives
 in Mnemos. Analytics lives in Prism.
@@ -378,7 +419,7 @@ let mut client = ConvergeClient::connect("http://127.0.0.1:50051").await?;
 let capabilities = client
     .get_capabilities(v1::GetCapabilitiesRequest {
         device_id: "cli-1".to_string(),
-        app_version: "3.8.1".to_string(),
+        app_version: "3.9.0".to_string(),
         platform: "cli".to_string(),
     })
     .await?;
@@ -396,15 +437,17 @@ contract types.
 Converge keeps universal contracts. Implementation-heavy or SDK-facing code
 lives outside the foundation.
 
-| Work | Home | Floor against Converge 3.8.1 |
+| Work | Home | Floor against Converge 3.9.0 |
 |---|---|---|
-| generic LLM, search, fetch, feed, embedding, and tool adapters | Manifold | `manifold = "1.0.0"` |
-| source-specific connector ports and adapters | Embassy | `embassy-*` (per-connector) |
-| knowledge, recall, retrieval, vector memory | Mnemos | `mnemos = "1.0.0"` |
-| analytics, ML, feature pipelines, monitoring | Prism | `prism = "1.0.0"` |
-| Cedar policy engines and policy suggestors | Arbiter | `arbiter = "1.0.0"` |
+| generic LLM, search, fetch, feed, embedding, and tool adapters | Manifold | `converge-manifold-adapters = "1.1.1"` |
+| source-specific connector ports and adapters | Embassy | `converge-embassy-* = "1.1.1"` |
+| knowledge, recall, retrieval, vector memory | Mnemos | `converge-mnemos-knowledge = "1.2.0"` |
+| analytics, feature pipelines, monitoring | Prism | `converge-prism-analytics = "2.0.0"` |
+| trained model packs and RF/SVM/ANFIS suggestors | Crucible | `converge-crucible-models = "0.2.0"` |
+| Cedar policy engines and policy suggestors | Arbiter | `converge-arbiter-policy = "2.0.0"` |
+| native OR-Tools and HiGHS solver integrations | Ferrox | `converge-ferrox-solver = "0.6.0"` |
+| SMT-backed safety and assurance suggestors | Soter | `converge-soter-smt = "0.2.0"` |
 | domain packs and worked exemplars | Atelier | `atelier-domain = "1.0.0"` |
-| native solver integrations | Ferrox | `ferrox-solver = "0.3.12"` |
 | deployment assembly, secrets, processes, Docker, databases | Runway or product repos | — |
 
 The dependency direction is:
@@ -459,6 +502,22 @@ These rules are part of the platform contract:
 - do not add feature flags or compatibility shims for new behavior
 - do not inline dependency versions in crate manifests; use workspace dependencies
 - keep the root checkout clean and use a topic branch or dedicated worktree for non-trivial changes
+
+## 3.9.0 Migration Notes
+
+Use the current contract shape:
+
+| Changed or stale name | Current API |
+|---|---|
+| raw semantic strings in `ProposedFact::new(...)` | typed `FactPayload` values, usually through `*_PROVENANCE.proposed_fact(...)` |
+| ad hoc provenance strings inside fact-emitting suggestors | `ProvenanceSource` marker + `Suggestor::provenance()` override |
+| empty provenance on a fact-emitting suggestor | `ConvergeError::EmptyProvenance` from the engine |
+| `gate::ProvenanceEnvelope` | `gate::AuditEnvelope` (`ProvenanceEnvelope` is a deprecated compatibility alias) |
+| local `FormationKind` definitions | `converge-pack::FormationKind`, re-exported from `converge-core` |
+| string-built runtime config | `ExecutionIdentity::runtime_config_from_typed(...)` or `with_runtime_config_typed(...)` |
+
+`Context::formation_kind()` now reports an optional formation kind and defaults
+to `None` for contexts that do not carry formation metadata.
 
 ## 3.8.1 Migration Notes
 

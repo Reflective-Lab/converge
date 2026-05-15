@@ -88,7 +88,7 @@ Search providers are intentionally separate from chat:
 
 ### Local Inference (runway `converge-llm`)
 
-Local inference lives in runway (`~/dev/work/runway/crates/llm`) — it is
+Local inference lives in runway (`~/dev/reflective/stack/runway/crates/llm`) — it is
 the local-inference distribution component, not a foundation contract:
 
 | Engine | Framework | GPU Support | Use Case |

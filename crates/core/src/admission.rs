@@ -10,7 +10,7 @@
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
-use crate::context::{ContextKey, ProposalId, ProposedFact};
+use crate::context::{ContextKey, ProposalId, ProposedFact, TextPayload};
 use crate::types::{ActorId, ContentHash, TruthId};
 
 /// Error raised while constructing an admission request.
@@ -210,7 +210,12 @@ impl AdmissionRequest {
 
     pub(crate) fn into_proposal(self) -> ProposedFact {
         let provenance = self.provenance();
-        ProposedFact::new(self.key, self.id, self.content.into_string(), provenance)
+        ProposedFact::new(
+            self.key,
+            self.id,
+            TextPayload::new(self.content.into_string()),
+            provenance,
+        )
     }
 
     fn provenance(&self) -> String {

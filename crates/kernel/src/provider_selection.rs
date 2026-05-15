@@ -11,10 +11,74 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use converge_optimization::graph::matching::bipartite_matching;
-use converge_pack::{AgentEffect, Context, ContextKey, ProposedFact, Suggestor};
+use converge_pack::ProvenanceSource;
+use converge_pack::{
+    AgentEffect, Context, ContextKey, DiagnosticPayload, FactPayload, ProposedFact, Suggestor,
+};
 use converge_provider::{
     Backend, BackendRequirements, CapabilityAssignment, ProviderAssignment, ProviderRequest,
 };
+use serde::{Deserialize, Serialize};
+
+/// Typed fact payload for provider selection requests.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProviderRequestPayload {
+    request: ProviderRequest,
+}
+
+impl ProviderRequestPayload {
+    #[must_use]
+    pub fn new(request: ProviderRequest) -> Self {
+        Self { request }
+    }
+
+    #[must_use]
+    pub fn request(&self) -> &ProviderRequest {
+        &self.request
+    }
+}
+
+impl From<ProviderRequest> for ProviderRequestPayload {
+    fn from(request: ProviderRequest) -> Self {
+        Self::new(request)
+    }
+}
+
+impl FactPayload for ProviderRequestPayload {
+    const FAMILY: &'static str = "converge.kernel.provider.request";
+    const VERSION: u16 = 1;
+}
+
+/// Typed fact payload for provider selection assignments.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProviderAssignmentPayload {
+    assignment: ProviderAssignment,
+}
+
+impl ProviderAssignmentPayload {
+    #[must_use]
+    pub fn new(assignment: ProviderAssignment) -> Self {
+        Self { assignment }
+    }
+
+    #[must_use]
+    pub fn assignment(&self) -> &ProviderAssignment {
+        &self.assignment
+    }
+}
+
+impl From<ProviderAssignment> for ProviderAssignmentPayload {
+    fn from(assignment: ProviderAssignment) -> Self {
+        Self::new(assignment)
+    }
+}
+
+impl FactPayload for ProviderAssignmentPayload {
+    const FAMILY: &'static str = "converge.kernel.provider.assignment";
+    const VERSION: u16 = 1;
+}
 
 // ── Suggestor ─────────────────────────────────────────────────────────────────
 
@@ -35,6 +99,20 @@ pub struct ProviderSelectionSuggestor {
     backends: Vec<Arc<dyn Backend>>,
 }
 
+/// Canonical provenance marker for `converge-kernel` fact-emitting
+/// suggestors. Currently used by [`ProviderSelectionSuggestor`].
+#[derive(Copy, Clone, Debug)]
+pub struct ConvergeKernel;
+
+impl ProvenanceSource for ConvergeKernel {
+    fn as_str(&self) -> &'static str {
+        "converge-kernel"
+    }
+}
+
+/// Canonical provenance const for [`ConvergeKernel`].
+pub const CONVERGE_KERNEL_PROVENANCE: ConvergeKernel = ConvergeKernel;
+
 impl ProviderSelectionSuggestor {
     pub fn new(backends: Vec<Arc<dyn Backend>>) -> Self {
         Self { backends }
@@ -47,6 +125,10 @@ impl Suggestor for ProviderSelectionSuggestor {
         "ProviderSelectionSuggestor"
     }
 
+    fn provenance(&self) -> &'static str {
+        CONVERGE_KERNEL_PROVENANCE.as_str()
+    }
+
     fn dependencies(&self) -> &[ContextKey] {
         &[ContextKey::Seeds]
     }
@@ -54,9 +136,9 @@ impl Suggestor for ProviderSelectionSuggestor {
     fn accepts(&self, ctx: &dyn Context) -> bool {
         ctx.get(ContextKey::Seeds).iter().any(|f| {
             f.id().as_str().starts_with(REQUEST_PREFIX)
-                && match serde_json::from_str::<ProviderRequest>(f.content()) {
-                    Ok(_) => !assignment_exists(ctx, request_id(f.id().as_str())),
-                    Err(_) => !malformed_diagnostic_exists(ctx, f.id().as_str()),
+                && match f.payload::<ProviderRequestPayload>() {
+                    Some(_) => !assignment_exists(ctx, request_id(f.id().as_str())),
+                    None => !malformed_diagnostic_exists(ctx, f.id().as_str()),
                 }
         })
     }
@@ -69,39 +151,42 @@ impl Suggestor for ProviderSelectionSuggestor {
             .iter()
             .filter(|f| f.id().as_str().starts_with(REQUEST_PREFIX))
         {
-            match serde_json::from_str::<ProviderRequest>(fact.content()) {
-                Ok(req) => {
+            match fact.payload::<ProviderRequestPayload>() {
+                Some(payload) => {
                     if assignment_exists(ctx, request_id(fact.id().as_str())) {
                         continue;
                     }
 
-                    let assignment = route(&req, &self.backends);
+                    let assignment = route(payload.request(), &self.backends);
                     proposals.push(
                         ProposedFact::new(
                             ContextKey::Strategies,
                             format!("{}{}", ASSIGNMENT_PREFIX, assignment.request_id),
-                            serde_json::to_string(&assignment).unwrap_or_default(),
-                            self.name(),
+                            ProviderAssignmentPayload::new(assignment.clone()),
+                            self.name().to_string(),
                         )
                         .with_confidence(assignment.coverage_ratio),
                     );
                 }
-                Err(error) => {
+                None => {
                     if malformed_diagnostic_exists(ctx, fact.id().as_str()) {
                         continue;
                     }
 
-                    let diagnostic = serde_json::json!({
-                        "request_fact_id": fact.id(),
-                        "message": "malformed provider request ignored",
-                        "error": error.to_string(),
-                    });
                     proposals.push(
                         ProposedFact::new(
                             ContextKey::Diagnostic,
                             malformed_diagnostic_id(fact.id().as_str()),
-                            diagnostic.to_string(),
-                            self.name(),
+                            DiagnosticPayload::new(
+                                self.name(),
+                                format!(
+                                    "malformed provider request '{}': expected {} v{} payload",
+                                    fact.id(),
+                                    ProviderRequestPayload::FAMILY,
+                                    ProviderRequestPayload::VERSION
+                                ),
+                            ),
+                            self.name().to_string(),
                         )
                         .with_confidence(1.0),
                     );
@@ -257,6 +342,7 @@ fn malformed_diagnostic_exists(ctx: &dyn Context, fact_id: &str) -> bool {
 mod tests {
     use super::*;
     use converge_core::{ContextState, Engine};
+    use converge_pack::TextPayload;
     use converge_provider::{BackendKind, Capability};
 
     struct MockBackend {
@@ -464,8 +550,13 @@ mod tests {
         )]));
 
         let mut ctx = ContextState::new();
-        ctx.add_input(ContextKey::Seeds, "provider-request:broken", "{")
-            .expect("seed should stage");
+        ctx.add_proposal(ProposedFact::new(
+            ContextKey::Seeds,
+            "provider-request:broken",
+            TextPayload::new("not a provider request"),
+            "test",
+        ))
+        .expect("seed should stage");
 
         let first = engine.run(ctx).await.expect("run should converge");
         let diagnostics = first.context.get(ContextKey::Diagnostic);

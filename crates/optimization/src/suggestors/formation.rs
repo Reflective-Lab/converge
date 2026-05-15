@@ -9,7 +9,10 @@
 
 use async_trait::async_trait;
 use converge_model::formation::{FormationPlan, FormationRequest, ProfileSnapshot, RoleAssignment};
-use converge_pack::{AgentEffect, Context, ContextKey, ProposedFact, Suggestor};
+use converge_pack::ProvenanceSource;
+use converge_pack::{
+    AgentEffect, Context, ContextKey, DiagnosticPayload, FactPayload, ProposedFact, Suggestor,
+};
 
 use crate::graph::matching::bipartite_matching;
 
@@ -54,9 +57,9 @@ impl Suggestor for FormationAssemblySuggestor {
     fn accepts(&self, ctx: &dyn Context) -> bool {
         ctx.get(ContextKey::Seeds).iter().any(|f| {
             f.id().as_str().starts_with(REQUEST_PREFIX)
-                && match serde_json::from_str::<FormationRequest>(f.content()) {
-                    Ok(_) => !plan_exists(ctx, request_id(f.id().as_str())),
-                    Err(_) => !malformed_diagnostic_exists(ctx, f.id().as_str()),
+                && match f.payload::<FormationRequest>() {
+                    Some(_) => !plan_exists(ctx, request_id(f.id().as_str())),
+                    None => !malformed_diagnostic_exists(ctx, f.id().as_str()),
                 }
         })
     }
@@ -69,39 +72,42 @@ impl Suggestor for FormationAssemblySuggestor {
             .iter()
             .filter(|f| f.id().as_str().starts_with(REQUEST_PREFIX))
         {
-            match serde_json::from_str::<FormationRequest>(fact.content()) {
-                Ok(req) => {
+            match fact.payload::<FormationRequest>() {
+                Some(req) => {
                     if plan_exists(ctx, request_id(fact.id().as_str())) {
                         continue;
                     }
 
-                    let plan = assemble(&req, &self.catalog);
+                    let plan = assemble(req, &self.catalog);
                     proposals.push(
                         ProposedFact::new(
                             ContextKey::Strategies,
                             format!("{}{}", PLAN_PREFIX, plan.request_id),
-                            serde_json::to_string(&plan).unwrap_or_default(),
-                            self.name(),
+                            plan.clone(),
+                            self.name().to_string(),
                         )
                         .with_confidence(plan.coverage_ratio),
                     );
                 }
-                Err(error) => {
+                None => {
                     if malformed_diagnostic_exists(ctx, fact.id().as_str()) {
                         continue;
                     }
 
-                    let diagnostic = serde_json::json!({
-                        "request_fact_id": fact.id(),
-                        "message": "malformed formation request ignored",
-                        "error": error.to_string(),
-                    });
                     proposals.push(
                         ProposedFact::new(
                             ContextKey::Diagnostic,
                             malformed_diagnostic_id(fact.id().as_str()),
-                            diagnostic.to_string(),
-                            self.name(),
+                            DiagnosticPayload::new(
+                                self.name(),
+                                format!(
+                                    "malformed formation request '{}': expected {} v{} payload",
+                                    fact.id(),
+                                    FormationRequest::FAMILY,
+                                    FormationRequest::VERSION
+                                ),
+                            ),
+                            self.name().to_string(),
                         )
                         .with_confidence(1.0),
                     );
@@ -114,6 +120,10 @@ impl Suggestor for FormationAssemblySuggestor {
         } else {
             AgentEffect::with_proposals(proposals)
         }
+    }
+
+    fn provenance(&self) -> &'static str {
+        super::CONVERGE_OPTIMIZATION_PROVENANCE.as_str()
     }
 }
 
@@ -228,7 +238,7 @@ mod tests {
     use super::*;
     use converge_core::{ContextState, Engine};
     use converge_model::formation::{SuggestorCapability, SuggestorRole};
-    use converge_pack::ContextKey;
+    use converge_pack::{ContextKey, TextPayload};
     use converge_provider::{CostClass, LatencyClass};
 
     fn snapshot(name: &str, role: SuggestorRole, caps: &[SuggestorCapability]) -> ProfileSnapshot {
@@ -403,8 +413,13 @@ mod tests {
         )]));
 
         let mut ctx = ContextState::new();
-        ctx.add_input(ContextKey::Seeds, "formation-request:broken", "{")
-            .expect("seed should stage");
+        ctx.add_proposal(ProposedFact::new(
+            ContextKey::Seeds,
+            "formation-request:broken",
+            TextPayload::new("not a formation request"),
+            "test",
+        ))
+        .expect("seed should stage");
 
         let first = engine.run(ctx).await.expect("run should converge");
         let diagnostics = first.context.get(ContextKey::Diagnostic);

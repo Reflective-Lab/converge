@@ -28,7 +28,7 @@ Split into `converge-pack` (authoring) and `converge-provider` (capability routi
 
 ### Knowledge In-Repo (ADR-008) — CLOSED
 `crates/knowledge` extracted to the **mnemos** extension repo
-(`~/dev/extensions/mnemos`) on 2026-05-05. Foundation no longer ships vector
+(`~/dev/reflective/stack/mosaic-extensions/mnemos`) on 2026-05-05. Foundation no longer ships vector
 storage, agentic memory, or learning implementations. Knowledge suggestors
 join the convergence loop the same way as before, just from an extension
 crate. See [[ADRs/ADR-008-extension-crate-boundaries]] and
@@ -36,7 +36,7 @@ crate. See [[ADRs/ADR-008-extension-crate-boundaries]] and
 
 ### Analytics In-Repo (ADR-008) — CLOSED
 `crates/analytics` extracted to the **prism** extension repo
-(`~/dev/extensions/prism`) on 2026-05-05. Foundation no longer ships
+(`~/dev/reflective/stack/mosaic-extensions/prism`) on 2026-05-05. Foundation no longer ships
 Polars/Burn-based ML pipelines, training agents, or analytics packs.
 Analytics suggestors join the convergence loop from an extension crate.
 
@@ -49,14 +49,14 @@ deferred (depends on prism rewiring).
 
 ### Policy Engine In-Repo (ADR-008) — CLOSED
 `crates/policy` extracted to the **arbiter** extension repo
-(`~/dev/extensions/arbiter`) on 2026-05-05. Foundation `converge-pack`
+(`~/dev/reflective/stack/mosaic-extensions/arbiter`) on 2026-05-05. Foundation `converge-pack`
 keeps the policy gate trait and authorization vocabulary; Cedar engine
 wiring, policy suggestors, and ed25519 delegation token verification live
 in arbiter.
 
 ### Connector Port Topology — CLOSED
 Source-specific connector ports live in **embassy**
-(`~/dev/extensions/embassy`). LinkedIn is the first example: if the semantic
+(`~/dev/reflective/stack/mosaic-extensions/embassy`). LinkedIn is the first example: if the semantic
 contract must name the external party, it belongs in embassy. Generic
 capability adapters still belong in manifold. See
 [[Architecture/Extension Topology]].

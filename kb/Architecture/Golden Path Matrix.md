@@ -15,7 +15,7 @@ The goal is simple: **make the right thing easy to use**.
 | Layer | Purpose | Public surface | Typical consumers |
 |---|---|---|---|
 | Providers | External capabilities | provider SDKs behind adapter traits | adapter maintainers, controlled product integrations |
-| Converge | Governance, authority, convergence, promotion | `converge-pack`, `converge-provider`, `converge-model`, `converge-kernel`, `converge-client`, `converge-protocol` | Organism, Axiom, Helm, Wolfgang, hackathon, other apps |
+| Converge | Governance, authority, convergence, promotion | `converge-pack`, `converge-provider`, `converge-model`, `converge-kernel`, `converge-client`, `converge-protocol` | Organism, Axiom, Helm, Wolfgang, other apps |
 | Organism | Intent interpretation, planning, debate, simulation, reusable organizational workflows | `organism-pack`, `organism-runtime`, `organism-intelligence`, `organism-notes`, `organism-domain` | Helm and other apps that need reusable reasoning above Converge |
 | Axiom | Truth authoring, validation, simulation, compilation | Axiom CLI/library + produced WASM/manifests | Helm, truth authors, CI pipelines |
 | Helm | Operator-facing control surface | product UI and app APIs | humans |
@@ -87,7 +87,7 @@ Rules:
 | Axiom | `converge-provider` + `converge-provider` |
 | Helms | Axiom + `organism-pack`/`organism-runtime` + `converge-kernel`/`converge-model`/`converge-pack` |
 | Wolfgang | `converge-kernel` + `converge-model` + `converge-provider` + `converge-provider`; Organism only when a reusable capability clearly beats product-local code |
-| Hackathon participant-facing code | `converge-pack` + `converge-kernel` + `converge-provider` + `converge-provider` + `organism-pack`/`organism-runtime` |
+| Vendor-selection participant-facing code | `converge-pack` + `converge-kernel` + `converge-provider` + `converge-provider` + `organism-pack`/`organism-runtime` |
 
 ## Hard Rule
 

@@ -21,6 +21,7 @@ mod agent;
 pub mod context;
 pub mod effect;
 pub mod fact;
+pub mod formation;
 pub mod gate;
 pub mod governance;
 pub mod pack;
@@ -35,15 +36,21 @@ pub use context::{Context, ContextKey};
 pub use effect::{AgentEffect, AgentEffectBuilder};
 pub use fact::{
     CONFIDENCE_STEP_MAJOR, CONFIDENCE_STEP_MEDIUM, CONFIDENCE_STEP_MINOR, CONFIDENCE_STEP_PRIMARY,
-    CONFIDENCE_STEP_TINY, ContextFact, FactActor, FactActorKind, FactEvidenceRef, FactLocalTrace,
-    FactPromotionRecord, FactRemoteTrace, FactTraceLink, FactValidationSummary, ProposedFact,
-    ValidationError,
+    CONFIDENCE_STEP_TINY, ContextFact, DiagnosticPayload, ExecutionIdentity,
+    ExecutionIdentityEvidence, ExecutionProducerIdentity, FactActor, FactActorKind,
+    FactEvidenceRef, FactFamilyId, FactLocalTrace, FactPayload, FactPromotionRecord,
+    FactRemoteTrace, FactTraceLink, FactValidationSummary, NativeExecutionIdentity, PayloadError,
+    PayloadRegistry, PayloadVersion, ProposedFact, Provenance, ProvenanceSource, TextPayload,
+    ValidationError, WireContextFact, WireFactPayload, WireProposedFact,
 };
+pub use formation::FormationKind;
+#[allow(deprecated)]
+pub use gate::ProvenanceEnvelope;
 pub use gate::{
-    AuthorityPolicy, ConstraintHardness, ConstraintSpec, ConstraintType, DeterminismSpec,
-    Diagnostic, DiagnosticKind, GateDecision, GateError, GateResult, KernelTraceLink,
-    ObjectiveDirection, ObjectiveSpec, ProblemSpec, ProblemSpecBuilder, PromotionGate,
-    ProposedPlan, ProvenanceEnvelope, ReplayEnvelope, SolveBudgets, SolverReport, StopReason,
+    AuditEnvelope, AuthorityPolicy, ConstraintHardness, ConstraintSpec, ConstraintType,
+    DeterminismSpec, Diagnostic, DiagnosticKind, GateDecision, GateError, GateResult,
+    KernelTraceLink, ObjectiveDirection, ObjectiveSpec, ProblemSpec, ProblemSpecBuilder,
+    PromotionGate, ProposedPlan, ReplayEnvelope, SolveBudgets, SolverReport, StopReason,
     TieBreakStrategy, TraceMode, Violation,
 };
 pub use governance::{
@@ -54,7 +61,7 @@ pub use pack::{
     InvariantDef, InvariantResult, Pack, PackSchema, PackSolveResult, PackSolver,
     default_gate_evaluation,
 };
-pub use pack_suggestor::PackSuggestor;
+pub use pack_suggestor::{PackInputPayload, PackPlanPayload, PackSuggestor};
 pub use types::{
     ActorId, ApprovalId, ApprovalPointId, ArtifactId, BackendId, BasisPoints, ChainId,
     ConstraintName, ConstraintValue, ContentHash, CorrelationId, CriterionId, DisagreementId,

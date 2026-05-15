@@ -37,6 +37,21 @@ pub enum ConvergeError {
     #[error("agent failed: {agent_id}")]
     AgentFailed { agent_id: String },
 
+    /// A fact-emitting suggestor returned an empty `provenance()` string.
+    /// The empty-provenance contract reserves `""` for filter / observer
+    /// suggestors that never emit proposals. If a suggestor produced
+    /// proposals it MUST override `provenance()` to return its crate's
+    /// canonical `*_PROVENANCE.as_str()`.
+    #[error(
+        "suggestor '{suggestor}' emitted proposals with empty provenance — \
+        override Suggestor::provenance() to return your crate's canonical \
+        ProvenanceSource string"
+    )]
+    EmptyProvenance {
+        /// Name of the offending suggestor (from `Suggestor::name()`).
+        suggestor: String,
+    },
+
     /// Invalid HITL gate resume (e.g., gate_id mismatch between decision and pause).
     #[error("invalid gate resume: {reason}")]
     InvalidResume {
@@ -84,6 +99,7 @@ impl ConvergeError {
             }
             Self::BudgetExhausted { .. }
             | Self::AgentFailed { .. }
+            | Self::EmptyProvenance { .. }
             | Self::InvalidResume { .. }
             | Self::InvalidAdmission { .. }
             | Self::InvalidSnapshot { .. } => None,
@@ -107,6 +123,10 @@ impl ConvergeError {
             Self::AgentFailed { agent_id } => StopReason::AgentRefused {
                 agent_id: agent_id.clone(),
                 reason: "agent execution failed".to_string(),
+            },
+            Self::EmptyProvenance { suggestor } => StopReason::AgentRefused {
+                agent_id: suggestor.clone(),
+                reason: "suggestor emitted proposals with empty provenance".to_string(),
             },
             Self::InvalidResume { reason } => StopReason::Error {
                 message: format!("invalid gate resume: {reason}"),

@@ -674,7 +674,7 @@ checksum = "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c"
 
 [[package]]
 name = "converge-client"
-version = "3.8.1"
+version = "3.9.0"
 dependencies = [
  "converge-protocol",
  "thiserror 2.0.18",
@@ -684,7 +684,7 @@ dependencies = [
 
 [[package]]
 name = "converge-core"
-version = "3.8.1"
+version = "3.9.0"
 dependencies = [
  "async-trait",
  "converge-pack",
@@ -709,7 +709,7 @@ dependencies = [
 
 [[package]]
 name = "converge-experience"
-version = "3.8.1"
+version = "3.9.0"
 dependencies = [
  "converge-core",
  "proptest",
@@ -720,7 +720,7 @@ dependencies = [
 
 [[package]]
 name = "converge-kernel"
-version = "3.8.1"
+version = "3.9.0"
 dependencies = [
  "async-trait",
  "converge-core",
@@ -728,14 +728,14 @@ dependencies = [
  "converge-optimization",
  "converge-pack",
  "converge-provider",
- "serde_json",
+ "serde",
  "tokio",
  "trybuild",
 ]
 
 [[package]]
 name = "converge-model"
-version = "3.8.1"
+version = "3.9.0"
 dependencies = [
  "converge-core",
  "converge-pack",
@@ -748,7 +748,7 @@ dependencies = [
 
 [[package]]
 name = "converge-optimization"
-version = "3.8.1"
+version = "3.9.0"
 dependencies = [
  "approx",
  "async-trait",
@@ -776,7 +776,7 @@ dependencies = [
 
 [[package]]
 name = "converge-pack"
-version = "3.8.1"
+version = "3.9.0"
 dependencies = [
  "async-trait",
  "hex",
@@ -791,7 +791,7 @@ dependencies = [
 
 [[package]]
 name = "converge-protocol"
-version = "3.8.1"
+version = "3.9.0"
 dependencies = [
  "prost 0.13.5",
  "prost-types 0.13.5",
@@ -801,7 +801,7 @@ dependencies = [
 
 [[package]]
 name = "converge-provider"
-version = "3.8.1"
+version = "3.9.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -811,7 +811,7 @@ dependencies = [
 
 [[package]]
 name = "converge-runtime"
-version = "3.8.1"
+version = "3.9.0"
 dependencies = [
  "anyhow",
  "async-nats",
@@ -871,7 +871,7 @@ dependencies = [
 
 [[package]]
 name = "converge-storage"
-version = "3.8.1"
+version = "3.9.0"
 dependencies = [
  "object_store",
  "serde",

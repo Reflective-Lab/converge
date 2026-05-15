@@ -6,7 +6,9 @@
 //! These tests discover validation gaps and generate evidence for the typed-ID ADR.
 //! Documents current behavior that should be tightened in a future ADR.
 
-use converge_core::{AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor};
+use converge_core::{
+    AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor, TextPayload,
+};
 
 // ─── Helper: Suggestor that proposes a single fact ───────────────────────────
 
@@ -26,17 +28,23 @@ impl Suggestor for SingleProposalSuggestor {
         &[]
     }
 
-    fn accepts(&self, _ctx: &dyn converge_core::Context) -> bool {
-        true
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
+        !ctx.get(self.key)
+            .iter()
+            .any(|fact| fact.id().as_str() == self.id)
     }
 
     async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
         AgentEffect::with_proposal(ProposedFact::new(
             self.key,
             self.id.as_str(),
-            &self.content,
-            self.name(),
+            TextPayload::new(self.content.clone()),
+            self.name().to_string(),
         ))
+    }
+
+    fn provenance(&self) -> &'static str {
+        "test-suggestor"
     }
 }
 
@@ -68,8 +76,8 @@ async fn evidence_valid_id_roundtrips() {
         .expect("should find fact");
     assert_eq!(fact.id().as_str(), test_id, "ID should roundtrip unchanged");
     assert_eq!(
-        fact.content(),
-        test_content,
+        fact.text(),
+        Some(test_content.as_str()),
         "content should roundtrip unchanged"
     );
 }

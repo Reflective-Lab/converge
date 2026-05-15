@@ -9,10 +9,14 @@
 fn main() {
     #[cfg(feature = "grpc")]
     {
-        let schema_dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../schema/proto");
-        let context_proto = format!("{schema_dir}/context.proto");
+        let manifest_dir = std::path::PathBuf::from(
+            std::env::var("CARGO_MANIFEST_DIR")
+                .expect("Cargo must set CARGO_MANIFEST_DIR for the converge-runtime build script"),
+        );
+        let schema_dir = manifest_dir.join("../../schema/proto");
+        let context_proto = schema_dir.join("context.proto");
         if std::path::Path::new(&context_proto).exists() {
-            println!("cargo:rerun-if-changed={context_proto}");
+            println!("cargo:rerun-if-changed={}", context_proto.display());
             tonic_build::configure()
                 .build_server(false)
                 .build_client(true)

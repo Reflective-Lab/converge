@@ -2,7 +2,7 @@
 
 use converge_core::suggestors::SeedSuggestor;
 use converge_core::{
-    AgentEffect, Budget, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+    AgentEffect, Budget, ContextKey, ContextState, Engine, ProposedFact, Suggestor, TextPayload,
 };
 use proptest::prelude::*;
 
@@ -67,8 +67,12 @@ proptest! {
             async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
                 let n = ctx.get(ContextKey::Seeds).len();
                 AgentEffect::with_proposal(ProposedFact::new(
-                    ContextKey::Seeds, format!("a{}-{n}", self.0), "v", "always",
+                    ContextKey::Seeds, format!("a{}-{n}", self.0), TextPayload::new("v"), "always",
                 ))
+            }
+
+            fn provenance(&self) -> &'static str {
+                "test-suggestor"
             }
         }
         let mut engine = Engine::with_budget(Budget { max_cycles, max_facts: 1000 });
@@ -91,8 +95,12 @@ proptest! {
             }
             async fn execute(&self, _: &dyn converge_core::Context) -> AgentEffect {
                 AgentEffect::with_proposal(ProposedFact::new(
-                    ContextKey::Seeds, "p1", "content", &self.0,
+                    ContextKey::Seeds, "p1", TextPayload::new("content"), self.0.clone(),
                 ))
+            }
+
+            fn provenance(&self) -> &'static str {
+                "test-suggestor"
             }
         }
         let mut engine = Engine::new();

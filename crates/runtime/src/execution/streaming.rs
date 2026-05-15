@@ -168,12 +168,17 @@ impl StreamingCallback for RuntimeStreamingCallback {
 
     fn on_fact(&self, cycle: u32, fact: &ContextFact) {
         self.fact_count.fetch_add(1, Ordering::SeqCst);
+        let content = fact.text().map(str::to_string).unwrap_or_else(|| {
+            fact.to_wire()
+                .map(|wire| wire.payload.payload.to_string())
+                .unwrap_or_default()
+        });
         let event = StreamingEvent::Fact {
             sequence: self.next_sequence(),
             cycle,
             key: format!("{:?}", fact.key()),
             id: fact.id().to_string(),
-            content: fact.content().to_string(),
+            content,
             timestamp_ns: Self::now_ns(),
         };
         let _ = self.sender.try_send(event);

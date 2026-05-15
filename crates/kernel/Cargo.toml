@@ -17,7 +17,7 @@ converge-pack.workspace = true
 converge-provider.workspace = true
 converge-optimization.workspace = true
 async-trait.workspace = true
-serde_json.workspace = true
+serde.workspace = true
 
 [dev-dependencies]
 trybuild.workspace = true

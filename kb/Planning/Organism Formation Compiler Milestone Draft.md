@@ -20,10 +20,10 @@ explainable formation, run it through Converge, capture the outcome, and use
 that evidence to improve future formation choice.**
 
 Vendor selection is the first proof wedge because it is reconciliation-heavy,
-policy-rich, and visible enough to validate the architecture during the
-hackathon. The milestone should remain broader than procurement: it is about
-building the reusable Organism formation compiler, with vendor selection as the
-first decision product that proves it.
+policy-rich, and visible enough to validate the architecture against live
+buyer-side discovery. The milestone should remain broader than procurement: it
+is about building the reusable Organism formation compiler, with vendor
+selection as the first decision product that proves it.
 
 ## Why This Exists
 
@@ -114,13 +114,13 @@ cross-functional decision that forces a business to reconcile:
 - financial terms and total cost
 - implementation and operating risk
 
-It also aligns with the current hackathon: buyer-side learning from live vendor
-evaluation is better source material than abstract architecture debate.
+Buyer-side learning from live vendor evaluation is better source material than
+abstract architecture debate.
 
-## What The Hackathon Should Teach Organism
+## What Live Discovery Should Teach Organism
 
-The hackathon is field discovery for the first formation archetype. Capture at
-least these inputs:
+Live vendor-selection discovery is the field source for the first formation
+archetype. Capture at least these inputs:
 
 - how buyers enter the process
 - who participates in the decision and who only approves
@@ -259,7 +259,7 @@ compiler and the vendor-selection wedge.
 - Vendor selection exists as a first-class formation archetype/template
 - Intake fields, entities, criteria, risk classes, evidence sources, and
   approval actors are typed rather than left as loose prompts
-- Hackathon findings are captured as structured inputs, not only narrative
+- Discovery findings are captured as structured inputs, not only narrative
   notes
 
 ### 5. Compliance And Evaluation Are First-Class
@@ -301,9 +301,9 @@ compiler and the vendor-selection wedge.
 - Success metrics include business quality and risk reduction, not just
   cycle-time
 
-## What The Hackathon Should Produce
+## What Live Discovery Should Produce
 
-Treat the hackathon as milestone input generation.
+Treat live vendor-selection discovery as milestone input generation.
 
 Desired outputs:
 

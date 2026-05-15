@@ -141,7 +141,11 @@ impl ContentHash {
     /// Computes the hash of a Fact (combines key, id, and content).
     #[must_use]
     pub fn compute_fact(fact: &ContextFact) -> Self {
-        let combined = format!("{:?}|{}|{}", fact.key(), fact.id(), fact.content());
+        let payload = fact
+            .to_wire()
+            .map(|wire| wire.payload.payload.to_string())
+            .unwrap_or_else(|error| error.to_string());
+        let combined = format!("{:?}|{}|{}", fact.key(), fact.id(), payload);
         Self::compute(&combined)
     }
 

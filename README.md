@@ -68,10 +68,22 @@ just lint
 
 ```rust
 use converge_kernel::{
-    AgentEffect, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+    AgentEffect, Context, ContextKey, ContextState, Engine, ProvenanceSource, Suggestor,
+    TextPayload,
 };
 
 struct SeedSuggestor;
+
+#[derive(Clone, Copy)]
+struct SeedProvenance;
+
+impl ProvenanceSource for SeedProvenance {
+    fn as_str(&self) -> &'static str {
+        "suggestor:seed"
+    }
+}
+
+const SEED_PROVENANCE: SeedProvenance = SeedProvenance;
 
 #[async_trait::async_trait]
 impl Suggestor for SeedSuggestor {
@@ -87,13 +99,16 @@ impl Suggestor for SeedSuggestor {
         !ctx.has(ContextKey::Seeds)
     }
 
+    fn provenance(&self) -> &'static str {
+        SEED_PROVENANCE.as_str()
+    }
+
     async fn execute(&self, _ctx: &dyn Context) -> AgentEffect {
         AgentEffect::with_proposal(
-            ProposedFact::new(
+            SEED_PROVENANCE.proposed_fact(
                 ContextKey::Seeds,
                 "observation-1",
-                "Monthly active users grew 15%",
-                "suggestor:seed",
+                TextPayload::new("Monthly active users grew 15%"),
             )
             .with_confidence(0.95),
         )
@@ -173,7 +188,7 @@ Everything else in the workspace is internal implementation or internal batterie
 
 ## Foundation vs Extensions
 
-Foundation owns universal contracts and the convergence kernel. Implementation-heavy capabilities — vector stores, ML pipelines, policy engines, source-specific connectors, native solvers, vendor SDKs — live in extension repositories under `~/dev/extensions/*` and consume foundation contracts through `Suggestor` adapters.
+Foundation owns universal contracts and the convergence kernel. Implementation-heavy capabilities — vector stores, ML pipelines, policy engines, source-specific connectors, native solvers, vendor SDKs — live in extension repositories under `~/dev/reflective/stack/mosaic-extensions/*` and consume foundation contracts through `Suggestor` adapters.
 
 The dependency arrow is one-way: **foundation contracts ← extensions ← products**. Foundation never imports an extension.
 
@@ -261,7 +276,7 @@ Domain packs, policy, analytics, and knowledge moved to extension repos on 2026-
 
 The knowledge base in `kb/` is the canonical project documentation.
 
-- [Developer Guide](kb/Building/Developer%20Guide.md) — end-to-end guide for Converge 3.8.1 developers
+- [Developer Guide](kb/Building/Developer%20Guide.md) — end-to-end guide for Converge 3.9.0 developers
 - [Core Ideas](kb/Architecture/Core%20Ideas.md) — durable principles for the next stable period
 - [API Surfaces](kb/Architecture/API%20Surfaces.md)
 - [Extension Topology](kb/Architecture/Extension%20Topology.md) — where extension code lives and why

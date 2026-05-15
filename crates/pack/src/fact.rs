@@ -7,13 +7,742 @@
 //! the engine validates. `ProposedFact` is not `Fact`. There is no implicit
 //! conversion between them.
 
-use serde::{Deserialize, Serialize};
+use std::{any::Any, collections::HashMap, fmt, sync::Arc};
+
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use thiserror::Error;
 
 use crate::context::ContextKey;
 use crate::types::{
     ActorId, ApprovalId, ArtifactId, ContentHash, FactId, GateId, ObservationId, ProposalId,
     SpanId, Timestamp, TraceId, TraceReference, TraceSystemId, UnitInterval, ValidationCheckId,
 };
+
+/// Stable payload-family identifier used by typed facts and wire adapters.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct FactFamilyId(String);
+
+impl FactFamilyId {
+    /// Creates a payload-family identifier.
+    #[must_use]
+    pub fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+
+    /// Returns the raw identifier string.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for FactFamilyId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl From<&'static str> for FactFamilyId {
+    fn from(value: &'static str) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<String> for FactFamilyId {
+    fn from(value: String) -> Self {
+        Self::new(value)
+    }
+}
+
+/// Frozen payload schema version.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PayloadVersion(u16);
+
+impl PayloadVersion {
+    /// Creates a payload version.
+    #[must_use]
+    pub const fn new(value: u16) -> Self {
+        Self(value)
+    }
+
+    /// Returns the numeric payload version.
+    #[must_use]
+    pub const fn get(self) -> u16 {
+        self.0
+    }
+}
+
+impl fmt::Display for PayloadVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl From<u16> for PayloadVersion {
+    fn from(value: u16) -> Self {
+        Self::new(value)
+    }
+}
+
+/// Uniform proposal provenance metadata.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Provenance(String);
+
+impl Provenance {
+    /// Creates provenance metadata.
+    #[must_use]
+    pub fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+
+    /// Returns the provenance identifier.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for Provenance {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl From<&'static str> for Provenance {
+    fn from(value: &'static str) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<String> for Provenance {
+    fn from(value: String) -> Self {
+        Self::new(value)
+    }
+}
+
+/// Stable, audit-friendly identifier for an extension that emits
+/// facts into the convergence loop.
+///
+/// Implementors are typically zero-sized marker types declared by
+/// each fact-emitting crate. The trait gives them a single canonical
+/// [`as_str`](ProvenanceSource::as_str) plus a default
+/// [`proposed_fact`](ProvenanceSource::proposed_fact) constructor
+/// that stamps the resulting [`ProposedFact`] with the right
+/// [`Provenance`] string.
+///
+/// # Migration from the per-crate `ProvenanceSource` enum
+///
+/// Earlier fact-emitting extensions each duplicated an 8-variant
+/// `ProvenanceSource` enum and a `*_PROVENANCE` constant. This trait
+/// replaces that pattern. Each crate now declares only its own marker
+/// and canonical provenance constant:
+///
+/// ```ignore
+/// use converge_pack::{ProvenanceSource, ContextKey, TextPayload};
+///
+/// pub struct Arbiter;
+/// impl ProvenanceSource for Arbiter {
+///     fn as_str(&self) -> &'static str { "arbiter" }
+/// }
+/// pub const ARBITER_PROVENANCE: Arbiter = Arbiter;
+///
+/// let fact = ARBITER_PROVENANCE.proposed_fact(
+///     ContextKey::Diagnostic,
+///     "decision-001",
+///     TextPayload::new("hello"),
+/// );
+/// assert_eq!(fact.provenance(), "arbiter");
+/// ```
+///
+/// Extensions no longer need to enumerate every sibling extension.
+pub trait ProvenanceSource: Copy + Send + Sync + 'static {
+    /// Canonical lowercase identifier carried on
+    /// [`ProposedFact`]`.provenance`. Stable across the extension's
+    /// public API.
+    fn as_str(&self) -> &'static str;
+
+    /// Construct a [`ProposedFact`] stamped with this provenance and
+    /// a typed payload.
+    #[must_use]
+    fn proposed_fact<T>(
+        self,
+        key: ContextKey,
+        id: impl Into<ProposalId>,
+        payload: T,
+    ) -> ProposedFact
+    where
+        T: FactPayload + PartialEq,
+    {
+        ProposedFact::new(key, id, payload, self.as_str())
+    }
+}
+
+/// Typed payload carried by proposed and promoted facts.
+///
+/// Implementors own a frozen `(FAMILY, VERSION)` tuple. A shape change is a new
+/// Rust type and a new `VERSION`, never an implicit registry upgrade.
+pub trait FactPayload: fmt::Debug + Clone + Serialize + Send + Sync + 'static {
+    /// Stable payload-family identifier.
+    const FAMILY: &'static str;
+    /// Frozen schema version for this payload type.
+    const VERSION: u16;
+
+    /// Validate domain invariants that the Rust type cannot make
+    /// unrepresentable.
+    fn validate(&self) -> Result<(), PayloadError> {
+        Ok(())
+    }
+}
+
+trait ErasedFactPayload: fmt::Debug + Send + Sync {
+    fn family(&self) -> FactFamilyId;
+    fn version(&self) -> PayloadVersion;
+    fn validate(&self) -> Result<(), PayloadError>;
+    fn as_any(&self) -> &dyn Any;
+    fn to_json_value(&self) -> Result<serde_json::Value, PayloadError>;
+    fn equivalent(&self, other: &dyn ErasedFactPayload) -> bool;
+}
+
+impl<T> ErasedFactPayload for T
+where
+    T: FactPayload + PartialEq,
+{
+    fn family(&self) -> FactFamilyId {
+        FactFamilyId::from(T::FAMILY)
+    }
+
+    fn version(&self) -> PayloadVersion {
+        PayloadVersion::new(T::VERSION)
+    }
+
+    fn validate(&self) -> Result<(), PayloadError> {
+        FactPayload::validate(self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn to_json_value(&self) -> Result<serde_json::Value, PayloadError> {
+        serde_json::to_value(self).map_err(|err| PayloadError::Serialize {
+            family: T::FAMILY.into(),
+            version: T::VERSION.into(),
+            reason: err.to_string(),
+        })
+    }
+
+    fn equivalent(&self, other: &dyn ErasedFactPayload) -> bool {
+        other.as_any().downcast_ref::<T>() == Some(self)
+    }
+}
+
+/// Human-readable text payload. This is explicit text, not a generic semantic
+/// escape hatch.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TextPayload {
+    text: String,
+}
+
+impl TextPayload {
+    /// Creates a text payload.
+    #[must_use]
+    pub fn new(text: impl Into<String>) -> Self {
+        Self { text: text.into() }
+    }
+
+    /// Returns the text.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.text
+    }
+}
+
+impl FactPayload for TextPayload {
+    const FAMILY: &'static str = "converge.text";
+    const VERSION: u16 = 1;
+}
+
+/// Structured diagnostic payload.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DiagnosticPayload {
+    source: String,
+    message: String,
+}
+
+impl DiagnosticPayload {
+    /// Creates a diagnostic payload.
+    #[must_use]
+    pub fn new(source: impl Into<String>, message: impl Into<String>) -> Self {
+        Self {
+            source: source.into(),
+            message: message.into(),
+        }
+    }
+
+    /// Returns the diagnostic source.
+    #[must_use]
+    pub fn source(&self) -> &str {
+        &self.source
+    }
+
+    /// Returns the diagnostic message.
+    #[must_use]
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+}
+
+impl FactPayload for DiagnosticPayload {
+    const FAMILY: &'static str = "converge.diagnostic";
+    const VERSION: u16 = 1;
+}
+
+/// Crate, extension, or service that produced an execution result.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ExecutionProducerIdentity {
+    /// Producer crate, extension, or service name.
+    pub name: String,
+    /// Producer version.
+    pub version: String,
+}
+
+impl ExecutionProducerIdentity {
+    /// Creates producer identity metadata.
+    #[must_use]
+    pub fn new(name: impl Into<String>, version: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            version: version.into(),
+        }
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        validate_non_empty("producer.name", &self.name)?;
+        validate_non_empty("producer.version", &self.version)
+    }
+}
+
+/// Native backend details for solver, policy, analytics, or model execution.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct NativeExecutionIdentity {
+    /// Native backend name, for example `CVC5`, `OR-Tools:cp_sat`, or `HiGHS`.
+    pub backend: String,
+    /// Native backend version as reported by the linked library.
+    pub version: String,
+    /// Source URL for the native dependency when known.
+    pub source_url: String,
+    /// Expected pinned source commit or release identifier.
+    pub expected_commit: String,
+    /// Actual source commit or release identifier used at build time.
+    pub actual_commit: String,
+    /// How the native backend was sourced, for example vendored or external.
+    pub source_mode: String,
+}
+
+impl NativeExecutionIdentity {
+    /// Creates native backend identity metadata.
+    #[must_use]
+    pub fn new(
+        backend: impl Into<String>,
+        version: impl Into<String>,
+        source_url: impl Into<String>,
+        expected_commit: impl Into<String>,
+        actual_commit: impl Into<String>,
+        source_mode: impl Into<String>,
+    ) -> Self {
+        Self {
+            backend: backend.into(),
+            version: version.into(),
+            source_url: source_url.into(),
+            expected_commit: expected_commit.into(),
+            actual_commit: actual_commit.into(),
+            source_mode: source_mode.into(),
+        }
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        validate_non_empty("native_identity.backend", &self.backend)?;
+        validate_non_empty("native_identity.version", &self.version)?;
+        validate_non_empty("native_identity.source_url", &self.source_url)?;
+        validate_non_empty("native_identity.expected_commit", &self.expected_commit)?;
+        validate_non_empty("native_identity.actual_commit", &self.actual_commit)?;
+        validate_non_empty("native_identity.source_mode", &self.source_mode)
+    }
+}
+
+/// Runtime execution identity shared by evidence-producing extensions.
+///
+/// This records what executed a result. It is intentionally generic: CVC5,
+/// Cedar analysis, OR-Tools, HiGHS, model inference, and deterministic fake
+/// backends can all populate the same contract without leaking implementation
+/// fields into domain payloads.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ExecutionIdentity {
+    /// Producer crate, extension, or service.
+    pub producer: ExecutionProducerIdentity,
+    /// Logical backend or engine name, for example `cvc5` or `cp-sat-v9.15`.
+    pub backend: String,
+    /// Backend version visible at the safe execution boundary.
+    pub backend_version: String,
+    /// Build/source/config identity for replay and audit.
+    pub build_identity: String,
+    /// Runtime options that affect the result.
+    pub runtime_config: String,
+    /// Native backend details when the execution crossed an FFI/native boundary.
+    pub native_identity: Option<NativeExecutionIdentity>,
+}
+
+impl ExecutionIdentity {
+    /// Creates execution identity metadata.
+    #[must_use]
+    pub fn new(
+        producer: ExecutionProducerIdentity,
+        backend: impl Into<String>,
+        backend_version: impl Into<String>,
+        build_identity: impl Into<String>,
+        runtime_config: impl Into<String>,
+        native_identity: Option<NativeExecutionIdentity>,
+    ) -> Self {
+        Self {
+            producer,
+            backend: backend.into(),
+            backend_version: backend_version.into(),
+            build_identity: build_identity.into(),
+            runtime_config: runtime_config.into(),
+            native_identity,
+        }
+    }
+
+    /// Creates non-native execution identity metadata.
+    #[must_use]
+    pub fn non_native(
+        producer_name: impl Into<String>,
+        producer_version: impl Into<String>,
+        backend: impl Into<String>,
+        runtime_config: impl Into<String>,
+    ) -> Self {
+        Self::new(
+            ExecutionProducerIdentity::new(producer_name, producer_version),
+            backend,
+            "not_applicable",
+            "not_applicable",
+            runtime_config,
+            None,
+        )
+    }
+
+    /// Creates unknown execution identity metadata for placeholders and tests.
+    #[must_use]
+    pub fn unspecified(
+        producer_name: impl Into<String>,
+        producer_version: impl Into<String>,
+    ) -> Self {
+        Self::new(
+            ExecutionProducerIdentity::new(producer_name, producer_version),
+            "unknown",
+            "unknown",
+            "unknown",
+            "unknown",
+            None,
+        )
+    }
+
+    /// Serializes a typed configuration struct to the canonical
+    /// `runtime_config` JSON string.
+    ///
+    /// This is the workspace-standard encoding for `runtime_config` per
+    /// `kb/Standards/Runtime Config Encoding.md`: a JSON object whose keys
+    /// are the struct field names and whose values are field values. Empty
+    /// configs serialize as `{}`.
+    ///
+    /// Panics if `T`'s `Serialize` impl is malformed (e.g., non-finite
+    /// floats, non-string map keys). For all practical workspace config
+    /// structs this is unreachable; a panic here means the caller's config
+    /// struct is broken.
+    ///
+    /// ```ignore
+    /// let rc = ExecutionIdentity::runtime_config_from_typed(&my_cfg);
+    /// let identity = ExecutionIdentity::non_native("crate", "1.0", "backend", rc);
+    /// ```
+    #[must_use]
+    pub fn runtime_config_from_typed<T: Serialize>(value: &T) -> String {
+        serde_json::to_string(value)
+            .expect("typed runtime_config must serialize to JSON; check Serialize impl")
+    }
+
+    /// Replaces this identity's `runtime_config` with the JSON encoding of a
+    /// typed config struct. Builder-style sibling of
+    /// [`Self::runtime_config_from_typed`].
+    #[must_use]
+    pub fn with_runtime_config_typed<T: Serialize>(mut self, value: &T) -> Self {
+        self.runtime_config = Self::runtime_config_from_typed(value);
+        self
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        self.producer.validate()?;
+        validate_non_empty("backend", &self.backend)?;
+        validate_non_empty("backend_version", &self.backend_version)?;
+        validate_non_empty("build_identity", &self.build_identity)?;
+        validate_non_empty("runtime_config", &self.runtime_config)?;
+        if let Some(native_identity) = &self.native_identity {
+            native_identity.validate()?;
+        }
+        Ok(())
+    }
+}
+
+/// Companion evidence that links a produced fact to its execution identity.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ExecutionIdentityEvidence {
+    /// Context key containing the produced subject.
+    pub subject_key: ContextKey,
+    /// Subject fact/proposal id.
+    pub subject_id: String,
+    /// Subject payload family.
+    pub subject_family: FactFamilyId,
+    /// Subject payload version.
+    pub subject_version: PayloadVersion,
+    /// Execution identity that produced the subject.
+    pub identity: ExecutionIdentity,
+}
+
+impl ExecutionIdentityEvidence {
+    /// Creates execution identity evidence for a known payload family.
+    #[must_use]
+    pub fn new(
+        subject_key: ContextKey,
+        subject_id: impl Into<String>,
+        subject_family: impl Into<FactFamilyId>,
+        subject_version: impl Into<PayloadVersion>,
+        identity: ExecutionIdentity,
+    ) -> Self {
+        Self {
+            subject_key,
+            subject_id: subject_id.into(),
+            subject_family: subject_family.into(),
+            subject_version: subject_version.into(),
+            identity,
+        }
+    }
+
+    /// Creates execution identity evidence for a typed fact payload.
+    #[must_use]
+    pub fn for_payload<T: FactPayload>(
+        subject_key: ContextKey,
+        subject_id: impl Into<String>,
+        identity: ExecutionIdentity,
+    ) -> Self {
+        Self::new(subject_key, subject_id, T::FAMILY, T::VERSION, identity)
+    }
+}
+
+impl FactPayload for ExecutionIdentityEvidence {
+    const FAMILY: &'static str = "converge.execution_identity.evidence";
+    const VERSION: u16 = 1;
+
+    fn validate(&self) -> Result<(), PayloadError> {
+        validate_non_empty("subject_id", &self.subject_id).map_err(|reason| {
+            PayloadError::Invalid {
+                family: Self::FAMILY.into(),
+                version: Self::VERSION.into(),
+                reason,
+            }
+        })?;
+        self.identity
+            .validate()
+            .map_err(|reason| PayloadError::Invalid {
+                family: Self::FAMILY.into(),
+                version: Self::VERSION.into(),
+                reason,
+            })
+    }
+}
+
+fn validate_non_empty(field: &str, value: &str) -> Result<(), String> {
+    if value.trim().is_empty() {
+        Err(format!("{field} must not be empty"))
+    } else {
+        Ok(())
+    }
+}
+
+/// Errors at the typed payload and wire materialization boundary.
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum PayloadError {
+    /// Payload failed validation.
+    #[error("invalid payload for {family} v{version}: {reason}")]
+    Invalid {
+        /// Payload family.
+        family: FactFamilyId,
+        /// Payload version.
+        version: PayloadVersion,
+        /// Human-readable reason.
+        reason: String,
+    },
+    /// Payload failed JSON serialization at a border.
+    #[error("failed to serialize payload {family} v{version}: {reason}")]
+    Serialize {
+        /// Payload family.
+        family: FactFamilyId,
+        /// Payload version.
+        version: PayloadVersion,
+        /// Human-readable reason.
+        reason: String,
+    },
+    /// Payload failed JSON deserialization at a border.
+    #[error("failed to deserialize payload {family} v{version}: {reason}")]
+    Deserialize {
+        /// Payload family.
+        family: FactFamilyId,
+        /// Payload version.
+        version: PayloadVersion,
+        /// Human-readable reason.
+        reason: String,
+    },
+    /// No decoder is registered for the wire family and version.
+    #[error("unknown payload family/version: {family} v{version}")]
+    UnknownFamilyVersion {
+        /// Payload family.
+        family: FactFamilyId,
+        /// Payload version.
+        version: PayloadVersion,
+    },
+    /// A typed access request used the wrong payload type.
+    #[error(
+        "payload type mismatch: expected {expected} v{expected_version}, got {actual} v{actual_version}"
+    )]
+    TypeMismatch {
+        /// Expected family.
+        expected: FactFamilyId,
+        /// Expected version.
+        expected_version: PayloadVersion,
+        /// Actual family.
+        actual: FactFamilyId,
+        /// Actual version.
+        actual_version: PayloadVersion,
+    },
+}
+
+/// Stable wire payload shape for HTTP, gRPC, NATS, storage/replay, CLI
+/// fixtures, non-Rust clients, and audit export.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WireFactPayload {
+    /// Payload family.
+    pub family: FactFamilyId,
+    /// Payload schema version.
+    pub version: PayloadVersion,
+    /// JSON payload bytes decoded into a value at the border.
+    pub payload: serde_json::Value,
+}
+
+impl WireFactPayload {
+    fn from_erased(payload: &dyn ErasedFactPayload) -> Result<Self, PayloadError> {
+        Ok(Self {
+            family: payload.family(),
+            version: payload.version(),
+            payload: payload.to_json_value()?,
+        })
+    }
+}
+
+/// Wire shape for proposed facts. This is the only sanctioned way for borders
+/// to materialize proposals without already holding a typed Rust payload.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WireProposedFact {
+    /// Destination context key.
+    pub key: ContextKey,
+    /// Proposal identifier.
+    pub id: ProposalId,
+    /// Proposed payload.
+    pub payload: WireFactPayload,
+    /// Confidence hint.
+    pub confidence: UnitInterval,
+    /// Uniform provenance metadata.
+    pub provenance: Provenance,
+}
+
+/// Wire shape for promoted context facts.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WireContextFact {
+    /// Context key.
+    pub key: ContextKey,
+    /// Fact identifier.
+    pub id: FactId,
+    /// Fact payload.
+    pub payload: WireFactPayload,
+    /// Promotion record.
+    pub promotion_record: FactPromotionRecord,
+    /// Creation timestamp.
+    pub created_at: Timestamp,
+}
+
+type PayloadDecoder = Box<
+    dyn Fn(serde_json::Value) -> Result<Arc<dyn ErasedFactPayload>, PayloadError> + Send + Sync,
+>;
+
+/// Registry used at serialization borders to materialize typed payloads from
+/// `(family, version, payload)` tuples.
+#[derive(Default)]
+pub struct PayloadRegistry {
+    decoders: HashMap<(FactFamilyId, PayloadVersion), PayloadDecoder>,
+}
+
+impl PayloadRegistry {
+    /// Creates an empty registry.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Registers one frozen payload type.
+    pub fn register<T>(&mut self)
+    where
+        T: FactPayload + PartialEq + DeserializeOwned,
+    {
+        self.decoders.insert(
+            (
+                FactFamilyId::from(T::FAMILY),
+                PayloadVersion::new(T::VERSION),
+            ),
+            Box::new(|value| {
+                let payload: T =
+                    serde_json::from_value(value).map_err(|err| PayloadError::Deserialize {
+                        family: T::FAMILY.into(),
+                        version: T::VERSION.into(),
+                        reason: err.to_string(),
+                    })?;
+                payload.validate()?;
+                Ok(Arc::new(payload))
+            }),
+        );
+    }
+
+    fn decode(
+        &self,
+        family: &FactFamilyId,
+        version: PayloadVersion,
+        payload: serde_json::Value,
+    ) -> Result<Arc<dyn ErasedFactPayload>, PayloadError> {
+        let decoder = self
+            .decoders
+            .get(&(family.clone(), version))
+            .ok_or_else(|| PayloadError::UnknownFamilyVersion {
+                family: family.clone(),
+                version,
+            })?;
+        decoder(payload)
+    }
+}
 
 /// Actor kind recorded on a promoted fact.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -315,18 +1044,56 @@ impl FactPromotionRecord {
 /// pack authors can read from context after the engine has promoted a
 /// proposal. Constructing one locally does not admit it into Converge; there is
 /// no public API that accepts a `ContextFact` as promoted truth.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone)]
 pub struct ContextFact {
     /// Which context key this fact belongs to.
     key: ContextKey,
     /// Unique identifier within the context key namespace.
     id: FactId,
-    /// The fact's content as a string. Interpretation is key-dependent.
-    content: String,
+    /// Typed fact payload.
+    payload: Arc<dyn ErasedFactPayload>,
     /// The immutable promotion record that made this fact authoritative.
     promotion_record: FactPromotionRecord,
     /// When the authoritative fact entered context.
     created_at: Timestamp,
+}
+
+impl fmt::Debug for ContextFact {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ContextFact")
+            .field("key", &self.key)
+            .field("id", &self.id)
+            .field("payload_family", &self.payload_family())
+            .field("payload_version", &self.payload_version())
+            .field("promotion_record", &self.promotion_record)
+            .field("created_at", &self.created_at)
+            .finish()
+    }
+}
+
+impl PartialEq for ContextFact {
+    fn eq(&self, other: &Self) -> bool {
+        self.key == other.key
+            && self.id == other.id
+            && self.payload_family() == other.payload_family()
+            && self.payload_version() == other.payload_version()
+            && self.payload.equivalent(other.payload.as_ref())
+            && self.promotion_record == other.promotion_record
+            && self.created_at == other.created_at
+    }
+}
+
+impl Eq for ContextFact {}
+
+impl Serialize for ContextFact {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.to_wire()
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
 }
 
 impl ContextFact {
@@ -336,20 +1103,54 @@ impl ContextFact {
     /// a projection constructor. The engine is still the only component that can
     /// add context facts to a live `ContextState`.
     #[must_use]
-    pub fn new_projection(
+    pub fn new_projection<T>(
         key: ContextKey,
         id: impl Into<FactId>,
-        content: impl Into<String>,
+        payload: T,
         promotion_record: FactPromotionRecord,
         created_at: impl Into<Timestamp>,
-    ) -> Self {
+    ) -> Self
+    where
+        T: FactPayload + PartialEq,
+    {
         Self {
             key,
             id: id.into(),
-            content: content.into(),
+            payload: Arc::new(payload),
             promotion_record,
             created_at: created_at.into(),
         }
+    }
+
+    /// Creates a context fact from a wire representation at a serialization
+    /// border.
+    pub fn from_wire(
+        wire: WireContextFact,
+        registry: &PayloadRegistry,
+    ) -> Result<Self, PayloadError> {
+        let payload = registry.decode(
+            &wire.payload.family,
+            wire.payload.version,
+            wire.payload.payload,
+        )?;
+        Ok(Self {
+            key: wire.key,
+            id: wire.id,
+            payload,
+            promotion_record: wire.promotion_record,
+            created_at: wire.created_at,
+        })
+    }
+
+    /// Converts this fact to the stable wire shape.
+    pub fn to_wire(&self) -> Result<WireContextFact, PayloadError> {
+        Ok(WireContextFact {
+            key: self.key,
+            id: self.id.clone(),
+            payload: WireFactPayload::from_erased(self.payload.as_ref())?,
+            promotion_record: self.promotion_record.clone(),
+            created_at: self.created_at.clone(),
+        })
     }
 
     /// Returns the context key this fact belongs to.
@@ -364,10 +1165,45 @@ impl ContextFact {
         &self.id
     }
 
-    /// Returns the fact content.
+    /// Returns the typed payload when the requested type matches the stored
+    /// payload family/version.
     #[must_use]
-    pub fn content(&self) -> &str {
-        &self.content
+    pub fn payload<T: FactPayload>(&self) -> Option<&T> {
+        self.payload.as_any().downcast_ref::<T>()
+    }
+
+    /// Returns the typed payload or a mismatch error.
+    pub fn require_payload<T: FactPayload>(&self) -> Result<&T, PayloadError> {
+        self.payload::<T>()
+            .ok_or_else(|| PayloadError::TypeMismatch {
+                expected: T::FAMILY.into(),
+                expected_version: T::VERSION.into(),
+                actual: self.payload_family(),
+                actual_version: self.payload_version(),
+            })
+    }
+
+    /// Returns the payload family.
+    #[must_use]
+    pub fn payload_family(&self) -> FactFamilyId {
+        self.payload.family()
+    }
+
+    /// Returns the payload version.
+    #[must_use]
+    pub fn payload_version(&self) -> PayloadVersion {
+        self.payload.version()
+    }
+
+    /// Returns the payload as text when this is a [`TextPayload`].
+    #[must_use]
+    pub fn text(&self) -> Option<&str> {
+        self.payload::<TextPayload>().map(TextPayload::as_str)
+    }
+
+    /// Validates the stored payload.
+    pub fn validate_payload(&self) -> Result<(), PayloadError> {
+        self.payload.validate()
     }
 
     /// Returns the immutable promotion record for this fact.
@@ -387,33 +1223,60 @@ impl ContextFact {
     pub fn is_replay_eligible(&self) -> bool {
         self.promotion_record.is_replay_eligible()
     }
-
-    /// Parse the fact's content as JSON into a typed value.
-    ///
-    /// This helper is deliberately named for JSON and preserves parse errors.
-    /// Callers that use another representation should parse `content` with
-    /// that representation's decoder.
-    pub fn parse_json_content<T: serde::de::DeserializeOwned>(&self) -> serde_json::Result<T> {
-        serde_json::from_str(&self.content)
-    }
 }
 
 /// An unvalidated suggestion from a non-authoritative source.
 ///
 /// Proposed facts live in `ContextKey::Proposals` until a `ValidationAgent`
 /// promotes them to `Fact`. The proposal tracks its origin for audit trail.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone)]
 pub struct ProposedFact {
     /// The context key this proposal targets.
     pub key: ContextKey,
     /// Unique identifier encoding origin and target.
     pub id: ProposalId,
-    /// The proposed content.
-    pub content: String,
+    /// Typed proposed payload.
+    payload: Arc<dyn ErasedFactPayload>,
     /// Confidence hint from the source. Always in [0.0, 1.0].
     confidence: UnitInterval,
     /// Provenance information (e.g., model ID, prompt hash).
-    pub provenance: String,
+    pub provenance: Provenance,
+}
+
+impl fmt::Debug for ProposedFact {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ProposedFact")
+            .field("key", &self.key)
+            .field("id", &self.id)
+            .field("payload_family", &self.payload_family())
+            .field("payload_version", &self.payload_version())
+            .field("confidence", &self.confidence)
+            .field("provenance", &self.provenance)
+            .finish()
+    }
+}
+
+impl PartialEq for ProposedFact {
+    fn eq(&self, other: &Self) -> bool {
+        self.key == other.key
+            && self.id == other.id
+            && self.payload_family() == other.payload_family()
+            && self.payload_version() == other.payload_version()
+            && self.payload.equivalent(other.payload.as_ref())
+            && self.confidence == other.confidence
+            && self.provenance == other.provenance
+    }
+}
+
+impl Serialize for ProposedFact {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.to_wire()
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
+    }
 }
 
 impl ProposedFact {
@@ -421,18 +1284,74 @@ impl ProposedFact {
     ///
     /// Confidence defaults to 1.0. Override with [`with_confidence`][Self::with_confidence].
     #[must_use]
-    pub fn new(
+    pub fn new<T>(
         key: ContextKey,
         id: impl Into<ProposalId>,
-        content: impl Into<String>,
-        provenance: impl Into<String>,
-    ) -> Self {
+        payload: T,
+        provenance: impl Into<Provenance>,
+    ) -> Self
+    where
+        T: FactPayload + PartialEq,
+    {
         Self {
             key,
             id: id.into(),
-            content: content.into(),
+            payload: Arc::new(payload),
             confidence: UnitInterval::ONE,
             provenance: provenance.into(),
+        }
+    }
+
+    /// Materializes a proposal from the stable wire shape at an external
+    /// border.
+    pub fn from_wire(
+        wire: WireProposedFact,
+        registry: &PayloadRegistry,
+    ) -> Result<Self, PayloadError> {
+        let payload = registry.decode(
+            &wire.payload.family,
+            wire.payload.version,
+            wire.payload.payload,
+        )?;
+        Ok(Self {
+            key: wire.key,
+            id: wire.id,
+            payload,
+            confidence: wire.confidence,
+            provenance: wire.provenance,
+        })
+    }
+
+    /// Converts this proposal to the stable wire shape.
+    pub fn to_wire(&self) -> Result<WireProposedFact, PayloadError> {
+        Ok(WireProposedFact {
+            key: self.key,
+            id: self.id.clone(),
+            payload: WireFactPayload::from_erased(self.payload.as_ref())?,
+            confidence: self.confidence,
+            provenance: self.provenance.clone(),
+        })
+    }
+
+    /// Creates a promoted context projection that preserves this proposal's
+    /// exact typed payload.
+    ///
+    /// Promotion authority still belongs to the engine/gate. This method only
+    /// avoids re-serializing or textifying a payload after that authority has
+    /// already accepted the proposal.
+    #[must_use]
+    pub fn to_context_fact(
+        &self,
+        id: impl Into<FactId>,
+        promotion_record: FactPromotionRecord,
+        created_at: impl Into<Timestamp>,
+    ) -> ContextFact {
+        ContextFact {
+            key: self.key,
+            id: id.into(),
+            payload: Arc::clone(&self.payload),
+            promotion_record,
+            created_at: created_at.into(),
         }
     }
 
@@ -448,16 +1367,51 @@ impl ProposedFact {
         &self.id
     }
 
-    /// Returns the proposed content.
+    /// Returns the typed payload when the requested type matches the stored
+    /// payload family/version.
     #[must_use]
-    pub fn content(&self) -> &str {
-        &self.content
+    pub fn payload<T: FactPayload>(&self) -> Option<&T> {
+        self.payload.as_any().downcast_ref::<T>()
+    }
+
+    /// Returns the typed payload or a mismatch error.
+    pub fn require_payload<T: FactPayload>(&self) -> Result<&T, PayloadError> {
+        self.payload::<T>()
+            .ok_or_else(|| PayloadError::TypeMismatch {
+                expected: T::FAMILY.into(),
+                expected_version: T::VERSION.into(),
+                actual: self.payload_family(),
+                actual_version: self.payload_version(),
+            })
+    }
+
+    /// Returns the payload family.
+    #[must_use]
+    pub fn payload_family(&self) -> FactFamilyId {
+        self.payload.family()
+    }
+
+    /// Returns the payload version.
+    #[must_use]
+    pub fn payload_version(&self) -> PayloadVersion {
+        self.payload.version()
+    }
+
+    /// Returns the payload as text when this is a [`TextPayload`].
+    #[must_use]
+    pub fn text(&self) -> Option<&str> {
+        self.payload::<TextPayload>().map(TextPayload::as_str)
+    }
+
+    /// Validates the stored payload.
+    pub fn validate_payload(&self) -> Result<(), PayloadError> {
+        self.payload.validate()
     }
 
     /// Returns the proposal provenance string.
     #[must_use]
     pub fn provenance(&self) -> &str {
-        &self.provenance
+        self.provenance.as_str()
     }
 
     /// Returns the confidence value, always in [0.0, 1.0].
@@ -479,47 +1433,15 @@ impl ProposedFact {
         self
     }
 
-    /// Parse the proposal's content as JSON into a typed value.
-    ///
-    /// This helper is deliberately named for JSON and preserves parse errors.
-    /// Callers that use another representation should parse `content` with
-    /// that representation's decoder.
-    pub fn parse_json_content<T: serde::de::DeserializeOwned>(&self) -> serde_json::Result<T> {
-        serde_json::from_str(&self.content)
-    }
-
-    /// Construct a proposal whose content is `payload` serialized to JSON.
-    ///
-    /// Symmetric with [`parse_json_content`][Self::parse_json_content] and named
-    /// for the same reason: callers using another representation should serialize
-    /// `content` themselves and pass it to [`new`][Self::new].
-    ///
-    /// Returns a `serde_json::Error` only if `T` is non-representable as JSON
-    /// (e.g. floats with NaN, maps with non-string keys). For payload types that
-    /// are always representable, callers can `.expect("payload always serializable")`.
-    pub fn from_json_payload<T: serde::Serialize>(
-        key: ContextKey,
-        id: impl Into<ProposalId>,
-        payload: &T,
-        provenance: impl Into<String>,
-    ) -> serde_json::Result<Self> {
-        Ok(Self::new(
-            key,
-            id,
-            serde_json::to_string(payload)?,
-            provenance,
-        ))
-    }
-
     /// Adjust confidence by a named step, clamped to [0.0, 1.0].
     ///
     /// This is the recommended way to express confidence in suggestors and pack
     /// solvers. Use the `CONFIDENCE_STEP_*` constants as the vocabulary:
     ///
     /// ```rust,ignore
-    /// use converge_pack::{CONFIDENCE_STEP_MAJOR, CONFIDENCE_STEP_MINOR, CONFIDENCE_STEP_TINY};
+    /// use converge_pack::{CONFIDENCE_STEP_MAJOR, CONFIDENCE_STEP_MINOR, CONFIDENCE_STEP_TINY, TextPayload};
     ///
-    /// let proposal = ProposedFact::new(key, id, content, prov)
+    /// let proposal = EXAMPLE_PROVENANCE.proposed_fact(key, id, TextPayload::new(content))
     ///     .with_confidence(0.5)                        // baseline
     ///     .adjust_confidence(CONFIDENCE_STEP_MAJOR)    // primary criterion met
     ///     .adjust_confidence(CONFIDENCE_STEP_MINOR)    // supporting criterion met
@@ -590,7 +1512,74 @@ mod tests {
         id: impl Into<FactId>,
         content: impl Into<String>,
     ) -> ContextFact {
-        ContextFact::new_projection(key, id, content, projection_record(), Timestamp::epoch())
+        ContextFact::new_projection(
+            key,
+            id,
+            TextPayload::new(content),
+            projection_record(),
+            Timestamp::epoch(),
+        )
+    }
+
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct TestPayload {
+        kind: String,
+        score: f64,
+    }
+
+    impl FactPayload for TestPayload {
+        const FAMILY: &'static str = "test.payload";
+        const VERSION: u16 = 1;
+    }
+
+    fn native_identity() -> NativeExecutionIdentity {
+        NativeExecutionIdentity::new(
+            "CVC5",
+            "1.3.3",
+            "https://github.com/cvc5/cvc5",
+            "expected",
+            "actual",
+            "vendored",
+        )
+    }
+
+    #[test]
+    fn execution_identity_evidence_targets_typed_payload() {
+        let identity = ExecutionIdentity::new(
+            ExecutionProducerIdentity::new("soter", "0.1.0"),
+            "cvc5",
+            "1.3.3",
+            "configure_flags=--no-poly",
+            "timeout_ms=5000",
+            Some(native_identity()),
+        );
+        let evidence = ExecutionIdentityEvidence::for_payload::<TestPayload>(
+            ContextKey::Evaluations,
+            "smt-report-q1",
+            identity,
+        );
+
+        assert_eq!(evidence.subject_key, ContextKey::Evaluations);
+        assert_eq!(evidence.subject_id, "smt-report-q1");
+        assert_eq!(evidence.subject_family, FactFamilyId::from("test.payload"));
+        assert_eq!(evidence.subject_version, PayloadVersion::new(1));
+        assert_eq!(evidence.identity.backend, "cvc5");
+        assert!(FactPayload::validate(&evidence).is_ok());
+    }
+
+    #[test]
+    fn execution_identity_evidence_rejects_empty_subject_id() {
+        let evidence = ExecutionIdentityEvidence::for_payload::<TestPayload>(
+            ContextKey::Strategies,
+            "",
+            ExecutionIdentity::non_native("ferrox", "0.5.1", "greedy", "tasks=3"),
+        );
+
+        assert!(matches!(
+            FactPayload::validate(&evidence),
+            Err(PayloadError::Invalid { .. })
+        ));
     }
 
     #[test]
@@ -652,23 +1641,29 @@ mod tests {
 
     #[test]
     fn proposed_fact_new_sets_fields() {
-        let pf = ProposedFact::new(ContextKey::Hypotheses, "p1", "my content", "gpt-4");
+        let pf = ProposedFact::new(
+            ContextKey::Hypotheses,
+            "p1",
+            TextPayload::new("my content"),
+            "gpt-4",
+        );
         assert_eq!(pf.key, ContextKey::Hypotheses);
         assert_eq!(pf.id, "p1");
-        assert_eq!(pf.content, "my content");
+        assert_eq!(pf.text(), Some("my content"));
         assert_eq!(pf.confidence(), 1.0);
-        assert_eq!(pf.provenance, "gpt-4");
+        assert_eq!(pf.provenance(), "gpt-4");
     }
 
     #[test]
     fn proposed_fact_with_confidence() {
-        let pf = ProposedFact::new(ContextKey::Signals, "p2", "c", "prov").with_confidence(0.42);
+        let pf = ProposedFact::new(ContextKey::Signals, "p2", TextPayload::new("c"), "prov")
+            .with_confidence(0.42);
         assert!((pf.confidence() - 0.42).abs() < f64::EPSILON);
     }
 
     #[test]
     fn adjust_confidence_accumulates() {
-        let pf = ProposedFact::new(ContextKey::Seeds, "p", "c", "x")
+        let pf = ProposedFact::new(ContextKey::Seeds, "p", TextPayload::new("c"), "x")
             .with_confidence(0.5)
             .adjust_confidence(CONFIDENCE_STEP_MINOR)
             .adjust_confidence(CONFIDENCE_STEP_MAJOR);
@@ -677,7 +1672,7 @@ mod tests {
 
     #[test]
     fn adjust_confidence_clamps_at_one() {
-        let pf = ProposedFact::new(ContextKey::Seeds, "p", "c", "x")
+        let pf = ProposedFact::new(ContextKey::Seeds, "p", TextPayload::new("c"), "x")
             .with_confidence(0.9)
             .adjust_confidence(CONFIDENCE_STEP_MAJOR);
         assert_eq!(pf.confidence(), 1.0);
@@ -685,7 +1680,7 @@ mod tests {
 
     #[test]
     fn adjust_confidence_clamps_at_zero() {
-        let pf = ProposedFact::new(ContextKey::Seeds, "p", "c", "x")
+        let pf = ProposedFact::new(ContextKey::Seeds, "p", TextPayload::new("c"), "x")
             .with_confidence(0.1)
             .adjust_confidence(-0.5);
         assert_eq!(pf.confidence(), 0.0);
@@ -693,125 +1688,127 @@ mod tests {
 
     #[test]
     fn with_confidence_clamps_high() {
-        let pf = ProposedFact::new(ContextKey::Seeds, "p", "c", "x").with_confidence(1.5);
+        let pf = ProposedFact::new(ContextKey::Seeds, "p", TextPayload::new("c"), "x")
+            .with_confidence(1.5);
         assert_eq!(pf.confidence(), 1.0);
     }
 
     #[test]
     fn with_confidence_clamps_negative() {
-        let pf = ProposedFact::new(ContextKey::Seeds, "p", "c", "x").with_confidence(-0.1);
+        let pf = ProposedFact::new(ContextKey::Seeds, "p", TextPayload::new("c"), "x")
+            .with_confidence(-0.1);
         assert_eq!(pf.confidence(), 0.0);
     }
 
     #[test]
     fn with_confidence_normalizes_nan() {
-        let pf = ProposedFact::new(ContextKey::Seeds, "p", "c", "x").with_confidence(f64::NAN);
+        let pf = ProposedFact::new(ContextKey::Seeds, "p", TextPayload::new("c"), "x")
+            .with_confidence(f64::NAN);
         assert_eq!(pf.confidence(), 0.0);
     }
 
     #[test]
     fn with_confidence_normalizes_infinity() {
-        let pf = ProposedFact::new(ContextKey::Seeds, "p", "c", "x").with_confidence(f64::INFINITY);
+        let pf = ProposedFact::new(ContextKey::Seeds, "p", TextPayload::new("c"), "x")
+            .with_confidence(f64::INFINITY);
         assert_eq!(pf.confidence(), 0.0);
     }
 
     #[test]
-    fn proposed_fact_deserialization_rejects_out_of_range_confidence() {
+    fn wire_proposed_fact_deserialization_rejects_out_of_range_confidence() {
         let json = r#"{
             "key":"Seeds",
             "id":"p",
-            "content":"c",
+            "payload":{
+                "family":"converge.text",
+                "version":1,
+                "payload":{"text":"c"}
+            },
             "confidence":1.5,
             "provenance":"test"
         }"#;
-        let result = serde_json::from_str::<ProposedFact>(json);
+        let result = serde_json::from_str::<WireProposedFact>(json);
         assert!(result.is_err());
     }
 
     #[test]
-    fn proposed_fact_parse_json_content_succeeds_for_valid_json() {
-        #[derive(serde::Deserialize, PartialEq, Debug)]
-        struct Payload {
-            kind: String,
-            score: f64,
-        }
-        let pf = ProposedFact::new(
-            ContextKey::Hypotheses,
-            "p",
-            r#"{"kind":"vote","score":0.7}"#,
-            "test",
-        );
-        let parsed: Payload = pf.parse_json_content().unwrap();
-        assert_eq!(
-            parsed,
-            Payload {
-                kind: "vote".into(),
-                score: 0.7,
-            }
-        );
-    }
-
-    #[test]
-    fn proposed_fact_parse_json_content_returns_error_for_invalid_json() {
-        let pf = ProposedFact::new(ContextKey::Hypotheses, "p", "not json", "test");
-        let parsed = pf.parse_json_content::<serde_json::Value>();
-        assert!(parsed.is_err());
-    }
-
-    #[test]
-    fn fact_parse_json_content_succeeds_for_valid_json() {
-        #[derive(serde::Deserialize, PartialEq, Debug)]
-        struct Payload {
-            label: String,
-        }
-        let fact = projection_fact(ContextKey::Seeds, "f", r#"{"label":"x"}"#);
-        let parsed: Payload = fact.parse_json_content().unwrap();
-        assert_eq!(parsed, Payload { label: "x".into() });
-    }
-
-    #[test]
-    fn proposed_fact_from_json_payload_round_trips() {
-        #[derive(serde::Serialize, serde::Deserialize, PartialEq, Debug)]
-        struct Payload {
-            kind: String,
-            score: f64,
-        }
-        let payload = Payload {
+    fn proposed_fact_wire_round_trips_through_registry() {
+        let payload = TestPayload {
             kind: "vote".into(),
             score: 0.7,
         };
-        let pf =
-            ProposedFact::from_json_payload(ContextKey::Hypotheses, "p", &payload, "test").unwrap();
-        assert_eq!(pf.key, ContextKey::Hypotheses);
-        assert_eq!(pf.id, "p");
-        assert_eq!(pf.provenance, "test");
-        let parsed: Payload = pf.parse_json_content().unwrap();
-        assert_eq!(parsed, payload);
+        let pf = ProposedFact::new(ContextKey::Hypotheses, "p", payload.clone(), "test");
+        let wire = pf.to_wire().unwrap();
+        let mut registry = PayloadRegistry::new();
+        registry.register::<TestPayload>();
+
+        let decoded = ProposedFact::from_wire(wire, &registry).unwrap();
+
+        assert_eq!(decoded.key, ContextKey::Hypotheses);
+        assert_eq!(decoded.id, "p");
+        assert_eq!(decoded.provenance(), "test");
+        assert_eq!(decoded.require_payload::<TestPayload>().unwrap(), &payload);
     }
 
     #[test]
-    fn proposed_fact_from_json_payload_propagates_serialization_error() {
-        use std::collections::HashMap;
-        let mut map: HashMap<Vec<u8>, &str> = HashMap::new();
-        map.insert(vec![1, 2, 3], "value");
-        let result = ProposedFact::from_json_payload(ContextKey::Hypotheses, "p", &map, "test");
-        assert!(result.is_err());
+    fn proposed_fact_from_wire_fails_closed_for_unknown_family_version() {
+        let wire = WireProposedFact {
+            key: ContextKey::Hypotheses,
+            id: "p".into(),
+            payload: WireFactPayload {
+                family: FactFamilyId::new("unknown.payload"),
+                version: PayloadVersion::new(1),
+                payload: serde_json::json!({"kind":"vote"}),
+            },
+            confidence: UnitInterval::ONE,
+            provenance: Provenance::new("test"),
+        };
+
+        let registry = PayloadRegistry::new();
+        let result = ProposedFact::from_wire(wire, &registry);
+
+        assert!(matches!(
+            result,
+            Err(PayloadError::UnknownFamilyVersion { .. })
+        ));
     }
 
     #[test]
-    fn fact_projection_json_payload_round_trips() {
-        #[derive(serde::Serialize, serde::Deserialize, PartialEq, Debug)]
-        struct Payload {
-            label: String,
-        }
-        let payload = Payload { label: "x".into() };
-        let fact = projection_fact(
+    fn context_fact_wire_round_trips_through_registry() {
+        let payload = TestPayload {
+            kind: "fact".into(),
+            score: 0.9,
+        };
+        let fact = ContextFact::new_projection(
             ContextKey::Seeds,
             "f",
-            serde_json::to_string(&payload).unwrap(),
+            payload.clone(),
+            projection_record(),
+            Timestamp::epoch(),
         );
-        let parsed: Payload = fact.parse_json_content().unwrap();
-        assert_eq!(parsed, payload);
+        let wire = fact.to_wire().unwrap();
+        let mut registry = PayloadRegistry::new();
+        registry.register::<TestPayload>();
+
+        let decoded = ContextFact::from_wire(wire, &registry).unwrap();
+
+        assert_eq!(decoded.key(), ContextKey::Seeds);
+        assert_eq!(decoded.id(), "f");
+        assert_eq!(decoded.require_payload::<TestPayload>().unwrap(), &payload);
+    }
+
+    #[test]
+    fn proposed_fact_to_context_fact_preserves_typed_payload() {
+        let payload = TestPayload {
+            kind: "proposal".into(),
+            score: 0.8,
+        };
+        let proposal = ProposedFact::new(ContextKey::Strategies, "p", payload.clone(), "test");
+
+        let fact = proposal.to_context_fact("f", projection_record(), Timestamp::epoch());
+
+        assert_eq!(fact.key(), ContextKey::Strategies);
+        assert_eq!(fact.require_payload::<TestPayload>().unwrap(), &payload);
     }
 
     #[test]
@@ -835,7 +1832,7 @@ mod tests {
         let fact = projection_fact(ContextKey::Constraints, "f2", "body");
         assert_eq!(fact.key(), ContextKey::Constraints);
         assert_eq!(fact.id(), "f2");
-        assert_eq!(fact.content(), "body");
+        assert_eq!(fact.text(), Some("body"));
         assert_eq!(fact.created_at(), "1970-01-01T00:00:00Z");
         assert_eq!(fact.promotion_record().gate_id(), "projection-test");
     }
@@ -908,11 +1905,11 @@ mod tests {
                 content in ".*",
                 prov in "[a-z0-9-]{1,30}",
             ) {
-                let pf = ProposedFact::new(key, id.clone(), content.clone(), prov.clone());
+                let pf = ProposedFact::new(key, id.clone(), TextPayload::new(content.clone()), prov.clone());
                 prop_assert_eq!(pf.key, key);
                 prop_assert_eq!(&pf.id, &id);
-                prop_assert_eq!(&pf.content, &content);
-                prop_assert_eq!(&pf.provenance, &prov);
+                prop_assert_eq!(pf.text(), Some(content.as_str()));
+                prop_assert_eq!(pf.provenance(), prov.as_str());
                 prop_assert!((pf.confidence() - 1.0).abs() < f64::EPSILON);
             }
         }

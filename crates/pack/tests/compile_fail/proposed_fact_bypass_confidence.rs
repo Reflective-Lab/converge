@@ -2,13 +2,13 @@
 // Even with confidence set to any value, there is no path from ProposedFact → ContextFact
 // without kernel authority. The type system makes bypass impossible.
 
-use converge_pack::{ContextFact, ContextKey, ProposedFact};
+use converge_pack::{ContextFact, ContextKey, ProposedFact, TextPayload};
 
 fn main() {
     let proposal = ProposedFact::new(
         ContextKey::Seeds,
         "bypass-id",
-        "bypass-content",
+        TextPayload::new("bypass-content"),
         "attacker",
     );
 

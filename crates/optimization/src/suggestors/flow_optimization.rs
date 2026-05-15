@@ -16,7 +16,10 @@
 //! re-converges on the updated routing.
 
 use async_trait::async_trait;
-use converge_pack::{AgentEffect, Context, ContextKey, ProposedFact, Suggestor};
+use converge_pack::ProvenanceSource;
+use converge_pack::{
+    AgentEffect, Context, ContextKey, DiagnosticPayload, FactPayload, ProposedFact, Suggestor,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::graph::flow::{FlowNetwork, MinCostFlowProblem, min_cost_flow};
@@ -24,7 +27,8 @@ use crate::graph::flow::{FlowNetwork, MinCostFlowProblem, min_cost_flow};
 // ── Request ───────────────────────────────────────────────────────────────────
 
 /// Seed under [`ContextKey::Seeds`] with id prefix `"flow-request:"`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct FlowRequest {
     pub id: String,
     pub num_nodes: usize,
@@ -35,8 +39,14 @@ pub struct FlowRequest {
     pub demand: i64,
 }
 
+impl FactPayload for FlowRequest {
+    const FAMILY: &'static str = "converge.optimization.flow.request";
+    const VERSION: u16 = 1;
+}
+
 /// One directed edge in the flow network.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct FlowEdgeSpec {
     pub from: usize,
     pub to: usize,
@@ -50,7 +60,8 @@ pub struct FlowEdgeSpec {
 // ── Plan (output) ─────────────────────────────────────────────────────────────
 
 /// The min-cost flow routing.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct FlowPlan {
     pub request_id: String,
     pub total_flow: i64,
@@ -60,6 +71,11 @@ pub struct FlowPlan {
     /// `total_flow / demand` — 1.0 when demand is fully satisfied.
     pub fulfillment: f64,
     pub feasible: bool,
+}
+
+impl FactPayload for FlowPlan {
+    const FAMILY: &'static str = "converge.optimization.flow.plan";
+    const VERSION: u16 = 1;
 }
 
 // ── Suggestor ─────────────────────────────────────────────────────────────────
@@ -91,9 +107,9 @@ impl Suggestor for FlowOptimizationSuggestor {
     fn accepts(&self, ctx: &dyn Context) -> bool {
         ctx.get(ContextKey::Seeds).iter().any(|f| {
             f.id().as_str().starts_with(REQUEST_PREFIX)
-                && match serde_json::from_str::<FlowRequest>(f.content()) {
-                    Ok(_) => !plan_exists(ctx, req_id(f.id().as_str())),
-                    Err(_) => !error_exists(ctx, f.id().as_str()),
+                && match f.payload::<FlowRequest>() {
+                    Some(_) => !plan_exists(ctx, req_id(f.id().as_str())),
+                    None => !error_exists(ctx, f.id().as_str()),
                 }
         })
     }
@@ -106,38 +122,41 @@ impl Suggestor for FlowOptimizationSuggestor {
             .iter()
             .filter(|f| f.id().as_str().starts_with(REQUEST_PREFIX))
         {
-            match serde_json::from_str::<FlowRequest>(fact.content()) {
-                Ok(req) => {
+            match fact.payload::<FlowRequest>() {
+                Some(req) => {
                     if plan_exists(ctx, req_id(fact.id().as_str())) {
                         continue;
                     }
-                    let plan = solve(&req);
+                    let plan = solve(req);
                     let confidence = plan.fulfillment;
                     proposals.push(
                         ProposedFact::new(
                             ContextKey::Strategies,
                             format!("{}{}", PLAN_PREFIX, plan.request_id),
-                            serde_json::to_string(&plan).unwrap_or_default(),
-                            self.name(),
+                            plan.clone(),
+                            self.name().to_string(),
                         )
                         .with_confidence(confidence),
                     );
                 }
-                Err(e) => {
+                None => {
                     if error_exists(ctx, fact.id().as_str()) {
                         continue;
                     }
-                    let diag = serde_json::json!({
-                        "request_fact_id": fact.id(),
-                        "message": "malformed flow request",
-                        "error": e.to_string(),
-                    });
                     proposals.push(
                         ProposedFact::new(
                             ContextKey::Diagnostic,
                             format!("{}{}", ERROR_PREFIX, fact.id()),
-                            diag.to_string(),
-                            self.name(),
+                            DiagnosticPayload::new(
+                                self.name(),
+                                format!(
+                                    "malformed flow request '{}': expected {} v{} payload",
+                                    fact.id(),
+                                    FlowRequest::FAMILY,
+                                    FlowRequest::VERSION
+                                ),
+                            ),
+                            self.name().to_string(),
                         )
                         .with_confidence(1.0),
                     );
@@ -150,6 +169,10 @@ impl Suggestor for FlowOptimizationSuggestor {
         } else {
             AgentEffect::with_proposals(proposals)
         }
+    }
+
+    fn provenance(&self) -> &'static str {
+        super::CONVERGE_OPTIMIZATION_PROVENANCE.as_str()
     }
 }
 
@@ -236,11 +259,12 @@ fn error_exists(ctx: &dyn Context, fact_id: &str) -> bool {
 mod tests {
     use super::*;
     use converge_core::{ContextState, Engine};
+    use converge_pack::TextPayload;
 
-    fn two_path_request(demand: i64) -> String {
+    fn two_path_request(demand: i64) -> FlowRequest {
         // Cheap path (cost=2/unit, cap=3): s→a→t
         // Expensive path (cost=10/unit, cap=3): s→b→t
-        serde_json::to_string(&FlowRequest {
+        FlowRequest {
             id: "r1".into(),
             num_nodes: 4,
             edges: vec![
@@ -276,8 +300,7 @@ mod tests {
             source: 0,
             sink: 3,
             demand,
-        })
-        .unwrap()
+        }
     }
 
     #[tokio::test]
@@ -287,13 +310,18 @@ mod tests {
         engine.register_suggestor(FlowOptimizationSuggestor);
 
         let mut ctx = ContextState::new();
-        ctx.add_input(ContextKey::Seeds, "flow-request:r1", two_path_request(3))
-            .unwrap();
+        ctx.add_proposal(ProposedFact::new(
+            ContextKey::Seeds,
+            "flow-request:r1",
+            two_path_request(3),
+            "test",
+        ))
+        .unwrap();
 
         let result = engine.run(ctx).await.unwrap();
         let facts = result.context.get(ContextKey::Strategies);
         assert_eq!(facts.len(), 1);
-        let plan: FlowPlan = serde_json::from_str(facts[0].content()).unwrap();
+        let plan = facts[0].require_payload::<FlowPlan>().unwrap();
         assert_eq!(plan.total_flow, 3);
         assert_eq!(plan.total_cost, 6);
         assert!((plan.fulfillment - 1.0).abs() < f64::EPSILON);
@@ -306,12 +334,18 @@ mod tests {
         engine.register_suggestor(FlowOptimizationSuggestor);
 
         let mut ctx = ContextState::new();
-        ctx.add_input(ContextKey::Seeds, "flow-request:r1", two_path_request(4))
-            .unwrap();
+        ctx.add_proposal(ProposedFact::new(
+            ContextKey::Seeds,
+            "flow-request:r1",
+            two_path_request(4),
+            "test",
+        ))
+        .unwrap();
 
         let result = engine.run(ctx).await.unwrap();
-        let plan: FlowPlan =
-            serde_json::from_str(result.context.get(ContextKey::Strategies)[0].content()).unwrap();
+        let plan = result.context.get(ContextKey::Strategies)[0]
+            .require_payload::<FlowPlan>()
+            .unwrap();
         assert_eq!(plan.total_flow, 4);
         assert_eq!(plan.total_cost, 16, "3×2 + 1×10 = 16");
     }
@@ -322,8 +356,13 @@ mod tests {
         engine.register_suggestor(FlowOptimizationSuggestor);
 
         let mut ctx = ContextState::new();
-        ctx.add_input(ContextKey::Seeds, "flow-request:r1", two_path_request(3))
-            .unwrap();
+        ctx.add_proposal(ProposedFact::new(
+            ContextKey::Seeds,
+            "flow-request:r1",
+            two_path_request(3),
+            "test",
+        ))
+        .unwrap();
 
         let first = engine.run(ctx).await.unwrap();
         let mut engine2 = Engine::new();
@@ -341,8 +380,13 @@ mod tests {
         engine.register_suggestor(FlowOptimizationSuggestor);
 
         let mut ctx = ContextState::new();
-        ctx.add_input(ContextKey::Seeds, "flow-request:bad", "not-json")
-            .unwrap();
+        ctx.add_proposal(ProposedFact::new(
+            ContextKey::Seeds,
+            "flow-request:bad",
+            TextPayload::new("not a flow request"),
+            "test",
+        ))
+        .unwrap();
 
         let result = engine.run(ctx).await.unwrap();
         assert_eq!(result.context.get(ContextKey::Diagnostic).len(), 1);

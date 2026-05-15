@@ -4,7 +4,7 @@
 use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR")?);
     let bundled_proto_dir = manifest_dir.join("proto");
     let workspace_proto_dir = manifest_dir.join("../../schema/proto");
 

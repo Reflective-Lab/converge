@@ -4,19 +4,22 @@ error[E0599]: no function or associated item named `construct` found for struct 
 7 |     let _fact = ContextFact::construct(ContextKey::Seeds, "test-id", "test-content");
   |                              ^^^^^^^^^ function or associated item not found in `converge_core::ContextFact`
   |
-note: if you're trying to build a new `converge_core::ContextFact`, consider using `converge_core::ContextFact::new_projection` which returns `converge_core::ContextFact`
+note: if you're trying to build a new `converge_core::ContextFact` consider using one of the following associated functions:
+      converge_core::ContextFact::new_projection
+      converge_core::ContextFact::from_wire
  --> $WORKSPACE/crates/pack/src/fact.rs
   |
-  | /     pub fn new_projection(
+  | /     pub fn new_projection<T>(
   | |         key: ContextKey,
   | |         id: impl Into<FactId>,
-  | |         content: impl Into<String>,
-  | |         promotion_record: FactPromotionRecord,
-  | |         created_at: impl Into<Timestamp>,
-  | |     ) -> Self {
-  | |_____________^
-help: there is a method `content` with a similar name, but with different arguments
- --> $WORKSPACE/crates/pack/src/fact.rs
-  |
-  |     pub fn content(&self) -> &str {
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  | |         payload: T,
+... |
+  | |     where
+  | |         T: FactPayload + PartialEq,
+  | |___________________________________^
+...
+  | /     pub fn from_wire(
+  | |         wire: WireContextFact,
+  | |         registry: &PayloadRegistry,
+  | |     ) -> Result<Self, PayloadError> {
+  | |___________________________________^

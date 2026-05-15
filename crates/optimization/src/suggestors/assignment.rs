@@ -15,7 +15,10 @@
 //! request id — the suggestor reacts and the formation re-converges.
 
 use async_trait::async_trait;
-use converge_pack::{AgentEffect, Context, ContextKey, ProposedFact, Suggestor};
+use converge_pack::ProvenanceSource;
+use converge_pack::{
+    AgentEffect, Context, ContextKey, DiagnosticPayload, FactPayload, ProposedFact, Suggestor,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::assignment::{AssignmentProblem, hungarian};
@@ -23,7 +26,8 @@ use crate::assignment::{AssignmentProblem, hungarian};
 // ── Request ───────────────────────────────────────────────────────────────────
 
 /// Seed this under [`ContextKey::Seeds`] with id prefix `"assignment-request:"`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct AssignmentRequest {
     /// Stable identifier for idempotency.
     pub id: String,
@@ -35,10 +39,16 @@ pub struct AssignmentRequest {
     pub costs: Vec<Vec<i64>>,
 }
 
+impl FactPayload for AssignmentRequest {
+    const FAMILY: &'static str = "converge.optimization.assignment.request";
+    const VERSION: u16 = 1;
+}
+
 // ── Plan (output) ─────────────────────────────────────────────────────────────
 
 /// The optimal assignment produced by the suggestor.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct AssignmentPlan {
     pub request_id: String,
     /// `(agent_label, task_label)` pairs, one per matched agent.
@@ -46,6 +56,11 @@ pub struct AssignmentPlan {
     pub total_cost: i64,
     /// `assignments.len() / agents.len()` — 1.0 means fully matched.
     pub utilization: f64,
+}
+
+impl FactPayload for AssignmentPlan {
+    const FAMILY: &'static str = "converge.optimization.assignment.plan";
+    const VERSION: u16 = 1;
 }
 
 // ── Suggestor ─────────────────────────────────────────────────────────────────
@@ -76,9 +91,9 @@ impl Suggestor for AssignmentSuggestor {
     fn accepts(&self, ctx: &dyn Context) -> bool {
         ctx.get(ContextKey::Seeds).iter().any(|f| {
             f.id().as_str().starts_with(REQUEST_PREFIX)
-                && match serde_json::from_str::<AssignmentRequest>(f.content()) {
-                    Ok(_) => !plan_exists(ctx, req_id(f.id().as_str())),
-                    Err(_) => !error_exists(ctx, f.id().as_str()),
+                && match f.payload::<AssignmentRequest>() {
+                    Some(_) => !plan_exists(ctx, req_id(f.id().as_str())),
+                    None => !error_exists(ctx, f.id().as_str()),
                 }
         })
     }
@@ -91,37 +106,40 @@ impl Suggestor for AssignmentSuggestor {
             .iter()
             .filter(|f| f.id().as_str().starts_with(REQUEST_PREFIX))
         {
-            match serde_json::from_str::<AssignmentRequest>(fact.content()) {
-                Ok(req) => {
+            match fact.payload::<AssignmentRequest>() {
+                Some(req) => {
                     if plan_exists(ctx, req_id(fact.id().as_str())) {
                         continue;
                     }
-                    let plan = solve(&req);
+                    let plan = solve(req);
                     proposals.push(
                         ProposedFact::new(
                             ContextKey::Strategies,
                             format!("{}{}", PLAN_PREFIX, plan.request_id),
-                            serde_json::to_string(&plan).unwrap_or_default(),
-                            self.name(),
+                            plan.clone(),
+                            self.name().to_string(),
                         )
                         .with_confidence(plan.utilization),
                     );
                 }
-                Err(e) => {
+                None => {
                     if error_exists(ctx, fact.id().as_str()) {
                         continue;
                     }
-                    let diag = serde_json::json!({
-                        "request_fact_id": fact.id(),
-                        "message": "malformed assignment request",
-                        "error": e.to_string(),
-                    });
                     proposals.push(
                         ProposedFact::new(
                             ContextKey::Diagnostic,
                             format!("{}{}", ERROR_PREFIX, fact.id()),
-                            diag.to_string(),
-                            self.name(),
+                            DiagnosticPayload::new(
+                                self.name(),
+                                format!(
+                                    "malformed assignment request '{}': expected {} v{} payload",
+                                    fact.id(),
+                                    AssignmentRequest::FAMILY,
+                                    AssignmentRequest::VERSION
+                                ),
+                            ),
+                            self.name().to_string(),
                         )
                         .with_confidence(1.0),
                     );
@@ -134,6 +152,10 @@ impl Suggestor for AssignmentSuggestor {
         } else {
             AgentEffect::with_proposals(proposals)
         }
+    }
+
+    fn provenance(&self) -> &'static str {
+        super::CONVERGE_OPTIMIZATION_PROVENANCE.as_str()
     }
 }
 
@@ -215,16 +237,16 @@ fn error_exists(ctx: &dyn Context, fact_id: &str) -> bool {
 mod tests {
     use super::*;
     use converge_core::{ContextState, Engine};
+    use converge_pack::TextPayload;
 
-    fn req_json(id: &str, costs: Vec<Vec<i64>>) -> String {
+    fn req(id: &str, costs: Vec<Vec<i64>>) -> AssignmentRequest {
         let n = costs.len();
-        serde_json::to_string(&AssignmentRequest {
+        AssignmentRequest {
             id: id.to_string(),
             agents: (0..n).map(|i| format!("agent-{i}")).collect(),
             tasks: (0..n).map(|i| format!("task-{i}")).collect(),
             costs,
-        })
-        .unwrap()
+        }
     }
 
     #[tokio::test]
@@ -234,17 +256,18 @@ mod tests {
         engine.register_suggestor(AssignmentSuggestor);
 
         let mut ctx = ContextState::new();
-        ctx.add_input(
+        ctx.add_proposal(ProposedFact::new(
             ContextKey::Seeds,
             "assignment-request:r1",
-            req_json("r1", vec![vec![9, 2, 7], vec![6, 4, 3], vec![5, 8, 1]]),
-        )
+            req("r1", vec![vec![9, 2, 7], vec![6, 4, 3], vec![5, 8, 1]]),
+            "test",
+        ))
         .unwrap();
 
         let result = engine.run(ctx).await.unwrap();
         let plans = result.context.get(ContextKey::Strategies);
         assert_eq!(plans.len(), 1);
-        let plan: AssignmentPlan = serde_json::from_str(plans[0].content()).unwrap();
+        let plan = plans[0].require_payload::<AssignmentPlan>().unwrap();
         assert_eq!(plan.total_cost, 9, "optimal cost = 9");
         assert_eq!(plan.assignments.len(), 3);
         assert!((plan.utilization - 1.0).abs() < f64::EPSILON);
@@ -256,11 +279,12 @@ mod tests {
         engine.register_suggestor(AssignmentSuggestor);
 
         let mut ctx = ContextState::new();
-        ctx.add_input(
+        ctx.add_proposal(ProposedFact::new(
             ContextKey::Seeds,
             "assignment-request:r1",
-            req_json("r1", vec![vec![9, 2, 7], vec![6, 4, 3], vec![5, 8, 1]]),
-        )
+            req("r1", vec![vec![9, 2, 7], vec![6, 4, 3], vec![5, 8, 1]]),
+            "test",
+        ))
         .unwrap();
 
         let first = engine.run(ctx).await.unwrap();
@@ -279,8 +303,13 @@ mod tests {
         engine.register_suggestor(AssignmentSuggestor);
 
         let mut ctx = ContextState::new();
-        ctx.add_input(ContextKey::Seeds, "assignment-request:bad", "{")
-            .unwrap();
+        ctx.add_proposal(ProposedFact::new(
+            ContextKey::Seeds,
+            "assignment-request:bad",
+            TextPayload::new("not an assignment request"),
+            "test",
+        ))
+        .unwrap();
 
         let result = engine.run(ctx).await.unwrap();
         assert_eq!(result.context.get(ContextKey::Diagnostic).len(), 1);

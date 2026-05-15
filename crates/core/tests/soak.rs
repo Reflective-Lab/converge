@@ -11,7 +11,7 @@
 //! Run with: `cargo test -- --include-ignored soak --nocapture`
 
 use converge_core::{
-    AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+    AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor, TextPayload,
     suggestors::SeedSuggestor,
 };
 
@@ -36,9 +36,13 @@ impl Suggestor for SimpleScaleProposer {
         AgentEffect::with_proposal(ProposedFact::new(
             ContextKey::Hypotheses,
             "h-0",
-            "hypothesis",
-            self.name(),
+            TextPayload::new("hypothesis"),
+            self.name().to_string(),
         ))
+    }
+
+    fn provenance(&self) -> &'static str {
+        "test-suggestor"
     }
 }
 

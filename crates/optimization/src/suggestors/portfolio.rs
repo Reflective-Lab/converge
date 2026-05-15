@@ -15,7 +15,10 @@
 //! and converges on the new optimum.
 
 use async_trait::async_trait;
-use converge_pack::{AgentEffect, Context, ContextKey, ProposedFact, Suggestor};
+use converge_pack::ProvenanceSource;
+use converge_pack::{
+    AgentEffect, Context, ContextKey, DiagnosticPayload, FactPayload, ProposedFact, Suggestor,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::knapsack::{self, KnapsackProblem};
@@ -24,7 +27,8 @@ use crate::knapsack::{self, KnapsackProblem};
 
 /// A portfolio optimisation request. Seed under [`ContextKey::Seeds`] with id
 /// prefix `"portfolio-request:"`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PortfolioRequest {
     /// Stable identifier for idempotency.
     pub id: String,
@@ -34,8 +38,14 @@ pub struct PortfolioRequest {
     pub budget: i64,
 }
 
+impl FactPayload for PortfolioRequest {
+    const FAMILY: &'static str = "converge.optimization.portfolio.request";
+    const VERSION: u16 = 1;
+}
+
 /// A single candidate item in the portfolio.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PortfolioItem {
     pub label: String,
     /// Resource consumption (cost, effort, capital, story points, …).
@@ -47,7 +57,8 @@ pub struct PortfolioItem {
 // ── Selection (output) ────────────────────────────────────────────────────────
 
 /// The optimal portfolio selection.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PortfolioSelection {
     pub request_id: String,
     /// Labels of the selected items.
@@ -56,6 +67,11 @@ pub struct PortfolioSelection {
     pub total_weight: i64,
     /// `total_weight / budget` — how much of the budget is consumed.
     pub utilization: f64,
+}
+
+impl FactPayload for PortfolioSelection {
+    const FAMILY: &'static str = "converge.optimization.portfolio.selection";
+    const VERSION: u16 = 1;
 }
 
 // ── Suggestor ─────────────────────────────────────────────────────────────────
@@ -85,9 +101,9 @@ impl Suggestor for PortfolioSuggestor {
     fn accepts(&self, ctx: &dyn Context) -> bool {
         ctx.get(ContextKey::Seeds).iter().any(|f| {
             f.id().as_str().starts_with(REQUEST_PREFIX)
-                && match serde_json::from_str::<PortfolioRequest>(f.content()) {
-                    Ok(_) => !selection_exists(ctx, req_id(f.id().as_str())),
-                    Err(_) => !error_exists(ctx, f.id().as_str()),
+                && match f.payload::<PortfolioRequest>() {
+                    Some(_) => !selection_exists(ctx, req_id(f.id().as_str())),
+                    None => !error_exists(ctx, f.id().as_str()),
                 }
         })
     }
@@ -100,37 +116,40 @@ impl Suggestor for PortfolioSuggestor {
             .iter()
             .filter(|f| f.id().as_str().starts_with(REQUEST_PREFIX))
         {
-            match serde_json::from_str::<PortfolioRequest>(fact.content()) {
-                Ok(req) => {
+            match fact.payload::<PortfolioRequest>() {
+                Some(req) => {
                     if selection_exists(ctx, req_id(fact.id().as_str())) {
                         continue;
                     }
-                    let selection = solve(&req);
+                    let selection = solve(req);
                     proposals.push(
                         ProposedFact::new(
                             ContextKey::Strategies,
                             format!("{}{}", SELECTION_PREFIX, selection.request_id),
-                            serde_json::to_string(&selection).unwrap_or_default(),
-                            self.name(),
+                            selection.clone(),
+                            self.name().to_string(),
                         )
                         .with_confidence(selection.utilization.min(1.0)),
                     );
                 }
-                Err(e) => {
+                None => {
                     if error_exists(ctx, fact.id().as_str()) {
                         continue;
                     }
-                    let diag = serde_json::json!({
-                        "request_fact_id": fact.id(),
-                        "message": "malformed portfolio request",
-                        "error": e.to_string(),
-                    });
                     proposals.push(
                         ProposedFact::new(
                             ContextKey::Diagnostic,
                             format!("{}{}", ERROR_PREFIX, fact.id()),
-                            diag.to_string(),
-                            self.name(),
+                            DiagnosticPayload::new(
+                                self.name(),
+                                format!(
+                                    "malformed portfolio request '{}': expected {} v{} payload",
+                                    fact.id(),
+                                    PortfolioRequest::FAMILY,
+                                    PortfolioRequest::VERSION
+                                ),
+                            ),
+                            self.name().to_string(),
                         )
                         .with_confidence(1.0),
                     );
@@ -143,6 +162,10 @@ impl Suggestor for PortfolioSuggestor {
         } else {
             AgentEffect::with_proposals(proposals)
         }
+    }
+
+    fn provenance(&self) -> &'static str {
+        super::CONVERGE_OPTIMIZATION_PROVENANCE.as_str()
     }
 }
 
@@ -228,9 +251,10 @@ fn error_exists(ctx: &dyn Context, fact_id: &str) -> bool {
 mod tests {
     use super::*;
     use converge_core::{ContextState, Engine};
+    use converge_pack::TextPayload;
 
-    fn req_json(id: &str, items: Vec<(&str, i64, i64)>, budget: i64) -> String {
-        serde_json::to_string(&PortfolioRequest {
+    fn req(id: &str, items: Vec<(&str, i64, i64)>, budget: i64) -> PortfolioRequest {
+        PortfolioRequest {
             id: id.to_string(),
             items: items
                 .into_iter()
@@ -241,8 +265,7 @@ mod tests {
                 })
                 .collect(),
             budget,
-        })
-        .unwrap()
+        }
     }
 
     #[tokio::test]
@@ -252,10 +275,10 @@ mod tests {
         engine.register_suggestor(PortfolioSuggestor);
 
         let mut ctx = ContextState::new();
-        ctx.add_input(
+        ctx.add_proposal(ProposedFact::new(
             ContextKey::Seeds,
             "portfolio-request:r1",
-            req_json(
+            req(
                 "r1",
                 vec![
                     ("alpha", 2, 3),
@@ -266,13 +289,14 @@ mod tests {
                 ],
                 20,
             ),
-        )
+            "test",
+        ))
         .unwrap();
 
         let result = engine.run(ctx).await.unwrap();
         let facts = result.context.get(ContextKey::Strategies);
         assert_eq!(facts.len(), 1);
-        let sel: PortfolioSelection = serde_json::from_str(facts[0].content()).unwrap();
+        let sel = facts[0].require_payload::<PortfolioSelection>().unwrap();
         assert_eq!(sel.total_value, 26, "optimal portfolio value = 26");
         assert!(sel.total_weight <= 20);
     }
@@ -283,11 +307,12 @@ mod tests {
         engine.register_suggestor(PortfolioSuggestor);
 
         let mut ctx = ContextState::new();
-        ctx.add_input(
+        ctx.add_proposal(ProposedFact::new(
             ContextKey::Seeds,
             "portfolio-request:r1",
-            req_json("r1", vec![("a", 2, 5), ("b", 3, 6), ("c", 4, 4)], 5),
-        )
+            req("r1", vec![("a", 2, 5), ("b", 3, 6), ("c", 4, 4)], 5),
+            "test",
+        ))
         .unwrap();
 
         let first = engine.run(ctx).await.unwrap();
@@ -306,8 +331,13 @@ mod tests {
         engine.register_suggestor(PortfolioSuggestor);
 
         let mut ctx = ContextState::new();
-        ctx.add_input(ContextKey::Seeds, "portfolio-request:bad", "not-json")
-            .unwrap();
+        ctx.add_proposal(ProposedFact::new(
+            ContextKey::Seeds,
+            "portfolio-request:bad",
+            TextPayload::new("not a portfolio request"),
+            "test",
+        ))
+        .unwrap();
 
         let result = engine.run(ctx).await.unwrap();
         assert_eq!(result.context.get(ContextKey::Diagnostic).len(), 1);

@@ -1,33 +1,21 @@
-error[E0308]: mismatched types
- --> tests/compile_fail/fact_struct_literal.rs:9:13
-  |
-9 |         id: "test-id".to_string(),
-  |             ^^^^^^^^^^^^^^^^^^^^^ expected `FactId`, found `String`
-  |
-help: call `Into::into` on this expression to convert `String` into `FactId`
-  |
-9 |         id: "test-id".to_string().into(),
-  |                                  +++++++
+error[E0451]: fields `key`, `id`, `payload`, `promotion_record` and `created_at` of struct `ContextFact` are private
+  --> tests/compile_fail/fact_struct_literal.rs:9:9
+   |
+ 8 |     let _fact = ContextFact {
+   |                 ----------- in this type
+ 9 |         key: ContextKey::Seeds,
+   |         ^^^ private field
+10 |         id: "test-id".into(),
+   |         ^^ private field
+11 |         payload: unreachable!(),
+   |         ^^^^^^^ private field
+12 |         promotion_record: unreachable!(),
+   |         ^^^^^^^^^^^^^^^^ private field
+13 |         created_at: unreachable!(),
+   |         ^^^^^^^^^^ private field
 
-error: cannot construct `ContextFact` with struct literal syntax due to private fields
-  --> tests/compile_fail/fact_struct_literal.rs:7:17
+error: trait `fact::ErasedFactPayload` is private
+  --> tests/compile_fail/fact_struct_literal.rs:11:18
    |
- 7 |     let _fact = ContextFact {
-   |                 ^^^^^^^^^^^
- 8 |         key: ContextKey::Seeds,
-   |         ---------------------- private field
- 9 |         id: "test-id".to_string(),
-   |         ------------------------- private field
-10 |         content: "test-content".to_string(),
-   |         ----------------------------------- private field
-   |
-   = note: ...and other private fields `promotion_record` and `created_at` that were not provided
-help: you might have meant to use the `new_projection` associated function
-   |
- 7 -     let _fact = ContextFact {
- 8 -         key: ContextKey::Seeds,
- 9 -         id: "test-id".to_string(),
-10 -         content: "test-content".to_string(),
-11 -     };
- 7 +     let _fact = ContextFact::new_projection(_, _, _, _, _);
-   |
+11 |         payload: unreachable!(),
+   |                  ^^^^^^^^^^^^^^ private trait

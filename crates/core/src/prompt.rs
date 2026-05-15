@@ -296,7 +296,7 @@ impl AgentPrompt {
                 s.push_str(":id \"");
                 s.push_str(&escape_string(fact.id().as_str()));
                 s.push_str("\" :c \"");
-                s.push_str(&escape_string(fact.content()));
+                s.push_str(&escape_string(fact.text().unwrap_or("")));
                 s.push('"');
             }
             s.push_str("}]");
@@ -338,7 +338,7 @@ impl AgentPrompt {
         for (key, facts) in &self.context.facts {
             writeln!(s, "\n## {key:?}").unwrap();
             for fact in facts {
-                writeln!(s, "- {}: {}", fact.id(), fact.content()).unwrap();
+                writeln!(s, "- {}: {}", fact.id(), fact.text().unwrap_or("")).unwrap();
             }
         }
 

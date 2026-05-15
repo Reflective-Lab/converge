@@ -61,8 +61,8 @@ mod tests {
             AgentEffect::with_proposal(crate::ProposedFact::new(
                 ContextKey::Seeds,
                 self.fact_id.clone(),
-                "test content",
-                self.name(),
+                crate::TextPayload::new("test content"),
+                self.name().to_string(),
             ))
         }
     }

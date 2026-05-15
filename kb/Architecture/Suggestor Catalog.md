@@ -67,7 +67,7 @@ All accessed through `converge_optimization::suggestor::SolverSuggestor::new(Pac
 ## Analytics — ML Pipeline Agents (11 Suggestors — extracted to prism)
 
 Direct `Suggestor` implementations now in the **prism** extension crate
-(`~/dev/extensions/prism`). Extracted from `converge-analytics` on 2026-05-05.
+(`~/dev/reflective/stack/mosaic-extensions/prism`). Extracted from `converge-analytics` on 2026-05-05.
 
 | Agent | Purpose | Watches | Writes |
 |-------|---------|---------|--------|
@@ -85,7 +85,7 @@ Direct `Suggestor` implementations now in the **prism** extension crate
 
 ## Analytics — Data Packs (9 Suggestors via `SolverSuggestor<Pack>` — extracted to prism)
 
-Live in the **prism** extension (`~/dev/extensions/prism`, formerly
+Live in the **prism** extension (`~/dev/reflective/stack/mosaic-extensions/prism`, formerly
 `converge-analytics`). Accessed through
 `converge_optimization::suggestor::SolverSuggestor::new(AnalyticsPack, input_key, output_key)`.
 
@@ -106,7 +106,7 @@ Live in the **prism** extension (`~/dev/extensions/prism`, formerly
 ## Policy Gates (8 Suggestors — extracted to arbiter)
 
 Direct `Suggestor` implementations now in the **arbiter** extension crate
-(`~/dev/extensions/arbiter`). Extracted from `converge-policy` on 2026-05-05.
+(`~/dev/reflective/stack/mosaic-extensions/arbiter`). Extracted from `converge-policy` on 2026-05-05.
 
 | Gate | Purpose | Watches | Writes |
 |------|---------|---------|--------|
@@ -124,7 +124,7 @@ Direct `Suggestor` implementations now in the **arbiter** extension crate
 ## Knowledge (2 Suggestors — extracted to mnemos)
 
 Direct `Suggestor` implementations now in the **mnemos** extension crate
-(`~/dev/extensions/mnemos`). Extracted from `converge-knowledge` on 2026-05-05.
+(`~/dev/reflective/stack/mosaic-extensions/mnemos`). Extracted from `converge-knowledge` on 2026-05-05.
 
 | Agent | Purpose | Watches | Writes |
 |-------|---------|---------|--------|

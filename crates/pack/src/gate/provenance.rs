@@ -3,9 +3,15 @@
 use serde::{Deserialize, Serialize};
 use std::time::SystemTime;
 
-/// Provenance information for audit trail
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProvenanceEnvelope {
+/// Audit trail envelope for gate-level operations.
+///
+/// Renamed from `ProvenanceEnvelope` in 3.9.0 — the old name overlapped with
+/// `fact::Provenance` (the per-proposal stamp) and invited confusion about
+/// which provenance layer applied. `ProvenanceEnvelope` remains as a
+/// deprecated type alias for backwards source compatibility; new code should
+/// use `AuditEnvelope`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AuditEnvelope {
     /// Input data hash (for integrity verification)
     pub input_hash: String,
     /// Timestamp when problem was submitted
@@ -21,7 +27,16 @@ pub struct ProvenanceEnvelope {
     pub metadata: serde_json::Value,
 }
 
-impl Default for ProvenanceEnvelope {
+/// Deprecated alias for [`AuditEnvelope`].
+///
+/// Renamed in 3.9.0 to disambiguate from `fact::Provenance` (proposal stamp)
+/// and `fact::ProvenanceSource` (extension origin marker). This alias keeps
+/// existing downstream `use converge_pack::ProvenanceEnvelope` imports working
+/// during the migration window; remove direct uses by 4.0.
+#[deprecated(since = "3.9.0", note = "use `AuditEnvelope` instead")]
+pub type ProvenanceEnvelope = AuditEnvelope;
+
+impl Default for AuditEnvelope {
     fn default() -> Self {
         Self {
             input_hash: String::new(),
@@ -34,7 +49,7 @@ impl Default for ProvenanceEnvelope {
     }
 }
 
-impl ProvenanceEnvelope {
+impl AuditEnvelope {
     /// Create with minimal info
     pub fn new(source_system: impl Into<String>, submitted_by: impl Into<String>) -> Self {
         Self {
@@ -64,7 +79,7 @@ impl ProvenanceEnvelope {
 }
 
 /// Link to kernel trace for replay/audit
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KernelTraceLink {
     /// Trace ID
     pub trace_id: String,
@@ -120,7 +135,7 @@ pub enum TraceMode {
 }
 
 /// Replay envelope for solver reproducibility
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ReplayEnvelope {
     /// Hash of input data
     pub input_hash: String,
@@ -196,7 +211,7 @@ mod tests {
 
     #[test]
     fn test_provenance_builder() {
-        let prov = ProvenanceEnvelope::new("test-system", "test-user")
+        let prov = AuditEnvelope::new("test-system", "test-user")
             .with_correlation_id("corr-123")
             .with_input_hash("sha256:abc");
 
@@ -225,9 +240,22 @@ mod tests {
 
     #[test]
     fn test_serde_roundtrip() {
-        let prov = ProvenanceEnvelope::new("system", "user");
+        let prov = AuditEnvelope::new("system", "user");
         let json = serde_json::to_string(&prov).unwrap();
-        let restored: ProvenanceEnvelope = serde_json::from_str(&json).unwrap();
+        let restored: AuditEnvelope = serde_json::from_str(&json).unwrap();
         assert_eq!(restored.source_system, prov.source_system);
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn deprecated_alias_resolves_to_audit_envelope() {
+        // Source compatibility: existing `ProvenanceEnvelope` constructors
+        // still compile and produce values that round-trip through the new
+        // name. The alias is the migration off-ramp; remove direct uses by
+        // 4.0.
+        let prov: ProvenanceEnvelope = AuditEnvelope::new("system", "user");
+        let json = serde_json::to_string(&prov).unwrap();
+        let restored: AuditEnvelope = serde_json::from_str(&json).unwrap();
+        assert_eq!(restored.source_system, "system");
     }
 }

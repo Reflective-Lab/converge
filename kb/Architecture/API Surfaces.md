@@ -41,8 +41,10 @@ Key surface:
 - `Context`
 - `ContextKey`
 - `AgentEffect`
+- `FactPayload`
 - `ProposedFact`
 - `ContextFact` (read-only context projection for normal pack authors and downstream consumers)
+- `WireProposedFact`, `WireContextFact`, and `PayloadRegistry` for border materialization
 - semantic contract values such as `FactId`, `ProposalId`, `GateId`, `Timestamp`, and `ContentHash`
 - `Invariant`
 
@@ -52,6 +54,9 @@ Status:
 - `kernel-authority` is removed; authoritative construction is engine-owned
 - persistence uses `ContextSnapshot` rather than fact constructors
 - semantic identifiers, hashes, and timestamps are typed contract values, not string conventions
+- fact payloads are typed in process; serialization happens through the wire
+  fact shapes at HTTP/gRPC, CLI, storage/replay, audit, non-Rust, and NATS
+  borders
 
 ### `converge-provider`
 
@@ -192,7 +197,7 @@ contracts:
 
 Domain packs and worked examples have moved to the **atelier** showcase repo
 (`~/dev/atelier`). Policy engines have moved to the **arbiter** extension
-(`~/dev/extensions/arbiter`). Knowledge moved to **mnemos**, analytics to
+(`~/dev/reflective/stack/mosaic-extensions/arbiter`). Knowledge moved to **mnemos**, analytics to
 **prism**. See [[Architecture/Extension Topology]].
 
 Some of these crates are publishable. That does not make them part of the

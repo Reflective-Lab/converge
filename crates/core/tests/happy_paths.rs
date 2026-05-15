@@ -1,7 +1,9 @@
 // Additional happy-path tests for the core engine.
 
 use converge_core::suggestors::{ReactOnceSuggestor, SeedSuggestor};
-use converge_core::{AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor};
+use converge_core::{
+    AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor, TextPayload,
+};
 
 #[tokio::test]
 async fn five_seeds_all_converge() {
@@ -33,11 +35,15 @@ async fn seed_with_high_confidence_promoted() {
                 ProposedFact::new(
                     ContextKey::Seeds,
                     "high-conf-1",
-                    "high confidence fact",
+                    TextPayload::new("high confidence fact"),
                     "high-conf-suggestor",
                 )
                 .with_confidence(1.0),
             )
+        }
+
+        fn provenance(&self) -> &'static str {
+            "test-suggestor"
         }
     }
     let mut engine = Engine::new();
@@ -45,8 +51,8 @@ async fn seed_with_high_confidence_promoted() {
     let result = engine.run(ContextState::new()).await.expect("converges");
     assert!(result.converged);
     assert_eq!(
-        result.context.get(ContextKey::Seeds)[0].content(),
-        "high confidence fact"
+        result.context.get(ContextKey::Seeds)[0].text(),
+        Some("high confidence fact")
     );
 }
 
@@ -72,9 +78,13 @@ async fn multiple_context_keys_populated() {
             AgentEffect::with_proposal(ProposedFact::new(
                 ContextKey::Strategies,
                 "strat-1",
-                "go forward",
-                self.name(),
+                TextPayload::new("go forward"),
+                self.name().to_string(),
             ))
+        }
+
+        fn provenance(&self) -> &'static str {
+            "test-suggestor"
         }
     }
 

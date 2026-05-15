@@ -5,7 +5,7 @@ tags: [architecture, contract, ecosystem]
 
 Converge is the governed execution kernel.
 
-Axiom defines what must be true. Organism decides how to form the team to satisfy it. Converge runs the governed loop, promotes facts, and records what actually happened. Product and hackathon apps own the user experience, artifact ingestion, integrations, and writeback.
+Axiom defines what must be true. Organism decides how to form the team to satisfy it. Converge runs the governed loop, promotes facts, and records what actually happened. Product apps own the user experience, artifact ingestion, integrations, and writeback.
 
 ## Firm Statement
 
@@ -17,7 +17,7 @@ Converge does not define business truth contracts. That is Axiom.
 
 Converge does not choose which formation should solve a business decision, run tournaments, learn formation priors, or own domain decision products. That is Organism.
 
-Converge does not own UI, imported artifacts, customer-specific workflows, or writeback into systems of record. That belongs to product layers such as the hackathon app.
+Converge does not own UI, imported artifacts, customer-specific workflows, or writeback into systems of record. That belongs to the product layers above.
 
 ## Authority Split
 

@@ -130,9 +130,10 @@ impl AgentEffect {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fact::TextPayload;
 
     fn proposal(key: ContextKey, id: &str) -> ProposedFact {
-        ProposedFact::new(key, id, "content", "test")
+        ProposedFact::new(key, id, TextPayload::new("content"), "test")
     }
 
     #[test]
@@ -258,7 +259,7 @@ mod tests {
                 let proposals: Vec<ProposedFact> = keys
                     .iter()
                     .enumerate()
-                    .map(|(i, &k)| ProposedFact::new(k, format!("p{i}"), "c", "prov"))
+                    .map(|(i, &k)| ProposedFact::new(k, format!("p{i}"), TextPayload::new("c"), "prov"))
                     .collect();
                 let effect = AgentEffect::with_proposals(proposals);
                 let result = effect.affected_keys();

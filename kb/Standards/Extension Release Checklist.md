@@ -7,7 +7,7 @@ date: 2026-05-06
 ---
 # Extension Release Checklist
 
-The seven extension repos under `~/dev/extensions/*` (atelier, mnemos, prism,
+The seven extension repos under `~/dev/reflective/stack/mosaic-extensions/*` (atelier, mnemos, prism,
 arbiter, embassy, ferrox, manifold) live outside the foundation but
 participate in the same release. This page is the **single source of truth**
 for the engineering habits each one must demonstrate before it ships
@@ -74,7 +74,7 @@ archivable artefacts under `target/` or `kb/Baselines/` and is idempotent.
 | Soak | `just soak` | `target/soak/` | `.github/workflows/stability.yml` |
 
 The recipes mirror the foundation recipes byte for byte (with crate name
-substitution). Copy from `~/dev/templates/converge-extension/Justfile`
+substitution). Copy from `~/dev/reflective/templates/converge-extension/Justfile`
 rather than handcrafting. When the foundation tightens a recipe, every
 extension picks up the change in its next sync.
 
@@ -145,7 +145,7 @@ Required pages:
 - While the platform head is unreleased, consumers redirect crates.io to
   local paths via `[patch.crates-io]` at the bottom of their workspace
   `Cargo.toml` (canonical block lives in
-  `~/dev/templates/converge-engagement/Cargo.toml`).
+  `~/dev/reflective/templates/converge-engagement/Cargo.toml`).
 - Release tags follow `vMAJOR.MINOR.PATCH`. Performance baselines are
   named after the release tag (`PERF_BASELINE=v1.0.0 just
   performance-profile`).
@@ -176,11 +176,11 @@ Archive `target/security/`, `target/coverage/`, `target/criterion/`,
 
 ## How to apply this to an existing extension
 
-1. Copy `~/dev/templates/converge-extension/Justfile` to the extension
+1. Copy `~/dev/reflective/templates/converge-extension/Justfile` to the extension
    root and replace the crate name placeholders.
-2. Copy `~/dev/templates/converge-extension/.github/workflows/*.yml`
+2. Copy `~/dev/reflective/templates/converge-extension/.github/workflows/*.yml`
    into the extension's `.github/workflows/` directory.
-3. Copy `~/dev/templates/converge-extension/deny.toml` to the
+3. Copy `~/dev/reflective/templates/converge-extension/deny.toml` to the
    extension root, with the foundation's ignore list as the starting
    point.
 4. Run the five-command release ritual locally. Address every red gate

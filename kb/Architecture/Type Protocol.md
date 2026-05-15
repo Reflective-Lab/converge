@@ -25,6 +25,8 @@ This means:
 
 - Semantic IDs are newtypes, not raw strings.
   Examples: `FactId`, `ProposalId`, `ObservationId`, `GateId`, `PackName`, `AgentName`.
+- Fact and proposal payloads are typed `FactPayload` values in process. Raw
+  strings are valid only for explicit text payloads or border DTOs.
 - Closed vocabularies are enums, not string conventions.
   Examples: `RequirementPreset`, `Selector::Any`, typed stop reasons, owned flow/action enums.
 - Bounded numbers are validated values.
@@ -117,6 +119,53 @@ let proposal = ProposedFact::new(...)
 
 This is the important architectural point: the engine should not be compensating for a weak proposal type. Where Converge owns the range, the type should own the range.
 
+## Typed Fact Payloads
+
+`converge-pack::ProposedFact` no longer carries semantic `content: String`.
+The constructor requires a typed payload:
+
+```rust
+let proposal = ProposedFact::new(
+    ContextKey::Seeds,
+    "invoice-policy-check",
+    InvoicePolicyCheckV1 { /* fields */ },
+    "arbiter",
+);
+```
+
+The payload type owns the schema:
+
+```rust
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct InvoicePolicyCheckV1 {
+    decision: Decision,
+}
+
+impl FactPayload for InvoicePolicyCheckV1 {
+    const FAMILY: &'static str = "arbiter.invoice-policy-check";
+    const VERSION: u16 = 1;
+}
+```
+
+Read typed values from context:
+
+```rust
+for fact in ctx.get(ContextKey::Decisions) {
+    let payload = fact.require_payload::<InvoicePolicyCheckV1>()?;
+}
+```
+
+For HTTP/gRPC, CLI fixtures, storage/replay, audit export, non-Rust clients, and
+NATS/Lattice traffic, use `WireProposedFact` or `WireContextFact` plus a
+`PayloadRegistry`. Unknown `(family, version)` fails closed.
+
+Version policy is frozen tuple based: `family + v1` maps to one Rust type
+forever. Schema changes create `v2`; implicit registry upgraders are forbidden.
+Explicit migration suggestors may read V1 and emit V2.
+
+See [[Standards/Typed Fact Payloads]] for the full wire and replay policy.
+
 ## Test Policy
 
 Types do not replace every test. Keep tests where they prove something types cannot.
@@ -136,19 +185,11 @@ Replace with stronger types when the test is mostly proving:
 
 ## Content Parsing Helpers
 
-Do not add ambiguous helpers named as if fact content had one canonical wire
-format. If a helper parses JSON, the name must say JSON and return a parse
-error, not discard diagnostics as `Option`.
+Do not add helpers that parse semantic JSON out of `ProposedFact` or
+`ContextFact`. These types no longer expose a generic semantic string payload.
 
-Current rule:
-
-```rust
-let value: MyPayload = fact.parse_json_content()?;
-```
-
-For CBOR, protobuf, MessagePack, or domain-specific payloads, callers should
-use that decoder directly against `content` until there is a deliberately named
-typed payload contract.
+If the value is meaningful inside Converge, define a `FactPayload`. If the value
+is crossing a boundary, decode through the wire shape and payload registry.
 
 ## Test Layout Rule
 
@@ -184,6 +225,8 @@ The type direction is clear, but not complete. Remaining range-heavy or clamp-he
 - evaluation scores in `converge-core`
 - gate severity helpers in `converge-pack`
 - provider-side quality thresholds and similar `0..1` values
+- older type-state gate summaries that still use `ProposedContent` string text
+  as a review/audit summary rather than the pack fact payload
 
 The rule stays the same: if the domain owns the range, the type should own the range.
 

@@ -223,7 +223,8 @@ pub use admission::{
 };
 pub use agent::{Suggestor, SuggestorId};
 pub use context::{
-    ContextFact, ContextKey, ContextSnapshot, ContextState, ProposedFact, ValidationError,
+    ContextFact, ContextKey, ContextSnapshot, ContextState, FactPayload, ProposedFact, TextPayload,
+    ValidationError,
 };
 pub use effect::AgentEffect;
 pub use formation::{

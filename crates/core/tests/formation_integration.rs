@@ -6,7 +6,19 @@
 use async_trait::async_trait;
 use converge_core::suggestors::{ReactOnceSuggestor, SeedSuggestor};
 use converge_core::{AgentEffect, Budget, ContextState, Engine, ProposedFact};
-use converge_pack::{Context, ContextKey, Suggestor};
+use converge_pack::{Context, ContextKey, FactPayload, Suggestor, TextPayload};
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct StrategyProposalPayload {
+    confidence: f64,
+    plan: String,
+}
+
+impl FactPayload for StrategyProposalPayload {
+    const FAMILY: &'static str = "test.strategy.proposal";
+    const VERSION: u16 = 1;
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -30,20 +42,26 @@ impl Suggestor for ThresholdPolicyAgent {
         let strategies = ctx.get(ContextKey::Strategies);
         let mut proposals = Vec::new();
         for fact in strategies {
-            if let Ok(v) = serde_json::from_str::<serde_json::Value>(fact.content()) {
-                if let Some(conf) = v.get("confidence").and_then(|c| c.as_f64()) {
-                    if conf > self.max_confidence {
-                        proposals.push(ProposedFact::new(
-                            ContextKey::Constraints,
-                            format!("block-{}", fact.id()),
-                            format!("confidence {conf} exceeds max {}", self.max_confidence),
-                            "threshold-policy",
-                        ));
-                    }
+            if let Some(payload) = fact.payload::<StrategyProposalPayload>() {
+                let conf = payload.confidence;
+                if conf > self.max_confidence {
+                    proposals.push(ProposedFact::new(
+                        ContextKey::Constraints,
+                        format!("block-{}", fact.id()),
+                        TextPayload::new(format!(
+                            "confidence {conf} exceeds max {}",
+                            self.max_confidence
+                        )),
+                        "threshold-policy",
+                    ));
                 }
             }
         }
         AgentEffect::with_proposals(proposals)
+    }
+
+    fn provenance(&self) -> &'static str {
+        "test-suggestor"
     }
 }
 
@@ -51,7 +69,8 @@ impl Suggestor for ThresholdPolicyAgent {
 struct StrategyAgent {
     name: &'static str,
     fact_id: &'static str,
-    content: &'static str,
+    confidence: f64,
+    plan: &'static str,
 }
 
 #[async_trait]
@@ -73,9 +92,16 @@ impl Suggestor for StrategyAgent {
         AgentEffect::with_proposal(ProposedFact::new(
             ContextKey::Strategies,
             self.fact_id,
-            self.content,
+            StrategyProposalPayload {
+                confidence: self.confidence,
+                plan: self.plan.to_string(),
+            },
             self.name,
         ))
+    }
+
+    fn provenance(&self) -> &'static str {
+        "test-suggestor"
     }
 }
 
@@ -101,7 +127,8 @@ async fn formation_policy_blocks_high_confidence() {
     engine.register_suggestor(StrategyAgent {
         name: "aggressive-planner",
         fact_id: "strategy-1",
-        content: r#"{"confidence": 0.99, "plan": "spend everything"}"#,
+        confidence: 0.99,
+        plan: "spend everything",
     });
     engine.register_suggestor(ThresholdPolicyAgent {
         max_confidence: 0.9,
@@ -112,7 +139,11 @@ async fn formation_policy_blocks_high_confidence() {
     // Policy writes a constraint blocking the overconfident strategy
     assert!(result.context.has(ContextKey::Constraints));
     let constraints = result.context.get(ContextKey::Constraints);
-    assert!(constraints[0].content().contains("0.99"));
+    assert!(
+        constraints[0]
+            .text()
+            .is_some_and(|text| text.contains("0.99"))
+    );
 }
 
 #[tokio::test]
@@ -123,7 +154,8 @@ async fn formation_policy_allows_reasonable_confidence() {
     engine.register_suggestor(StrategyAgent {
         name: "conservative-planner",
         fact_id: "strategy-1",
-        content: r#"{"confidence": 0.75, "plan": "balanced allocation"}"#,
+        confidence: 0.75,
+        plan: "balanced allocation",
     });
     engine.register_suggestor(ThresholdPolicyAgent {
         max_confidence: 0.9,
@@ -160,12 +192,14 @@ async fn formation_multiple_strategies_partial_block() {
     engine.register_suggestor(StrategyAgent {
         name: "planner-aggressive",
         fact_id: "aggressive",
-        content: r#"{"confidence": 0.95, "plan": "aggressive growth"}"#,
+        confidence: 0.95,
+        plan: "aggressive growth",
     });
     engine.register_suggestor(StrategyAgent {
         name: "planner-conservative",
         fact_id: "conservative",
-        content: r#"{"confidence": 0.7, "plan": "steady growth"}"#,
+        confidence: 0.7,
+        plan: "steady growth",
     });
 
     engine.register_suggestor(ThresholdPolicyAgent {

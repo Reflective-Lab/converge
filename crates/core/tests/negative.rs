@@ -3,7 +3,7 @@
 // Prove: the system rejects invalid input and handles edge cases gracefully.
 
 use converge_core::{
-    AgentEffect, Budget, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+    AgentEffect, Budget, ContextKey, ContextState, Engine, ProposedFact, Suggestor, TextPayload,
 };
 
 // ── Invalid proposals: rejected by promotion gate ──
@@ -30,9 +30,13 @@ impl Suggestor for BadContentAgent {
         AgentEffect::with_proposal(ProposedFact::new(
             self.key,
             self.id,
-            self.content,
+            TextPayload::new(self.content),
             "test-agent",
         ))
+    }
+
+    fn provenance(&self) -> &'static str {
+        "test-suggestor"
     }
 }
 
@@ -108,9 +112,13 @@ async fn budget_exhaustion_terminates() {
             AgentEffect::with_proposal(ProposedFact::new(
                 ContextKey::Seeds,
                 format!("infinite-{count}"),
-                format!("fact number {count}"),
-                self.name(),
+                TextPayload::new(format!("fact number {count}")),
+                self.name().to_string(),
             ))
+        }
+
+        fn provenance(&self) -> &'static str {
+            "test-suggestor"
         }
     }
 
@@ -150,12 +158,16 @@ async fn max_facts_budget_terminates() {
                     ProposedFact::new(
                         ContextKey::Seeds,
                         format!("flood-{}-{i}", n),
-                        format!("content {i}"),
+                        TextPayload::new(format!("content {i}")),
                         "flood-agent",
                     )
                 })
                 .collect();
             AgentEffect::with_proposals(proposals)
+        }
+
+        fn provenance(&self) -> &'static str {
+            "test-suggestor"
         }
     }
 

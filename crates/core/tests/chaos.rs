@@ -13,7 +13,7 @@
 //! determinism even under chaotic conditions.
 
 use converge_core::{
-    AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+    AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor, TextPayload,
     suggestors::SeedSuggestor,
 };
 use std::sync::{Arc, Mutex};
@@ -64,9 +64,13 @@ impl Suggestor for PanicSuggestor {
         AgentEffect::with_proposal(ProposedFact::new(
             ContextKey::Hypotheses,
             format!("safe-{}", current),
-            "safe proposal",
-            self.name(),
+            TextPayload::new("safe proposal"),
+            self.name().to_string(),
         ))
+    }
+
+    fn provenance(&self) -> &'static str {
+        "test-suggestor"
     }
 }
 
@@ -116,9 +120,13 @@ impl Suggestor for HangingSuggestor {
         AgentEffect::with_proposal(ProposedFact::new(
             ContextKey::Hypotheses,
             format!("hang-safe-{}", current),
-            "safe after hang",
-            self.name(),
+            TextPayload::new("safe after hang"),
+            self.name().to_string(),
         ))
+    }
+
+    fn provenance(&self) -> &'static str {
+        "test-suggestor"
     }
 }
 
@@ -146,8 +154,8 @@ impl Suggestor for MalformedSuggestor {
         &[]
     }
 
-    fn accepts(&self, _ctx: &dyn converge_core::Context) -> bool {
-        true
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
+        !ctx.has(ContextKey::Hypotheses)
     }
 
     async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
@@ -158,8 +166,8 @@ impl Suggestor for MalformedSuggestor {
                 AgentEffect::with_proposal(ProposedFact::new(
                     ContextKey::Hypotheses,
                     "overconfident-id",
-                    "overconfident data",
-                    self.name(),
+                    TextPayload::new("overconfident data"),
+                    self.name().to_string(),
                 ))
             }
             MalformedVariant::NullByteId => {
@@ -167,8 +175,8 @@ impl Suggestor for MalformedSuggestor {
                 AgentEffect::with_proposal(ProposedFact::new(
                     ContextKey::Hypotheses,
                     "bad-id\0with-null",
-                    "content",
-                    self.name(),
+                    TextPayload::new("content"),
+                    self.name().to_string(),
                 ))
             }
             MalformedVariant::NullByteContent => {
@@ -176,8 +184,8 @@ impl Suggestor for MalformedSuggestor {
                 AgentEffect::with_proposal(ProposedFact::new(
                     ContextKey::Hypotheses,
                     "valid-id",
-                    "bad-content\0with-null",
-                    self.name(),
+                    TextPayload::new("bad-content\0with-null"),
+                    self.name().to_string(),
                 ))
             }
             MalformedVariant::GiantContent => {
@@ -186,8 +194,8 @@ impl Suggestor for MalformedSuggestor {
                 AgentEffect::with_proposal(ProposedFact::new(
                     ContextKey::Hypotheses,
                     "giant-id",
-                    &giant,
-                    self.name(),
+                    TextPayload::new(giant),
+                    self.name().to_string(),
                 ))
             }
             MalformedVariant::EmptyId => {
@@ -195,8 +203,8 @@ impl Suggestor for MalformedSuggestor {
                 AgentEffect::with_proposal(ProposedFact::new(
                     ContextKey::Hypotheses,
                     "",
-                    "content",
-                    self.name(),
+                    TextPayload::new("content"),
+                    self.name().to_string(),
                 ))
             }
             MalformedVariant::WhitespaceOnlyId => {
@@ -204,11 +212,15 @@ impl Suggestor for MalformedSuggestor {
                 AgentEffect::with_proposal(ProposedFact::new(
                     ContextKey::Hypotheses,
                     "   ",
-                    "content",
-                    self.name(),
+                    TextPayload::new("content"),
+                    self.name().to_string(),
                 ))
             }
         }
+    }
+
+    fn provenance(&self) -> &'static str {
+        "test-suggestor"
     }
 }
 
@@ -233,8 +245,8 @@ impl Suggestor for LatencyVarianceSuggestor {
         &[]
     }
 
-    fn accepts(&self, _ctx: &dyn converge_core::Context) -> bool {
-        true
+    fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
+        !ctx.has(ContextKey::Hypotheses)
     }
 
     async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
@@ -243,9 +255,13 @@ impl Suggestor for LatencyVarianceSuggestor {
         AgentEffect::with_proposal(ProposedFact::new(
             ContextKey::Hypotheses,
             "latency-proposal",
-            "proposal with injected latency",
-            self.name(),
+            TextPayload::new("proposal with injected latency"),
+            self.name().to_string(),
         ))
+    }
+
+    fn provenance(&self) -> &'static str {
+        "test-suggestor"
     }
 }
 

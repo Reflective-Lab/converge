@@ -5,7 +5,7 @@
 
 pub use converge_core::{FormationKind, ScoringWeights};
 
-use converge_pack::ContextKey;
+use converge_pack::{ContextKey, FactPayload};
 use converge_provider::{CostClass, LatencyClass};
 use serde::{Deserialize, Serialize};
 
@@ -441,7 +441,8 @@ fn string_matches(catalog_values: &[String], query_values: &[String]) -> usize {
 }
 
 /// Structured request for formation assembly.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct FormationRequest {
     /// Stable request identifier used for idempotency.
     pub id: String,
@@ -452,7 +453,8 @@ pub struct FormationRequest {
 }
 
 /// Structured result of formation assembly.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct FormationPlan {
     /// The request this plan answers.
     pub request_id: String,
@@ -462,6 +464,16 @@ pub struct FormationPlan {
     pub unmatched_roles: Vec<SuggestorRole>,
     /// `assignments.len() / required_roles.len()` — 1.0 is full coverage.
     pub coverage_ratio: f64,
+}
+
+impl FactPayload for FormationRequest {
+    const FAMILY: &'static str = "converge.model.formation.request";
+    const VERSION: u16 = 1;
+}
+
+impl FactPayload for FormationPlan {
+    const FAMILY: &'static str = "converge.model.formation.plan";
+    const VERSION: u16 = 1;
 }
 
 /// A single role-to-suggestor assignment.

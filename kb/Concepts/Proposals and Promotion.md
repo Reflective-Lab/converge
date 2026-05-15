@@ -13,14 +13,16 @@ What suggestors emit. A suggestion, not a truth.
 ```rust
 pub struct ProposedFact {
     pub key: ContextKey,
-    pub id: String,
-    pub content: String,
-    pub confidence: f64,      // 0.0 - 1.0
-    pub provenance: String,   // origin metadata
+    pub id: ProposalId,
+    payload: Arc<dyn ErasedFactPayload>,
+    confidence: UnitInterval,
+    pub provenance: Provenance,
 }
 ```
 
-Every proposal carries `confidence` and `provenance` — always. This is how the governance gate makes informed decisions about what to promote.
+Every proposal carries typed payload identity, `confidence`, and `provenance`
+— always. In-process payloads implement `FactPayload`; serialized JSON appears
+only in `WireProposedFact` / `WireContextFact` at borders.
 
 ## The Promotion Gate
 

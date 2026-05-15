@@ -27,8 +27,25 @@
 //! ```
 
 use crate::agent::Suggestor;
-use crate::context::{ContextKey, ProposedFact};
+use crate::context::{ContextKey, ProposedFact, TextPayload};
 use crate::effect::AgentEffect;
+use converge_pack::ProvenanceSource;
+
+/// Canonical provenance marker for reference suggestors shipped by
+/// `converge-core` itself (e.g., [`SeedSuggestor`], [`ReactOnceSuggestor`]).
+/// External crates declare their own marker; this one exists so the core's
+/// own demonstration suggestors satisfy the empty-provenance contract.
+#[derive(Copy, Clone, Debug)]
+pub struct ConvergeCore;
+
+impl ProvenanceSource for ConvergeCore {
+    fn as_str(&self) -> &'static str {
+        "converge-core"
+    }
+}
+
+/// Canonical provenance const for [`ConvergeCore`].
+pub const CONVERGE_CORE_PROVENANCE: ConvergeCore = ConvergeCore;
 
 /// A suggestor that emits an initial seed proposal once.
 ///
@@ -73,9 +90,13 @@ impl Suggestor for SeedSuggestor {
         AgentEffect::with_proposal(ProposedFact::new(
             ContextKey::Seeds,
             self.fact_id.clone(),
-            self.content.clone(),
-            self.name(),
+            TextPayload::new(self.content.clone()),
+            self.name().to_string(),
         ))
+    }
+
+    fn provenance(&self) -> &'static str {
+        CONVERGE_CORE_PROVENANCE.as_str()
     }
 }
 
@@ -120,12 +141,16 @@ impl Suggestor for ReactOnceSuggestor {
                 .any(|f| f.id().as_str() == self.fact_id)
     }
 
+    fn provenance(&self) -> &'static str {
+        CONVERGE_CORE_PROVENANCE.as_str()
+    }
+
     async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
         AgentEffect::with_proposal(ProposedFact::new(
             ContextKey::Hypotheses,
             self.fact_id.clone(),
-            self.content.clone(),
-            self.name(),
+            TextPayload::new(self.content.clone()),
+            self.name().to_string(),
         ))
     }
 }
@@ -196,9 +221,13 @@ mod tests {
                 AgentEffect::with_proposal(ProposedFact::new(
                     ContextKey::Strategies,
                     "strat-1",
-                    "derived strategy",
-                    self.name(),
+                    TextPayload::new("derived strategy"),
+                    self.name().to_string(),
                 ))
+            }
+
+            fn provenance(&self) -> &'static str {
+                CONVERGE_CORE_PROVENANCE.as_str()
             }
         }
 

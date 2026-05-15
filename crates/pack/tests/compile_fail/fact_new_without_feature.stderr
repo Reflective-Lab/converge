@@ -4,19 +4,22 @@ error[E0599]: no function or associated item named `construct` found for struct 
 9 |     let _fact = ContextFact::construct(ContextKey::Seeds, "test-id", "test-content");
   |                              ^^^^^^^^^ function or associated item not found in `ContextFact`
   |
-note: if you're trying to build a new `ContextFact`, consider using `ContextFact::new_projection` which returns `ContextFact`
+note: if you're trying to build a new `ContextFact` consider using one of the following associated functions:
+      ContextFact::new_projection
+      ContextFact::from_wire
  --> src/fact.rs
   |
-  | /     pub fn new_projection(
+  | /     pub fn new_projection<T>(
   | |         key: ContextKey,
   | |         id: impl Into<FactId>,
-  | |         content: impl Into<String>,
-  | |         promotion_record: FactPromotionRecord,
-  | |         created_at: impl Into<Timestamp>,
-  | |     ) -> Self {
-  | |_____________^
-help: there is a method `content` with a similar name, but with different arguments
- --> src/fact.rs
-  |
-  |     pub fn content(&self) -> &str {
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  | |         payload: T,
+... |
+  | |     where
+  | |         T: FactPayload + PartialEq,
+  | |___________________________________^
+...
+  | /     pub fn from_wire(
+  | |         wire: WireContextFact,
+  | |         registry: &PayloadRegistry,
+  | |     ) -> Result<Self, PayloadError> {
+  | |___________________________________^

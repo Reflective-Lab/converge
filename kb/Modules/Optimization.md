@@ -25,6 +25,23 @@ default, with optional Varisat-backed constraint programming through the
 | VendorShortlist | Seeds (vendor profiles) | Strategies |
 | BacklogPrioritization | Seeds (backlog items) | Strategies |
 
+## Portable Suggestor Baselines
+
+`converge-optimization` also exposes pure Rust baseline Suggestors directly
+from `converge_optimization::suggestors`:
+
+| Suggestor | Seed prefix | Plan prefix | Role |
+|-----------|-------------|-------------|------|
+| GreedySchedulerSuggestor | `scheduling-request:*` | `scheduling-plan-greedy:*` | Fast EDF task scheduling with skills and time windows |
+| NearestNeighborTimeWindowRoutingSuggestor | `vrptw-request:*` | `vrptw-plan-greedy:*` | Fast single-vehicle time-window routing baseline |
+| AssignmentSuggestor | `assignment-request:*` | `assignment-plan:*` | Exact Hungarian assignment |
+| FlowOptimizationSuggestor | `flow-request:*` | `flow-plan:*` | Pure Rust min-cost flow baseline |
+| WorkScheduleSuggestor | `schedule-request:*` | `schedule-plan:*` | Simple disjunctive/cumulative work scheduling |
+
+Native Ferrox Suggestors should use the same seed shape when they are intended
+to compete with these baselines, but they must write distinct solver-prefixed
+plan facts so formations can compare candidates by confidence and policy.
+
 ## Usage in a Formation
 
 ```rust

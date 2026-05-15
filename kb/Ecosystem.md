@@ -100,7 +100,7 @@ Converge is the governance layer in a five-layer stack built by Reflective Labs.
 
 **Critical invariant:** Authority is never inherited from reasoning. Organism may produce `ProposedFact` and `AgentEffect`; Converge alone decides what becomes fact.
 
-Products like Wolfgang, the governance hackathon, and Monterro usually own both Helm and Axiom. The naming split is intentional: what operators touch is not the same as what defines truth.
+Products like Wolfgang and Monterro usually own both Helm and Axiom. The naming split is intentional: what operators touch is not the same as what defines truth.
 
 ## The Flow
 

@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.9.0] - 2026-05-15
+
+### Added
+- Typed runtime configuration helpers on `ExecutionIdentity`:
+  `runtime_config_from_typed<T: Serialize>` and
+  `with_runtime_config_typed`.
+- `ConvergeError::EmptyProvenance`; fact-emitting suggestors with empty
+  `provenance()` now fail inside the engine.
+- `FormationKind` in `converge-pack`, re-exported from `converge-core`, plus
+  `Context::formation_kind() -> Option<FormationKind>`.
+- Canonical provenance markers for the built-in core, kernel, and optimization
+  suggestors.
+
+### Changed
+- `gate::ProvenanceEnvelope` is now `gate::AuditEnvelope`.
+  `ProvenanceEnvelope` remains as a deprecated source-compatible alias.
+- `PackSuggestor::provenance()` defaults to the wrapped pack name.
+- Reference and test suggestors now declare provenance through
+  `ProvenanceSource` markers.
+
+### Dependencies
+- Aligns with the latest Mosaic extension floors:
+  `converge-arbiter-policy` 2.0.0,
+  `converge-prism-analytics` 2.0.0,
+  `converge-mnemos-knowledge` 1.2.0,
+  `converge-manifold-adapters` 1.1.1,
+  `converge-embassy-*` 1.1.1,
+  `converge-ferrox-solver` 0.6.0,
+  `converge-crucible-models` 0.2.0, and
+  `converge-soter-smt` 0.2.0.
+- Integrated pending Dependabot bumps from `origin/main`: `async-nats` 0.48,
+  `firestore` 0.49, `opentelemetry` / `opentelemetry-otlp` 0.32,
+  `ordered-float` 5, `sha2` 0.11, `strum` 0.28, and
+  `tracing-opentelemetry` 0.32.
+
 ## [3.8.1] - 2026-05-06
 
 First release of the v3.8 line. Foundation has been refocused around the
@@ -15,11 +50,11 @@ domain packs now live in dedicated extension repos.
 
 ### Removed
 - **BREAKING**: `converge-knowledge` extracted to the **mnemos** extension repo
-  (`~/dev/extensions/mnemos`). Foundation no longer ships vector storage,
+  (`~/dev/reflective/stack/mosaic-extensions/mnemos`). Foundation no longer ships vector storage,
   agentic memory, or learning implementations. Downstream consumers must
   depend on `mnemos` directly. See ADR-008.
 - **BREAKING**: `converge-analytics` extracted to the **prism** extension repo
-  (`~/dev/extensions/prism`). Foundation no longer ships Polars/Burn ML
+  (`~/dev/reflective/stack/mosaic-extensions/prism`). Foundation no longer ships Polars/Burn ML
   pipelines, training agents, or analytics packs. Downstream consumers must
   depend on `prism` directly.
 - **BREAKING**: `converge-domain` and `examples/*` extracted to the
@@ -27,7 +62,7 @@ domain packs now live in dedicated extension repos.
   (trust, money, delivery, data_metrics) and 13 worked examples now live in
   atelier. Downstream consumers depend on `atelier-domain`.
 - **BREAKING**: `converge-policy` extracted to the **arbiter** extension
-  repo (`~/dev/extensions/arbiter`). Cedar policy engine, policy suggestors,
+  repo (`~/dev/reflective/stack/mosaic-extensions/arbiter`). Cedar policy engine, policy suggestors,
   and ed25519-signed delegation tokens now live in arbiter. Foundation
   `converge-pack` keeps the gate trait and authorization vocabulary.
 - **BREAKING**: `converge-provider-adapters` (LLM, search, tool, embedding,

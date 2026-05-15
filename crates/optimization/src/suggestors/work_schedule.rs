@@ -19,7 +19,10 @@
 //!   active simultaneously (parallel machines / multi-resource).
 
 use async_trait::async_trait;
-use converge_pack::{AgentEffect, Context, ContextKey, ProposedFact, Suggestor};
+use converge_pack::ProvenanceSource;
+use converge_pack::{
+    AgentEffect, Context, ContextKey, DiagnosticPayload, FactPayload, ProposedFact, Suggestor,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::scheduling::{Interval, SchedulingProblem, list_schedule};
@@ -27,7 +30,8 @@ use crate::scheduling::{Interval, SchedulingProblem, list_schedule};
 // ── Request ───────────────────────────────────────────────────────────────────
 
 /// Seed under [`ContextKey::Seeds`] with id prefix `"schedule-request:"`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ScheduleRequest {
     pub id: String,
     pub tasks: Vec<ScheduleTask>,
@@ -35,8 +39,14 @@ pub struct ScheduleRequest {
     pub capacity: Option<i64>,
 }
 
+impl FactPayload for ScheduleRequest {
+    const FAMILY: &'static str = "converge.optimization.schedule.request";
+    const VERSION: u16 = 1;
+}
+
 /// A single task to be scheduled.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ScheduleTask {
     pub label: String,
     pub earliest_start: i64,
@@ -47,7 +57,8 @@ pub struct ScheduleTask {
 // ── Plan (output) ─────────────────────────────────────────────────────────────
 
 /// The schedule produced by the suggestor.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SchedulePlan {
     pub request_id: String,
     pub scheduled: Vec<ScheduledTask>,
@@ -56,7 +67,13 @@ pub struct SchedulePlan {
     pub efficiency: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+impl FactPayload for SchedulePlan {
+    const FAMILY: &'static str = "converge.optimization.schedule.plan";
+    const VERSION: u16 = 1;
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ScheduledTask {
     pub label: String,
     pub start: i64,
@@ -89,9 +106,9 @@ impl Suggestor for WorkScheduleSuggestor {
     fn accepts(&self, ctx: &dyn Context) -> bool {
         ctx.get(ContextKey::Seeds).iter().any(|f| {
             f.id().as_str().starts_with(REQUEST_PREFIX)
-                && match serde_json::from_str::<ScheduleRequest>(f.content()) {
-                    Ok(_) => !plan_exists(ctx, req_id(f.id().as_str())),
-                    Err(_) => !error_exists(ctx, f.id().as_str()),
+                && match f.payload::<ScheduleRequest>() {
+                    Some(_) => !plan_exists(ctx, req_id(f.id().as_str())),
+                    None => !error_exists(ctx, f.id().as_str()),
                 }
         })
     }
@@ -104,37 +121,40 @@ impl Suggestor for WorkScheduleSuggestor {
             .iter()
             .filter(|f| f.id().as_str().starts_with(REQUEST_PREFIX))
         {
-            match serde_json::from_str::<ScheduleRequest>(fact.content()) {
-                Ok(req) => {
+            match fact.payload::<ScheduleRequest>() {
+                Some(req) => {
                     if plan_exists(ctx, req_id(fact.id().as_str())) {
                         continue;
                     }
-                    let plan = solve(&req);
+                    let plan = solve(req);
                     proposals.push(
                         ProposedFact::new(
                             ContextKey::Strategies,
                             format!("{}{}", PLAN_PREFIX, plan.request_id),
-                            serde_json::to_string(&plan).unwrap_or_default(),
-                            self.name(),
+                            plan.clone(),
+                            self.name().to_string(),
                         )
                         .with_confidence(plan.efficiency.clamp(0.0, 1.0)),
                     );
                 }
-                Err(e) => {
+                None => {
                     if error_exists(ctx, fact.id().as_str()) {
                         continue;
                     }
-                    let diag = serde_json::json!({
-                        "request_fact_id": fact.id(),
-                        "message": "malformed schedule request",
-                        "error": e.to_string(),
-                    });
                     proposals.push(
                         ProposedFact::new(
                             ContextKey::Diagnostic,
                             format!("{}{}", ERROR_PREFIX, fact.id()),
-                            diag.to_string(),
-                            self.name(),
+                            DiagnosticPayload::new(
+                                self.name(),
+                                format!(
+                                    "malformed schedule request '{}': expected {} v{} payload",
+                                    fact.id(),
+                                    ScheduleRequest::FAMILY,
+                                    ScheduleRequest::VERSION
+                                ),
+                            ),
+                            self.name().to_string(),
                         )
                         .with_confidence(1.0),
                     );
@@ -147,6 +167,10 @@ impl Suggestor for WorkScheduleSuggestor {
         } else {
             AgentEffect::with_proposals(proposals)
         }
+    }
+
+    fn provenance(&self) -> &'static str {
+        super::CONVERGE_OPTIMIZATION_PROVENANCE.as_str()
     }
 }
 
@@ -242,9 +266,10 @@ fn error_exists(ctx: &dyn Context, fact_id: &str) -> bool {
 mod tests {
     use super::*;
     use converge_core::{ContextState, Engine};
+    use converge_pack::TextPayload;
 
-    fn req_json(id: &str, tasks: Vec<(&str, i64, i64, i64)>, capacity: Option<i64>) -> String {
-        serde_json::to_string(&ScheduleRequest {
+    fn req(id: &str, tasks: Vec<(&str, i64, i64, i64)>, capacity: Option<i64>) -> ScheduleRequest {
+        ScheduleRequest {
             id: id.to_string(),
             tasks: tasks
                 .into_iter()
@@ -256,8 +281,7 @@ mod tests {
                 })
                 .collect(),
             capacity,
-        })
-        .unwrap()
+        }
     }
 
     #[tokio::test]
@@ -266,10 +290,10 @@ mod tests {
         engine.register_suggestor(WorkScheduleSuggestor);
 
         let mut ctx = ContextState::new();
-        ctx.add_input(
+        ctx.add_proposal(ProposedFact::new(
             ContextKey::Seeds,
             "schedule-request:r1",
-            req_json(
+            req(
                 "r1",
                 vec![
                     ("design", 0, 30, 5),
@@ -278,13 +302,14 @@ mod tests {
                 ],
                 None,
             ),
-        )
+            "test",
+        ))
         .unwrap();
 
         let result = engine.run(ctx).await.unwrap();
         let facts = result.context.get(ContextKey::Strategies);
         assert_eq!(facts.len(), 1);
-        let plan: SchedulePlan = serde_json::from_str(facts[0].content()).unwrap();
+        let plan = facts[0].require_payload::<SchedulePlan>().unwrap();
         assert_eq!(plan.makespan, 16, "3 sequential tasks: 5+8+3=16");
         assert_eq!(plan.scheduled.len(), 3);
     }
@@ -295,11 +320,12 @@ mod tests {
         engine.register_suggestor(WorkScheduleSuggestor);
 
         let mut ctx = ContextState::new();
-        ctx.add_input(
+        ctx.add_proposal(ProposedFact::new(
             ContextKey::Seeds,
             "schedule-request:r1",
-            req_json("r1", vec![("a", 0, 20, 5), ("b", 0, 20, 3)], None),
-        )
+            req("r1", vec![("a", 0, 20, 5), ("b", 0, 20, 3)], None),
+            "test",
+        ))
         .unwrap();
 
         let first = engine.run(ctx).await.unwrap();
@@ -318,8 +344,13 @@ mod tests {
         engine.register_suggestor(WorkScheduleSuggestor);
 
         let mut ctx = ContextState::new();
-        ctx.add_input(ContextKey::Seeds, "schedule-request:bad", "not-json")
-            .unwrap();
+        ctx.add_proposal(ProposedFact::new(
+            ContextKey::Seeds,
+            "schedule-request:bad",
+            TextPayload::new("not a schedule request"),
+            "test",
+        ))
+        .unwrap();
 
         let result = engine.run(ctx).await.unwrap();
         assert_eq!(result.context.get(ContextKey::Diagnostic).len(), 1);

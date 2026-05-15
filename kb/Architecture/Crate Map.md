@@ -38,10 +38,10 @@ versions, dependency versions, lints, and build profiles.
 - `converge-kernel` owns the embedding surface above `converge-core`.
 - Domain packs and worked examples live in **atelier** (`~/dev/atelier`).
 - `converge-optimization` still joins the convergence loop by implementing `Suggestor`.
-- Knowledge suggestors live in **mnemos** (`~/dev/extensions/mnemos`).
-- Analytics suggestors live in **prism** (`~/dev/extensions/prism`).
-- Policy suggestors and Cedar engine live in **arbiter** (`~/dev/extensions/arbiter`).
-- Source-specific connector ports live in **embassy** (`~/dev/extensions/embassy`).
+- Knowledge suggestors live in **mnemos** (`~/dev/reflective/stack/mosaic-extensions/mnemos`).
+- Analytics suggestors live in **prism** (`~/dev/reflective/stack/mosaic-extensions/prism`).
+- Policy suggestors and Cedar engine live in **arbiter** (`~/dev/reflective/stack/mosaic-extensions/arbiter`).
+- Source-specific connector ports live in **embassy** (`~/dev/reflective/stack/mosaic-extensions/embassy`).
 - Provider vendor adapters live in **manifold**; the in-repo
   `converge-provider-adapters` staging crate was removed after the physical
   move completed (see [[Planning/Manifold Provider Tool Migration]]).

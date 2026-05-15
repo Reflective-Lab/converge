@@ -25,10 +25,15 @@ impl PackRegistry {
     /// Create registry with all built-in packs
     pub fn with_builtins() -> Self {
         let mut registry = Self::new();
+        registry.register(Arc::new(super::assignment_pack::AssignmentPack));
+        registry.register(Arc::new(super::facility_location::FacilityLocationPack));
+        registry.register(Arc::new(super::job_shop_scheduling::JobShopSchedulingPack));
         registry.register(Arc::new(super::meeting_scheduler::MeetingSchedulerPack));
         registry.register(Arc::new(
             super::inventory_rebalancing::InventoryRebalancingPack,
         ));
+        registry.register(Arc::new(super::network_flow::NetworkFlowPack));
+        registry.register(Arc::new(super::vehicle_routing::VehicleRoutingPack));
         registry
     }
 
@@ -97,8 +102,13 @@ mod tests {
     fn test_builtins() {
         let registry = PackRegistry::with_builtins();
         assert!(!registry.is_empty());
+        assert!(registry.contains("task-assignment"));
+        assert!(registry.contains("facility-location"));
+        assert!(registry.contains("job-shop-scheduling"));
         assert!(registry.contains("meeting-scheduler"));
         assert!(registry.contains("inventory-rebalancing"));
+        assert!(registry.contains("network-flow"));
+        assert!(registry.contains("vehicle-routing"));
     }
 
     #[test]
@@ -113,8 +123,13 @@ mod tests {
     fn test_list_packs() {
         let registry = PackRegistry::with_builtins();
         let names = registry.list();
+        assert!(names.contains(&"task-assignment"));
+        assert!(names.contains(&"facility-location"));
+        assert!(names.contains(&"job-shop-scheduling"));
         assert!(names.contains(&"meeting-scheduler"));
         assert!(names.contains(&"inventory-rebalancing"));
+        assert!(names.contains(&"network-flow"));
+        assert!(names.contains(&"vehicle-routing"));
     }
 
     #[test]

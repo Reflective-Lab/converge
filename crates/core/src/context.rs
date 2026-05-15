@@ -13,7 +13,8 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 // Re-export canonical types from converge-pack
 pub use converge_pack::{
-    ContextFact, ContextKey, FactId, ProposalId, ProposedFact, Timestamp, ValidationError,
+    ContextFact, ContextKey, FactId, FactPayload, ProposalId, ProposedFact, TextPayload, Timestamp,
+    ValidationError,
 };
 
 /// Durable, verified context snapshot for storage adapters.
@@ -21,7 +22,7 @@ pub use converge_pack::{
 /// This is the supported rehydration boundary for embedders such as Helms.
 /// Storage persists this value and later calls [`ContextState::from_snapshot`].
 /// It must not reconstruct facts through promotion constructors.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ContextSnapshot {
     version: u64,
@@ -153,7 +154,7 @@ pub(crate) fn new_fact(
     new_fact_with_promotion(
         key,
         id,
-        content,
+        TextPayload::new(content),
         converge_pack::FactPromotionRecord::new_projection(
             "engine-projection",
             converge_pack::ContentHash::zero(),
@@ -178,11 +179,11 @@ pub(crate) fn new_fact(
 pub(crate) fn new_fact_with_promotion(
     key: ContextKey,
     id: impl Into<FactId>,
-    content: impl Into<String>,
+    payload: impl FactPayload + PartialEq,
     promotion_record: converge_pack::FactPromotionRecord,
     created_at: impl Into<Timestamp>,
 ) -> ContextFact {
-    ContextFact::new_projection(key, id, content, promotion_record, created_at)
+    ContextFact::new_projection(key, id, payload, promotion_record, created_at)
 }
 
 /// The shared context for a Converge job.
@@ -291,20 +292,17 @@ impl ContextState {
     /// Returns `Ok(true)` if the proposal was new.
     /// Returns `Ok(false)` if an identical proposal is already pending.
     pub fn add_proposal(&mut self, proposal: ProposedFact) -> Result<bool, ConvergeError> {
-        let key = proposal.key;
+        let key = proposal.key();
         let proposals = self.proposals.entry(key).or_default();
 
-        if let Some(existing) = proposals.iter().find(|p| p.id == proposal.id) {
-            if existing.content == proposal.content
-                && existing.confidence() == proposal.confidence()
-                && existing.provenance == proposal.provenance
-            {
+        if let Some(existing) = proposals.iter().find(|p| p.id() == proposal.id()) {
+            if existing == &proposal {
                 return Ok(false);
             }
             return Err(ConvergeError::Conflict {
-                id: proposal.id.to_string(),
-                existing: existing.content.clone(),
-                new: proposal.content,
+                id: proposal.id().to_string(),
+                existing: format!("{existing:?}"),
+                new: format!("{proposal:?}"),
                 context: Box::new(self.clone()),
             });
         }
@@ -331,7 +329,12 @@ impl ContextState {
         content: impl Into<String>,
         provenance: impl Into<String>,
     ) -> Result<bool, ConvergeError> {
-        self.add_proposal(ProposedFact::new(key, id, content, provenance))
+        self.add_proposal(ProposedFact::new(
+            key,
+            id,
+            TextPayload::new(content),
+            converge_pack::Provenance::new(provenance.into()),
+        ))
     }
 
     /// Stages a typed external observation as a proposal.
@@ -375,13 +378,13 @@ impl ContextState {
         let facts = self.facts.entry(key).or_default();
 
         if let Some(existing) = facts.iter().find(|f| f.id() == fact.id()) {
-            if existing.content() == fact.content() {
+            if existing == &fact {
                 return Ok(false);
             }
             return Err(ConvergeError::Conflict {
                 id: fact.id().to_string(),
-                existing: existing.content().to_string(),
-                new: fact.content().to_string(),
+                existing: format!("{existing:?}"),
+                new: format!("{fact:?}"),
                 context: Box::new(self.clone()),
             });
         }
@@ -462,8 +465,8 @@ mod tests {
                 id, existing, new, ..
             }) => {
                 assert_eq!(id, "fact-1");
-                assert_eq!(existing, "version A");
-                assert_eq!(new, "version B");
+                assert!(existing.contains("ContextFact"));
+                assert!(new.contains("ContextFact"));
             }
             _ => panic!("Expected Conflict error, got {result:?}"),
         }
@@ -472,8 +475,12 @@ mod tests {
     #[test]
     fn adding_proposal_tracks_pending_state() {
         let mut ctx = ContextState::new();
-        let proposal =
-            ProposedFact::new(ContextKey::Hypotheses, "hyp-1", "market is growing", "test");
+        let proposal = ProposedFact::new(
+            ContextKey::Hypotheses,
+            "hyp-1",
+            TextPayload::new("market is growing"),
+            "test",
+        );
 
         assert!(ctx.add_proposal(proposal).unwrap());
         assert!(ctx.has_pending_proposals());
@@ -497,8 +504,8 @@ mod tests {
                 id, existing, new, ..
             }) => {
                 assert_eq!(id, "seed-1");
-                assert_eq!(existing, "version A");
-                assert_eq!(new, "version B");
+                assert!(existing.contains("ProposedFact"));
+                assert!(new.contains("ProposedFact"));
             }
             _ => panic!("Expected Conflict error, got {result:?}"),
         }
@@ -519,7 +526,7 @@ mod tests {
         ctx.add_proposal(ProposedFact::new(
             ContextKey::Hypotheses,
             "hyp-1",
-            "staged hypothesis",
+            TextPayload::new("staged hypothesis"),
             "test",
         ))
         .unwrap();
@@ -530,8 +537,8 @@ mod tests {
         assert!(restored.dirty_keys().is_empty());
         assert_eq!(restored.get(ContextKey::Seeds)[0].id(), "seed-1");
         assert_eq!(
-            restored.get(ContextKey::Seeds)[0].content(),
-            "persisted seed"
+            restored.get(ContextKey::Seeds)[0].text(),
+            Some("persisted seed")
         );
         assert_eq!(
             restored.get_proposals(ContextKey::Hypotheses)[0].id(),

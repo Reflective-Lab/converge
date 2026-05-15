@@ -12,6 +12,9 @@ use converge_optimization::packs::Pack;
 use converge_optimization::packs::facility_location::{
     Customer, Facility, FacilityLocationInput, FacilityLocationOutput, FacilityLocationPack,
 };
+use converge_optimization::packs::job_shop_scheduling::{
+    Job, JobShopInput, JobShopOutput, JobShopSchedulingPack, Operation,
+};
 use converge_optimization::packs::network_flow::{
     NetworkEdge, NetworkFlowInput, NetworkFlowOutput, NetworkFlowPack,
 };
@@ -226,6 +229,86 @@ fn network_flow_rejects_source_equals_sink() {
         .validate_inputs(&bad)
         .expect_err("source == sink is invalid");
     assert!(err.to_string().to_lowercase().contains("source"));
+}
+
+// -- Job Shop Scheduling -----------------------------------------------------
+
+#[test]
+fn job_shop_pack_schedules_precedence_and_machines() {
+    let input = JobShopInput {
+        machines: 2,
+        jobs: vec![
+            Job {
+                operations: vec![
+                    Operation {
+                        machine: 0,
+                        duration: 3,
+                    },
+                    Operation {
+                        machine: 1,
+                        duration: 2,
+                    },
+                ],
+            },
+            Job {
+                operations: vec![
+                    Operation {
+                        machine: 1,
+                        duration: 4,
+                    },
+                    Operation {
+                        machine: 0,
+                        duration: 1,
+                    },
+                ],
+            },
+        ],
+    };
+
+    let pack = JobShopSchedulingPack;
+    pack.validate_inputs(&serde_json::to_value(&input).unwrap())
+        .expect("input validates");
+
+    let spec = spec_for("jsp-two-two", &input);
+    let result = pack.solve(&spec).expect("solve succeeds");
+    let out: JobShopOutput = result.plan.plan_as().expect("payload deserializes");
+
+    let total_ops: usize = input.jobs.iter().map(|job| job.operations.len()).sum();
+    assert_eq!(out.schedule.len(), total_ops);
+    assert!(out.makespan > 0);
+
+    for job_idx in 0..input.jobs.len() {
+        let mut ops: Vec<_> = out
+            .schedule
+            .iter()
+            .filter(|scheduled| scheduled.job == job_idx)
+            .collect();
+        ops.sort_by_key(|scheduled| scheduled.operation);
+        for pair in ops.windows(2) {
+            let prev = pair[0];
+            let next = pair[1];
+            let prev_duration = input.jobs[prev.job].operations[prev.operation].duration;
+            assert!(
+                prev.start + prev_duration <= next.start,
+                "job precedence must be respected"
+            );
+        }
+    }
+}
+
+#[test]
+fn job_shop_rejects_invalid_machine_reference() {
+    let pack = JobShopSchedulingPack;
+    let bad = json!({
+        "machines": 1,
+        "jobs": [{
+            "operations": [{ "machine": 99, "duration": 1 }]
+        }]
+    });
+    let err = pack
+        .validate_inputs(&bad)
+        .expect_err("invalid machine reference is rejected");
+    assert!(err.to_string().to_lowercase().contains("machine"));
 }
 
 // ── Vehicle Routing ──────────────────────────────────────────────────────────

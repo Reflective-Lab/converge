@@ -303,25 +303,29 @@ impl SuccessCriterion {
 
                 // Check if any evaluation is positive
                 evaluations.iter().any(|e| {
-                    e.content().to_lowercase().contains("viable")
-                        || e.content().to_lowercase().contains("positive")
-                        || e.content().to_lowercase().contains("recommended")
+                    let content = e.text().unwrap_or("").to_lowercase();
+                    content.contains("viable")
+                        || content.contains("positive")
+                        || content.contains("recommended")
                 })
             }
             Self::ValidScheduleFound => ctx.has(ContextKey::Strategies),
             Self::AllTasksAllocated => {
                 // Check constraints are satisfied (no unallocated tasks)
-                !ctx.get(ContextKey::Constraints)
-                    .iter()
-                    .any(|c| c.content().to_lowercase().contains("unallocated"))
+                !ctx.get(ContextKey::Constraints).iter().any(|c| {
+                    c.text()
+                        .unwrap_or("")
+                        .to_lowercase()
+                        .contains("unallocated")
+                })
             }
             Self::MinimumStrategies(n) => ctx.get(ContextKey::Strategies).len() >= *n,
             Self::AllEvaluationsPositive => {
                 let evaluations = ctx.get(ContextKey::Evaluations);
                 !evaluations.is_empty()
                     && evaluations.iter().all(|e| {
-                        !e.content().to_lowercase().contains("negative")
-                            && !e.content().to_lowercase().contains("rejected")
+                        let content = e.text().unwrap_or("").to_lowercase();
+                        !content.contains("negative") && !content.contains("rejected")
                     })
             }
             Self::Custom(_) => {
@@ -794,15 +798,20 @@ mod tests {
             .iter()
             .find(|f| f.id().as_str().starts_with("intent:"))
             .unwrap();
-        assert!(intent_fact.content().contains("growth_strategy"));
-        assert!(intent_fact.content().contains("increase_demand"));
+        let intent_text = intent_fact.text().unwrap_or_default();
+        assert!(intent_text.contains("growth_strategy"));
+        assert!(intent_text.contains("increase_demand"));
 
         // Check constraint fact
         let constraint_fact = facts
             .iter()
             .find(|f| f.key() == ContextKey::Constraints)
             .unwrap();
-        assert!(constraint_fact.content().contains("budget=1M"));
+        assert!(
+            constraint_fact
+                .text()
+                .is_some_and(|text| text.contains("budget=1M"))
+        );
     }
 
     #[test]

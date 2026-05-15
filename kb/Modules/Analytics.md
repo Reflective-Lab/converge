@@ -5,7 +5,7 @@ source: mixed
 # Analytics Module
 
 > **Extracted to extension on 2026-05-05.** Analytics now lives in the
-> **prism** extension (`~/dev/extensions/prism`, formerly `converge-analytics`).
+> **prism** extension (`~/dev/reflective/stack/mosaic-extensions/prism`, formerly `converge-analytics`).
 > Foundation no longer ships Polars/Burn ML pipelines or analytics packs. See
 > [[Architecture/Extension Topology]].
 

@@ -1,6 +1,8 @@
 // Additional negative tests for edge cases.
 
-use converge_core::{AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor};
+use converge_core::{
+    AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor, TextPayload,
+};
 
 #[tokio::test]
 async fn confidence_exactly_zero_accepted() {
@@ -18,9 +20,18 @@ async fn confidence_exactly_zero_accepted() {
         }
         async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
             AgentEffect::with_proposal(
-                ProposedFact::new(ContextKey::Seeds, "zero-1", "zero confidence", "zero-conf")
-                    .with_confidence(0.0),
+                ProposedFact::new(
+                    ContextKey::Seeds,
+                    "zero-1",
+                    TextPayload::new("zero confidence"),
+                    "zero-conf",
+                )
+                .with_confidence(0.0),
             )
+        }
+
+        fn provenance(&self) -> &'static str {
+            "test-suggestor"
         }
     }
     let mut engine = Engine::new();
@@ -51,14 +62,23 @@ async fn confidence_slightly_above_one_clamped_and_accepted() {
         fn dependencies(&self) -> &[ContextKey] {
             &[]
         }
-        fn accepts(&self, _ctx: &dyn converge_core::Context) -> bool {
-            true
+        fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
+            !ctx.has(ContextKey::Seeds)
         }
         async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
             AgentEffect::with_proposal(
-                ProposedFact::new(ContextKey::Seeds, "over-1", "over confidence", "over-conf")
-                    .with_confidence(1.0001),
+                ProposedFact::new(
+                    ContextKey::Seeds,
+                    "over-1",
+                    TextPayload::new("over confidence"),
+                    "over-conf",
+                )
+                .with_confidence(1.0001),
             )
+        }
+
+        fn provenance(&self) -> &'static str {
+            "test-suggestor"
         }
     }
     let mut engine = Engine::new();
@@ -84,6 +104,10 @@ async fn suggestor_that_never_accepts_produces_no_facts() {
         async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
             panic!("should never be called")
         }
+
+        fn provenance(&self) -> &'static str {
+            "test-suggestor"
+        }
     }
     let mut engine = Engine::new();
     engine.register_suggestor(NeverAccepts);
@@ -107,9 +131,18 @@ async fn empty_proposal_id_still_works() {
         }
         async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
             AgentEffect::with_proposal(
-                ProposedFact::new(ContextKey::Seeds, "", "has empty id", "empty-id")
-                    .with_confidence(0.8),
+                ProposedFact::new(
+                    ContextKey::Seeds,
+                    "",
+                    TextPayload::new("has empty id"),
+                    "empty-id",
+                )
+                .with_confidence(0.8),
             )
+        }
+
+        fn provenance(&self) -> &'static str {
+            "test-suggestor"
         }
     }
     let mut engine = Engine::new();

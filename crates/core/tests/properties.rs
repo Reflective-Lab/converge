@@ -4,7 +4,7 @@
 
 use converge_core::suggestors::SeedSuggestor;
 use converge_core::{
-    AgentEffect, Budget, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+    AgentEffect, Budget, ContextKey, ContextState, Engine, ProposedFact, Suggestor, TextPayload,
 };
 use proptest::prelude::*;
 
@@ -65,9 +65,13 @@ proptest! {
                 AgentEffect::with_proposal(ProposedFact::new(
                     ContextKey::Seeds,
                     format!("c{}-{n}", self.0),
-                    format!("value from suggestor {}", self.0),
+                    TextPayload::new(format!("value from suggestor {}", self.0)),
                     "counting",
                 ))
+            }
+
+            fn provenance(&self) -> &'static str {
+                "test-suggestor"
             }
         }
 
@@ -113,9 +117,13 @@ async fn fact_count_monotonically_increases() {
             AgentEffect::with_proposal(ProposedFact::new(
                 ContextKey::Seeds,
                 format!("t{}-{n}", self.id),
-                "tracked value",
+                TextPayload::new("tracked value"),
                 "tracked",
             ))
+        }
+
+        fn provenance(&self) -> &'static str {
+            "test-suggestor"
         }
     }
 

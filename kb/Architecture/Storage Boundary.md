@@ -71,7 +71,7 @@ Closed for v3.8. `converge-storage` now carries object-storage contract types
 only. `converge-experience` carries in-memory test support and observer
 plumbing only. Concrete local/S3/GCS object-store builders, SurrealDB and
 LanceDB experience stores, and the generic LanceDB vector adapter live in
-`~/dev/extensions/manifold-adapters`.
+`~/dev/reflective/stack/mosaic-extensions/manifold-adapters`.
 
 Prism consumes only the `converge-storage` object-store contract; it no longer
 depends on foundation-owned local storage builders. Runway remains the place to

@@ -6,7 +6,7 @@ use converge_optimization::packs::graph_partitioning::GraphPartitioningPack;
 use converge_optimization::packs::job_shop_scheduling::JobShopSchedulingPack;
 use converge_optimization::packs::staff_rostering::StaffRosteringPack;
 use converge_optimization::packs::traveling_salesman::TravelingSalesmanPack;
-use converge_pack::PackSuggestor;
+use converge_pack::{PackInputPayload, PackPlanPayload, PackSuggestor, ProposedFact};
 
 fn budget() -> Budget {
     Budget {
@@ -19,6 +19,7 @@ async fn run_with_input<P: converge_pack::Pack + 'static>(
     pack: P,
     input: serde_json::Value,
 ) -> ConvergeResult {
+    let pack_name = pack.name();
     let mut engine = Engine::with_budget(budget());
     engine.register_suggestor(PackSuggestor::new(
         pack,
@@ -26,8 +27,20 @@ async fn run_with_input<P: converge_pack::Pack + 'static>(
         ContextKey::Strategies,
     ));
     let mut ctx = ContextState::new();
-    let _ = ctx.add_input(ContextKey::Seeds, "input-1", input.to_string());
+    let _ = ctx.add_proposal(ProposedFact::new(
+        ContextKey::Seeds,
+        "input-1",
+        PackInputPayload::new(pack_name, input),
+        "test",
+    ));
     engine.run(ctx).await.expect("should converge")
+}
+
+fn strategy_value(result: &ConvergeResult) -> &serde_json::Value {
+    let payload = result.context.get(ContextKey::Strategies)[0]
+        .require_payload::<PackPlanPayload>()
+        .expect("PackSuggestor emits typed pack plan payload");
+    &payload.plan
 }
 
 #[tokio::test]
@@ -51,8 +64,7 @@ async fn test_constraint_programming_formation() {
     let strategies = result.context.get(ContextKey::Strategies);
     assert_eq!(strategies.len(), 1);
 
-    let v: serde_json::Value = serde_json::from_str(strategies[0].content()).unwrap();
-    let plan = &v["plan"];
+    let plan = strategy_value(&result);
     assert!(plan["feasible"].as_bool().unwrap());
 
     let assignments = plan["assignments"].as_array().unwrap();
@@ -85,8 +97,7 @@ async fn test_job_shop_scheduling_formation() {
     let strategies = result.context.get(ContextKey::Strategies);
     assert_eq!(strategies.len(), 1);
 
-    let v: serde_json::Value = serde_json::from_str(strategies[0].content()).unwrap();
-    let payload = &v["plan"];
+    let payload = strategy_value(&result);
     let makespan = payload["makespan"].as_u64().unwrap();
     assert!(makespan > 0, "makespan must be positive");
 
@@ -115,8 +126,7 @@ async fn test_staff_rostering_formation() {
     let strategies = result.context.get(ContextKey::Strategies);
     assert_eq!(strategies.len(), 1);
 
-    let v: serde_json::Value = serde_json::from_str(strategies[0].content()).unwrap();
-    let payload = &v["plan"];
+    let payload = strategy_value(&result);
     let assignments = payload["assignments"].as_array().unwrap();
     let unassigned = payload["unassigned_shifts"].as_array().unwrap();
 
@@ -146,8 +156,7 @@ async fn test_traveling_salesman_formation() {
     let strategies = result.context.get(ContextKey::Strategies);
     assert_eq!(strategies.len(), 1);
 
-    let v: serde_json::Value = serde_json::from_str(strategies[0].content()).unwrap();
-    let payload = &v["plan"];
+    let payload = strategy_value(&result);
     let tour = payload["tour"].as_array().unwrap();
     let distance = payload["total_distance"].as_f64().unwrap();
 
@@ -181,8 +190,7 @@ async fn test_graph_partitioning_formation() {
     let strategies = result.context.get(ContextKey::Strategies);
     assert_eq!(strategies.len(), 1);
 
-    let v: serde_json::Value = serde_json::from_str(strategies[0].content()).unwrap();
-    let payload = &v["plan"];
+    let payload = strategy_value(&result);
     let partition = payload["partition"].as_array().unwrap();
     let cut_weight = payload["cut_weight"].as_f64().unwrap();
 

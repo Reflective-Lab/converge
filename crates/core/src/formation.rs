@@ -3,6 +3,11 @@
 
 use serde::{Deserialize, Serialize};
 
+// `FormationKind` was moved to `converge-pack` so suggestors can read it
+// from their `Context` without forcing pack to depend on core. Core still
+// owns the full `Formation` configuration enum below.
+pub use converge_pack::FormationKind;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Formation {
@@ -28,26 +33,6 @@ impl Formation {
             Self::Scored(f) => &f.candidate_names,
             Self::Deliberated(f) => &f.candidate_names,
             Self::OpenClaw(f) => &f.candidate_names,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum FormationKind {
-    Static,
-    Scored,
-    Deliberated,
-    OpenClaw,
-}
-
-impl std::fmt::Display for FormationKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Static => write!(f, "static"),
-            Self::Scored => write!(f, "scored"),
-            Self::Deliberated => write!(f, "deliberated"),
-            Self::OpenClaw => write!(f, "open_claw"),
         }
     }
 }

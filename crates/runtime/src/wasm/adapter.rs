@@ -42,7 +42,11 @@ pub fn context_to_guest(ctx: &dyn converge_core::Context, cycle: u32) -> GuestCo
                 .iter()
                 .map(|f| GuestFact {
                     id: f.id().to_string(),
-                    content: f.content().to_string(),
+                    content: f.text().map(str::to_string).unwrap_or_else(|| {
+                        f.to_wire()
+                            .map(|wire| wire.payload.payload.to_string())
+                            .unwrap_or_default()
+                    }),
                 })
                 .collect();
             facts.insert(format!("{key:?}"), guest_facts);

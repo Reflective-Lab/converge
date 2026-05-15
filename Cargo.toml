@@ -27,7 +27,7 @@ default-members = [
 ]
 
 [workspace.package]
-version = "3.8.1"
+version = "3.9.0"
 edition = "2024"
 rust-version = "1.94.0"
 license = "MIT"
@@ -35,17 +35,17 @@ repository = "https://github.com/Reflective-Lab/converge"
 
 [workspace.dependencies]
 # Internal crates — path (local dev) + version (crates.io publish)
-converge-model = { path = "crates/model", version = "3.8.1" }
-converge-pack = { path = "crates/pack", version = "3.8.1", features = ["strum"] }
-converge-protocol = { path = "crates/protocol", version = "3.8.1" }
-converge-kernel = { path = "crates/kernel", version = "3.8.1" }
-converge-client = { path = "crates/client", version = "3.8.1" }
-converge-core = { path = "crates/core", version = "3.8.1" }
-converge-provider = { path = "crates/provider", version = "3.8.1" }
-converge-experience = { path = "crates/experience", version = "3.8.1" }
-converge-optimization = { path = "crates/optimization", version = "3.8.1" }
-converge-runtime = { path = "crates/runtime", version = "3.8.1" }
-converge-storage = { path = "crates/storage", version = "3.8.1", default-features = false }
+converge-model = { path = "crates/model", version = "3.9.0" }
+converge-pack = { path = "crates/pack", version = "3.9.0", features = ["strum"] }
+converge-protocol = { path = "crates/protocol", version = "3.9.0" }
+converge-kernel = { path = "crates/kernel", version = "3.9.0" }
+converge-client = { path = "crates/client", version = "3.9.0" }
+converge-core = { path = "crates/core", version = "3.9.0" }
+converge-provider = { path = "crates/provider", version = "3.9.0" }
+converge-experience = { path = "crates/experience", version = "3.9.0" }
+converge-optimization = { path = "crates/optimization", version = "3.9.0" }
+converge-runtime = { path = "crates/runtime", version = "3.9.0" }
+converge-storage = { path = "crates/storage", version = "3.9.0", default-features = false }
 
 # Shared dependencies
 anyhow = "1"

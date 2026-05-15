@@ -11,19 +11,24 @@ use converge_model::{
 
 #[test]
 fn can_create_proposed_fact_from_model_crate() {
-    use converge_model::{ContextKey, ProposedFact, ValidationError};
+    use converge_model::{ContextKey, ProposedFact, TextPayload, ValidationError};
 
     let fact = ProposedFact::new(
         ContextKey::Hypotheses,
         "fact-1",
-        "The market is growing",
+        TextPayload::new("The market is growing"),
         "observation-1",
     );
     assert_eq!(fact.id, "fact-1");
     assert_eq!(fact.confidence(), 1.0);
 
-    let with_conf =
-        ProposedFact::new(ContextKey::Strategies, "f-2", "content", "obs-2").with_confidence(0.8);
+    let with_conf = ProposedFact::new(
+        ContextKey::Strategies,
+        "f-2",
+        TextPayload::new("content"),
+        "obs-2",
+    )
+    .with_confidence(0.8);
     assert!((with_conf.confidence() - 0.8).abs() < f64::EPSILON);
 
     let err = ValidationError {

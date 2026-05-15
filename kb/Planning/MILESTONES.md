@@ -1,6 +1,6 @@
 # Milestones
 
-> See `~/dev/work/EPIC.md` for the coarse-grained outcomes these milestones advance.
+> See `~/dev/reflective/stack/bedrock-platform/EPIC.md` for the coarse-grained outcomes these milestones advance.
 
 > Architecture follow-up for crate boundaries: [[Architecture/Extension Topology]] and [[Planning/v3.8 Foundation]].
 
@@ -44,10 +44,10 @@ Canonical plan: [[Planning/v3.8 Foundation]].
 - [x] Move `crates/domain` and `examples/` to the **atelier** showcase repo
       (`~/dev/atelier`) on 2026-05-05; single workspace, will also receive
       contributions from organism and axiom over time.
-- [x] Relocate **ferrox** from `~/dev/work/ferrox` to `~/dev/extensions/ferrox`
+- [x] Relocate **ferrox** from `~/dev/reflective/stack/mosaic-extensions/ferrox-solvers` to `~/dev/reflective/stack/mosaic-extensions/ferrox`
       to match the extension naming.
 - [x] Establish **embassy** as the extension home for source-specific connector
-      ports such as LinkedIn (`~/dev/extensions/embassy`, 2026-05-05).
+      ports such as LinkedIn (`~/dev/reflective/stack/mosaic-extensions/embassy`, 2026-05-05).
 - [x] Decide storage boundary: storage is a port; runtime persistence is
       host-wired; reusable database adapters live in extensions; Runway owns
       operations and deployment assembly ([[Architecture/Storage Boundary]],
@@ -68,7 +68,7 @@ Canonical plan: [[Planning/v3.8 Foundation]].
 
 ## Moved: OR-Tools Native Solver Wiring → ferrox
 Moved: 2026-04-22 — C++ FFI dependency doesn't belong in a pure Rust platform crate.
-OR-Tools integration now lives in `~/dev/extensions/ferrox`. Converge pack solvers remain on the
+OR-Tools integration now lives in `~/dev/reflective/stack/mosaic-extensions/ferrox`. Converge pack solvers remain on the
 current backtracking/nearest-neighbor heuristics until ferrox exposes a Rust-native interface
 that Converge can consume without a C++ toolchain dependency.
 

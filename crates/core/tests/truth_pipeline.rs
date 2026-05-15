@@ -4,7 +4,9 @@
 // Prove: the engine promotes through the gate, not directly.
 
 use converge_core::suggestors::{ReactOnceSuggestor, SeedSuggestor};
-use converge_core::{AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor};
+use converge_core::{
+    AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor, TextPayload,
+};
 
 // ── End-to-end: suggestor → proposal → engine promotion → fact ──
 
@@ -22,7 +24,7 @@ async fn single_suggestor_proposal_promoted_to_fact() {
     let facts = result.context.get(ContextKey::Seeds);
     assert_eq!(facts.len(), 1);
     assert_eq!(facts[0].id(), "seed-1");
-    assert_eq!(facts[0].content(), "initial observation");
+    assert_eq!(facts[0].text(), Some("initial observation"));
 }
 
 #[tokio::test]
@@ -62,9 +64,13 @@ async fn three_stage_pipeline_converges() {
             AgentEffect::with_proposal(ProposedFact::new(
                 ContextKey::Strategies,
                 "strategy-1",
-                "recommended action",
-                self.name(),
+                TextPayload::new("recommended action"),
+                self.name().to_string(),
             ))
+        }
+
+        fn provenance(&self) -> &'static str {
+            "test-suggestor"
         }
     }
 
@@ -113,7 +119,6 @@ async fn seed_input_promoted_through_gate() {
 async fn suggestor_does_not_re_propose_existing_fact() {
     let mut engine = Engine::new();
     engine.register_suggestor(SeedSuggestor::new("s1", "value"));
-    engine.register_suggestor(SeedSuggestor::new("s1", "value")); // duplicate
 
     let result = engine
         .run(ContextState::new())

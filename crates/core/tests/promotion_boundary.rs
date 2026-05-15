@@ -6,7 +6,7 @@
 // - these invariants hold across arbitrary valid and invalid seed inputs
 
 use converge_core::{
-    AgentEffect, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+    AgentEffect, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor, TextPayload,
 };
 use proptest::prelude::*;
 
@@ -37,9 +37,13 @@ impl Suggestor for SeedObserver {
         AgentEffect::with_proposal(ProposedFact::new(
             ContextKey::Hypotheses,
             format!("observed-{}", seed.id()),
-            format!("observed {}", seed.content()),
-            self.name(),
+            TextPayload::new(format!("observed {}", seed.text().unwrap_or_default())),
+            self.name().to_string(),
         ))
+    }
+
+    fn provenance(&self) -> &'static str {
+        "test-suggestor"
     }
 }
 
@@ -68,12 +72,12 @@ async fn staged_input_is_promoted_before_downstream_suggestors_run() {
     let seeds = result.context.get(ContextKey::Seeds);
     assert_eq!(seeds.len(), 1);
     assert_eq!(seeds[0].id(), "seed-1");
-    assert_eq!(seeds[0].content(), "seed content");
+    assert_eq!(seeds[0].text(), Some("seed content"));
 
     let hypotheses = result.context.get(ContextKey::Hypotheses);
     assert_eq!(hypotheses.len(), 1);
     assert_eq!(hypotheses[0].id(), "observed-seed-1");
-    assert_eq!(hypotheses[0].content(), "observed seed content");
+    assert_eq!(hypotheses[0].text(), Some("observed seed content"));
 }
 
 #[tokio::test]
@@ -122,10 +126,10 @@ proptest! {
 
         prop_assert_eq!(seeds.len(), 1);
         prop_assert_eq!(seeds[0].id().as_str(), id.as_str());
-        prop_assert_eq!(seeds[0].content(), content.as_str());
+        prop_assert_eq!(seeds[0].text(), Some(content.as_str()));
         prop_assert_eq!(hypotheses.len(), 1);
         let expected_hypothesis = format!("observed {content}");
-        prop_assert_eq!(hypotheses[0].content(), expected_hypothesis.as_str());
+        prop_assert_eq!(hypotheses[0].text(), Some(expected_hypothesis.as_str()));
         prop_assert!(!result.context.has_pending_proposals());
     }
 

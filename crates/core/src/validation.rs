@@ -10,7 +10,7 @@
 #![allow(clippy::unnecessary_literal_bound)]
 
 use crate::agent::Suggestor;
-use crate::context::{ContextKey, ProposedFact};
+use crate::context::{ContextKey, ProposedFact, TextPayload};
 use crate::effect::AgentEffect;
 use converge_pack::UnitInterval;
 use strum::IntoEnumIterator;
@@ -79,32 +79,41 @@ impl ValidationAgent {
             };
         }
 
-        if proposal.content.len() > self.config.max_content_length {
+        if let Err(error) = proposal.validate_payload() {
+            return ValidationResult::Rejected {
+                proposal_id: proposal.id.to_string(),
+                reason: error.to_string(),
+            };
+        }
+
+        let text = proposal.text().unwrap_or("");
+
+        if text.len() > self.config.max_content_length {
             return ValidationResult::Rejected {
                 proposal_id: proposal.id.to_string(),
                 reason: format!(
                     "content length {} exceeds max {}",
-                    proposal.content.len(),
+                    text.len(),
                     self.config.max_content_length
                 ),
             };
         }
 
-        if proposal.content.trim().is_empty() {
+        if text.trim().is_empty() {
             return ValidationResult::Rejected {
                 proposal_id: proposal.id.to_string(),
                 reason: "content is empty".into(),
             };
         }
 
-        if self.config.require_provenance && proposal.provenance.trim().is_empty() {
+        if self.config.require_provenance && proposal.provenance().trim().is_empty() {
             return ValidationResult::Rejected {
                 proposal_id: proposal.id.to_string(),
                 reason: "provenance is required but empty".into(),
             };
         }
 
-        let content_lower = proposal.content.to_lowercase();
+        let content_lower = text.to_lowercase();
         for term in &self.config.forbidden_terms {
             if content_lower.contains(&term.to_lowercase()) {
                 return ValidationResult::Rejected {
@@ -146,8 +155,10 @@ impl Suggestor for ValidationAgent {
                         ProposedFact::new(
                             ContextKey::Diagnostic,
                             format!("validation:rejected:{proposal_id}"),
-                            format!("Proposal '{proposal_id}' rejected: {reason}"),
-                            self.name(),
+                            TextPayload::new(format!(
+                                "Proposal '{proposal_id}' rejected: {reason}"
+                            )),
+                            self.name().to_string(),
                         )
                         .with_confidence(1.0),
                     );
@@ -175,7 +186,7 @@ mod tests {
         let proposal = ProposedFact::new(
             ContextKey::Hypotheses,
             "hyp-1",
-            "Market is growing",
+            TextPayload::new("Market is growing"),
             "gpt-4:abc123",
         )
         .with_confidence(0.8);
@@ -196,9 +207,13 @@ mod tests {
             min_confidence: UnitInterval::clamped(0.7),
             ..Default::default()
         });
-        let proposal =
-            ProposedFact::new(ContextKey::Hypotheses, "hyp-1", "Uncertain claim", "gpt-4")
-                .with_confidence(0.3);
+        let proposal = ProposedFact::new(
+            ContextKey::Hypotheses,
+            "hyp-1",
+            TextPayload::new("Uncertain claim"),
+            "gpt-4",
+        )
+        .with_confidence(0.3);
 
         match agent.validate_proposal(&proposal) {
             ValidationResult::Rejected { reason, .. } => {

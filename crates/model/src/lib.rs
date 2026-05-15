@@ -22,7 +22,7 @@ pub use converge_core::{
     TypesIntentKind, TypesObjective, TypesProposedContent, TypesRootIntent, TypesTraceLink,
     TypesValidationError, Validated, ValidationSummary,
 };
-pub use converge_pack::{ContextKey, ProposedFact, ValidationError};
+pub use converge_pack::{ContextKey, FactPayload, ProposedFact, TextPayload, ValidationError};
 pub use formation::{
     DeliberatedFormationTemplate, FormationCatalog, FormationKind, FormationPlan, FormationRequest,
     FormationTemplate, FormationTemplateMetadata, FormationTemplateQuery,

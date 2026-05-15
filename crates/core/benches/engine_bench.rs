@@ -12,7 +12,7 @@
 //! Run with: `cargo bench -p converge-core`
 
 use converge_core::{
-    AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+    AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor, TextPayload,
     suggestors::SeedSuggestor,
 };
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
@@ -62,8 +62,8 @@ fn bench_engine_multi_suggestor(c: &mut Criterion) {
             AgentEffect::with_proposal(ProposedFact::new(
                 self.key,
                 format!("{}-proposal", self.name),
-                format!("proposal from {}", self.name),
-                self.name.as_str(),
+                TextPayload::new(format!("proposal from {}", self.name)),
+                self.name.clone(),
             ))
         }
     }
@@ -122,8 +122,8 @@ fn bench_engine_budget_pressure(c: &mut Criterion) {
             AgentEffect::with_proposal(ProposedFact::new(
                 self.key,
                 "unlimited-1",
-                "will exhaust budget",
-                self.name(),
+                TextPayload::new("will exhaust budget"),
+                self.name().to_string(),
             ))
         }
     }

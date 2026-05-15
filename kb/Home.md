@@ -38,7 +38,7 @@ Knowledge base for the Converge platform — a correctness-first, context-driven
 
 ## Building with Converge
 
-- [[Building/Developer Guide]] — end-to-end guide for Converge 3.8.1 developers
+- [[Building/Developer Guide]] — end-to-end guide for Converge 3.9.0 developers
 - [[Building/Getting Started]] — toolchain, first run, quick reference
 - [[Building/Capabilities]] — what the platform already provides
 - [[Building/Writing Agents]] — implement the `Suggestor` trait
@@ -110,6 +110,7 @@ Knowledge base for the Converge platform — a correctness-first, context-driven
 ## Standards
 
 - [[Standards/Extension Release Checklist]] — the engineering bar every extension repo must meet
+- [[Standards/Typed Fact Payloads]] — typed in-process facts, stable wire payloads at borders
 
 ## Planning
 
