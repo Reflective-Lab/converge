@@ -13,11 +13,25 @@
 //! - `file:///path/to/dir` or plain paths → local filesystem
 //! - `s3://bucket` → S3-compatible (AWS, `MinIO`, `RustFS`)
 //! - `gs://bucket` → Google Cloud Storage
+//! - `hf://...` → HuggingFace datasets (via manifold's `HuggingFaceObjectStore`)
 //!
 //! Object key prefixes are configured separately via [`StorageConfig::prefix`].
 //!
+//! ## Optional Polars / Parquet bridge
+//!
+//! Enable the `polars` feature to bring in the
+//! [`polars_bridge`](crate::polars_bridge) module — a shared
+//! Parquet read/write surface that fetches blobs from any
+//! `ObjectStore` into a local cache, then hands them to Polars for
+//! zero-copy memory-mapped scans. Lifted out of `crucible-models` so
+//! every extension that needs columnar data from remote storage (the
+//! training pipeline, KB persistence, app-level dataset ingest) shares
+//! a single implementation rather than re-inventing the cache logic.
+//!
 mod config;
 mod error;
+#[cfg(feature = "polars")]
+pub mod polars_bridge;
 mod uri;
 
 pub use config::StorageConfig;

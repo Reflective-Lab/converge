@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.9.1] - 2026-05-17
+
+### Added
+- `converge-kernel` now re-exports `FactPayload`, `ProvenanceSource`, and
+  `TextPayload` so embedded applications can implement the 3.9 fact/provenance
+  contract from the kernel crate alone.
+- `converge-storage::polars_bridge` (gated behind the new `polars` feature):
+  shared Parquet read/write surface over any `ObjectStore` backend, with a
+  local cache layer keyed by storage path. Lifted out of `crucible-models`
+  so every extension that needs columnar data from `file://`, `s3://`,
+  `gs://`, or `hf://` consumes a single implementation. Three intent-encoded
+  tests pin the load-bearing replay guarantees: typed round-trip,
+  cache-on-second-call, and cross-tenant cache key isolation. Pulls
+  `parquet 58`, `polars 0.51`, `anyhow`, `tokio`, `tracing` only when the
+  feature is enabled — default consumers see no extra deps.
+- Workspace `parquet 58` dependency so all extensions pin the same Parquet
+  major rather than drifting per-crate.
+
+### Changed
+- Release documentation and embedded examples now use typed payloads and
+  `*_PROVENANCE.proposed_fact(...)` instead of stale raw string examples.
+- Integrated pending dependency updates from `origin/main`.
+
+### Fixed
+- Replaced yanked `metrics` 0.24.5 with `metrics` 0.24.6.
+
 ## [3.9.0] - 2026-05-15
 
 ### Added
@@ -31,12 +57,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Aligns with the latest Mosaic extension floors:
   `converge-arbiter-policy` 2.0.0,
   `converge-prism-analytics` 2.0.0,
-  `converge-mnemos-knowledge` 1.2.0,
+  `converge-mnemos-knowledge` 1.2.1,
   `converge-manifold-adapters` 1.1.1,
   `converge-embassy-*` 1.1.1,
-  `converge-ferrox-solver` 0.6.0,
-  `converge-crucible-models` 0.2.0, and
-  `converge-soter-smt` 0.2.0.
+  `converge-ferrox-solver` 0.7.0,
+  `converge-crucible-models` 0.2.1, and
+  `converge-soter-smt` 0.2.1.
 - Integrated pending Dependabot bumps from `origin/main`: `async-nats` 0.48,
   `firestore` 0.49, `opentelemetry` / `opentelemetry-otlp` 0.32,
   `ordered-float` 5, `sha2` 0.11, `strum` 0.28, and

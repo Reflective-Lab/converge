@@ -6,8 +6,8 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Object storage contract types for Converge"
-keywords = ["storage", "object-store", "converge"]
+description = "Object storage contract types for Converge — ObjectStore re-exports, URI parsing, and the optional Polars/Parquet bridge."
+keywords = ["storage", "object-store", "parquet", "polars", "converge"]
 categories = ["filesystem"]
 
 [dependencies]
@@ -16,8 +16,30 @@ serde.workspace = true
 toml.workspace = true
 thiserror.workspace = true
 
+# Optional — only pulled in when the `polars` feature is enabled. Keeps the
+# default surface (URI + ObjectStore re-exports) free of heavy ML deps for
+# consumers that just want the trait contract.
+anyhow = { workspace = true, optional = true }
+parquet = { workspace = true, optional = true }
+polars = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+tracing = { workspace = true, optional = true }
+
+[features]
+default = []
+# Brings in the Polars + Parquet bridge: fetch_to_cache, fetch_parquet,
+# write_parquet_to_store, scan_local_parquet. Pulls heavy deps; opt in.
+polars = [
+    "dep:anyhow",
+    "dep:parquet",
+    "dep:polars",
+    "dep:tokio",
+    "dep:tracing",
+]
+
 [dev-dependencies]
 tempfile.workspace = true
+tokio = { workspace = true }
 
 [lints]
 workspace = true

@@ -1,13 +1,13 @@
 ---
 tags: [building, guide]
 source: mixed
-version: 3.9.0
+version: 3.9.1
 date: 2026-05-15
 ---
-# Developer Guide for Converge 3.9.0
+# Developer Guide for Converge 3.9.1
 
 This guide is the practical entry point for developers building against
-Converge 3.9.0 or changing the Converge foundation itself.
+Converge 3.9.1 or changing the Converge foundation itself.
 
 Converge is a correctness-first, context-driven multi-suggestor runtime. The
 kernel owns convergence, proposal promotion, invariants, HITL pauses, and run
@@ -16,7 +16,7 @@ connectors, vendor SDK wiring, or application deployment.
 
 ## Version Baseline
 
-Converge 3.9.0 uses:
+Converge 3.9.1 uses:
 
 | Item | Value |
 |---|---|
@@ -61,8 +61,8 @@ For an embedded application:
 
 ```toml
 [dependencies]
-converge-kernel = "3.9.0"
-converge-model = "3.9.0"
+converge-kernel = "3.9.1"
+converge-model = "3.9.1"
 async-trait = "0.1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
@@ -71,21 +71,21 @@ For a reusable pack:
 
 ```toml
 [dependencies]
-converge-pack = "3.9.0"
+converge-pack = "3.9.1"
 ```
 
 For provider or tool adapters:
 
 ```toml
 [dependencies]
-converge-provider = "3.9.0"
+converge-provider = "3.9.1"
 ```
 
 For a remote Rust client:
 
 ```toml
 [dependencies]
-converge-client = "3.9.0"
+converge-client = "3.9.1"
 ```
 
 ## First Embedded Run
@@ -368,7 +368,7 @@ Use `run()` when the host wants a completed `ConvergeResult` or an error. Use
 - `ChatBackendSelectionConfig` and `SelectionCriteria`
 
 Concrete vendor implementations do not live in this foundation workspace in
-3.9.0. Generic adapters such as LLM chat, search, fetch, feed, embeddings,
+3.9.1. Generic adapters such as LLM chat, search, fetch, feed, embeddings,
 OpenAPI tools, and GraphQL tools live in Manifold. Source-specific connector
 ports live in Embassy. Policy implementations live in Arbiter. Knowledge lives
 in Mnemos. Analytics lives in Prism.
@@ -419,7 +419,7 @@ let mut client = ConvergeClient::connect("http://127.0.0.1:50051").await?;
 let capabilities = client
     .get_capabilities(v1::GetCapabilitiesRequest {
         device_id: "cli-1".to_string(),
-        app_version: "3.9.0".to_string(),
+        app_version: "3.9.1".to_string(),
         platform: "cli".to_string(),
     })
     .await?;
@@ -437,16 +437,16 @@ contract types.
 Converge keeps universal contracts. Implementation-heavy or SDK-facing code
 lives outside the foundation.
 
-| Work | Home | Floor against Converge 3.9.0 |
+| Work | Home | Floor against Converge 3.9.1 |
 |---|---|---|
 | generic LLM, search, fetch, feed, embedding, and tool adapters | Manifold | `converge-manifold-adapters = "1.1.1"` |
 | source-specific connector ports and adapters | Embassy | `converge-embassy-* = "1.1.1"` |
-| knowledge, recall, retrieval, vector memory | Mnemos | `converge-mnemos-knowledge = "1.2.0"` |
+| knowledge, recall, retrieval, vector memory | Mnemos | `converge-mnemos-knowledge = "1.2.1"` |
 | analytics, feature pipelines, monitoring | Prism | `converge-prism-analytics = "2.0.0"` |
-| trained model packs and RF/SVM/ANFIS suggestors | Crucible | `converge-crucible-models = "0.2.0"` |
+| trained model packs and RF/SVM/ANFIS suggestors | Crucible | `converge-crucible-models = "0.2.1"` |
 | Cedar policy engines and policy suggestors | Arbiter | `converge-arbiter-policy = "2.0.0"` |
-| native OR-Tools and HiGHS solver integrations | Ferrox | `converge-ferrox-solver = "0.6.0"` |
-| SMT-backed safety and assurance suggestors | Soter | `converge-soter-smt = "0.2.0"` |
+| native OR-Tools and HiGHS solver integrations | Ferrox | `converge-ferrox-solver = "0.7.0"` |
+| SMT-backed safety and assurance suggestors | Soter | `converge-soter-smt = "0.2.1"` |
 | domain packs and worked exemplars | Atelier | `atelier-domain = "1.0.0"` |
 | deployment assembly, secrets, processes, Docker, databases | Runway or product repos | — |
 
