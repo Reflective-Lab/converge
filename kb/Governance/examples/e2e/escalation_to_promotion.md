@@ -6,7 +6,7 @@ source: mixed
 > How escalation packets flow through disposition review to influence gate decisions.
 
 **Cross-references:**
-- Escalation schemas: [schemas/escalation-packet.yaml](../../schemas/escalation-packet.yaml), [schemas/disposition-feedback.yaml](../../schemas/disposition-feedback.yaml)
+- Escalation schemas: [escalation-packet](../../schemas/escalation-packet.md), [disposition-feedback](../../schemas/disposition-feedback.md)
 - Escalation guide: [ESCALATION.md](../../docs/ESCALATION.md)
 - Gate policy: [GATES.md](../../GATES.md) - Release Candidate section
 - Example escalation: [approved-example.md](../../schemas/escalation-examples/approved-example.md)

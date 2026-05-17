@@ -28,7 +28,7 @@ just example custom-agent            # implement your own agent
 just example meeting-scheduler       # domain pack with constraint agents
 ```
 
-See [examples/README.md](examples/README.md) for the full list.
+Run `just examples` from the Converge root for the current example catalog.
 
 ## Workspace Structure
 
@@ -47,8 +47,8 @@ crates/
 └── runtime/       # HTTP/gRPC execution service
 ```
 
-See [kb/Architecture/System Overview.md](kb/Architecture/System%20Overview.md) for the full
-dependency graph and [kb/Architecture/API Surfaces.md](kb/Architecture/API%20Surfaces.md) for
+See [System Overview](../Architecture/System%20Overview.md) for the full
+dependency graph and [API Surfaces](../Architecture/API%20Surfaces.md) for
 the canonical public contracts.
 
 ## Build Profiles
@@ -154,7 +154,7 @@ just security-audit
 
 ## Publishing to crates.io
 
-Publishable crates in dependency order (see [ADR-001](kb/Architecture/ADRs/ADR-001-canonical-public-crates.md)):
+Publishable crates in dependency order (see [ADR-001](../Architecture/ADRs/ADR-001-canonical-public-crates.md)):
 
 1. `converge-pack`
 2. `converge-provider`
