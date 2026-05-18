@@ -486,13 +486,30 @@ size-audit:
         awk -v size="$1" 'BEGIN { printf "%.2f", size / (1024 * 1024) }'
     }
 
+    dep_count() {
+        cargo tree -p converge-runtime "$@" --prefix none | sort -u | wc -l | tr -d ' '
+    }
+
+    dir_size() {
+        du -sh "$1" 2>/dev/null | awk '{print $1}'
+    }
+
     runtime_size() {
         local label="$1"
         shift
+        local start="${SECONDS}"
+        set +e
         cargo build -p converge-runtime --release --target-dir "${target_dir}" "$@" >/dev/null
+        local status="$?"
+        set -e
+        local elapsed="$((SECONDS - start))s"
+        if [ "${status}" -ne 0 ]; then
+            printf "%-10s %12s          %7s\n" "${label}" "build-fail" "${elapsed}"
+            return 0
+        fi
         local size
         size="$(wc -c < "${runtime_bin}")"
-        printf "%-10s %12s bytes  %7s MiB\n" "${label}" "${size}" "$(mib "${size}")"
+        printf "%-10s %12s bytes  %7s MiB  %7s\n" "${label}" "${size}" "$(mib "${size}")" "${elapsed}"
     }
 
     echo "──────────────────────────────────────────────"
@@ -505,18 +522,36 @@ size-audit:
     runtime_size "minimal" --no-default-features
     runtime_size "standard"
     runtime_size "full" --all-features
+    echo
+    echo "dependency graph"
+    echo "────────────────"
+    printf "%-10s %12s unique lines\n" "minimal" "$(dep_count --no-default-features)"
+    printf "%-10s %12s unique lines\n" "standard" "$(dep_count)"
+    printf "%-10s %12s unique lines\n" "full" "$(dep_count --all-features)"
 
     echo
     echo "converge-kernel"
     echo "───────────────"
+    kernel_start="${SECONDS}"
     cargo build -p converge-kernel --release --lib --target-dir "${target_dir}" >/dev/null
+    kernel_elapsed="$((SECONDS - kernel_start))s"
     kernel_rlib="$(find "${target_dir}/release/deps" -name 'libconverge_kernel-*.rlib' | sort | tail -n1)"
     if [ -z "${kernel_rlib}" ]; then
         echo "kernel artifact not found"
         exit 1
     fi
     kernel_size="$(wc -c < "${kernel_rlib}")"
-    printf "%-10s %12s bytes  %7s MiB\n" "release" "${kernel_size}" "$(mib "${kernel_size}")"
+    printf "%-10s %12s bytes  %7s MiB  %7s\n" "release" "${kernel_size}" "$(mib "${kernel_size}")" "${kernel_elapsed}"
+    printf "%-10s %12s unique lines\n" "deps" "$(cargo tree -p converge-kernel --prefix none | sort -u | wc -l | tr -d ' ')"
+
+    echo
+    echo "disk"
+    echo "────"
+    printf "%-14s %s\n" "audit target" "$(dir_size "${target_dir}")"
+    printf "%-14s %s\n" "release deps" "$(dir_size "${target_dir}/release/deps")"
+    if [ -d target ]; then
+        printf "%-14s %s\n" "workspace target" "$(dir_size target)"
+    fi
 
 # ── Info ───────────────────────────────────────────────────────────────
 

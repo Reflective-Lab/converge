@@ -42,6 +42,55 @@ That is already enough to show the current problem: the so-called minimal
 runtime shell is still carrying a lot of baggage for an embedder-friendly
 story.
 
+### 2026-05-18 Baseline
+
+Measured from branch `measure/packaging-baseline` with:
+
+```bash
+just size-audit
+```
+
+Artifact sizes:
+
+| Variant | Command | Result |
+|---|---|---|
+| runtime minimal | `cargo build -p converge-runtime --release --no-default-features` | `8,289,904` bytes / `7.91 MiB` |
+| runtime standard | `cargo build -p converge-runtime --release` | `10,030,608` bytes / `9.57 MiB` |
+| runtime full | `cargo build -p converge-runtime --release --all-features` | **build-fail** |
+| kernel | `cargo build -p converge-kernel --release --lib` | `328,112` bytes / `0.31 MiB` |
+
+Dependency graph shape, counted as unique `cargo tree --prefix none` lines:
+
+| Surface | Unique lines |
+|---|---:|
+| runtime minimal | `398` |
+| runtime standard | `425` |
+| runtime full | `567` |
+| kernel | `99` |
+
+Disk footprint after the audit:
+
+| Path | Size |
+|---|---:|
+| `/tmp/converge-size-audit` | `1.9G` |
+| `/tmp/converge-size-audit/release/deps` | `1.7G` |
+| workspace `target/` | `15G` |
+
+The failed full build is itself part of the baseline. Enabling all runtime
+features currently exposes bitrot in several optional surfaces:
+
+- `security` references missing `x509_parser` and `oid_registry` dependencies
+- `billing` references a missing `crate::billing` module
+- `telemetry` is incompatible with the current OpenTelemetry dependency set and
+  pulls conflicting OpenTelemetry versions into the graph
+- `wasm` has stale API/type mismatches and missing `hex` wiring
+
+The biggest release-deps artifacts observed during the failed full attempt were
+Wasmtime/Cranelift, `async-nats`, GCP/Firestore, duplicate transport stacks, and
+OpenTelemetry. That matches the current user concern: the runtime shell pulls in
+implementation-heavy surfaces too early, while `converge-kernel` remains small
+enough for the embedding story.
+
 ## Current Reality
 
 The old milestone wording talks about `converge-application`. That crate no
@@ -179,7 +228,8 @@ That is a v3.6-style split question, not the first cut of v3.4.
 
 ## What Comes Next
 
-1. Finish the first size audit and record all four variant numbers.
-2. Gate telemetry, metrics, and NATS dependencies honestly.
+1. Fix or quarantine the broken `--all-features` runtime surfaces so `full`
+   becomes measurable.
+2. Gate telemetry, metrics, NATS, cloud, and WASM dependencies honestly.
 3. Re-run `just size-audit` and compare deltas.
 4. Write the embedding guide around `converge-kernel`.
