@@ -369,18 +369,14 @@ impl ConvergeService for ConvergeServiceImpl {
 
         let req = request.into_inner();
 
-        // TODO: Lookup actual job status
-        Ok(Response::new(GetJobResponse {
-            job_id: req.job_id.clone(),
-            run_id: format!("run_{}", req.job_id),
-            status: super::generated::RunStatus::Pending.into(),
-            latest_sequence: self.sequence.load(Ordering::SeqCst),
-            facts_count: 0,
-            pending_proposals: 0,
-            cycles_completed: 0,
-            halt_info: None,
-            converged_info: None,
-        }))
+        tracing::debug!(
+            job_id = %req.job_id,
+            "GetJob requested without a configured runtime job store"
+        );
+
+        Err(Status::unimplemented(
+            "GetJob requires a configured runtime job store",
+        ))
     }
 
     /// Get events since sequence (polling fallback).
@@ -395,14 +391,17 @@ impl ConvergeService for ConvergeServiceImpl {
         )
         .await?;
 
-        let _req = request.into_inner();
+        let req = request.into_inner();
 
-        // TODO: Return actual events from storage
-        Ok(Response::new(GetEventsResponse {
-            entries: vec![],
-            latest_sequence: self.sequence.load(Ordering::SeqCst),
-            has_more: false,
-        }))
+        tracing::debug!(
+            job_id = %req.job_id,
+            since_sequence = req.since_sequence,
+            "GetEvents requested without a configured runtime event store"
+        );
+
+        Err(Status::unimplemented(
+            "GetEvents requires a configured runtime event store",
+        ))
     }
 
     /// Session handshake - capability negotiation.
@@ -482,5 +481,79 @@ impl ConvergeService for ConvergeServiceImpl {
             server_version: env!("CARGO_PKG_VERSION").to_string(),
             server_time_ns: Self::now_ns(),
         }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tonic::Code;
+
+    #[cfg(feature = "auth")]
+    #[tokio::test]
+    async fn get_job_requires_auth_without_token() {
+        let service = ConvergeServiceImpl::new();
+
+        let result = service
+            .get_job(Request::new(GetJobRequest {
+                job_id: "job-1".to_string(),
+            }))
+            .await;
+
+        let error = result.expect_err("GetJob should reject unauthenticated requests");
+        assert_eq!(error.code(), Code::Unauthenticated);
+    }
+
+    #[cfg(not(feature = "auth"))]
+    #[tokio::test]
+    async fn get_job_returns_unimplemented_without_store() {
+        let service = ConvergeServiceImpl::new();
+
+        let result = service
+            .get_job(Request::new(GetJobRequest {
+                job_id: "job-1".to_string(),
+            }))
+            .await;
+
+        let error = result.expect_err("GetJob should fail without a job store");
+        assert_eq!(error.code(), Code::Unimplemented);
+        assert!(error.message().contains("job store"));
+    }
+
+    #[cfg(feature = "auth")]
+    #[tokio::test]
+    async fn get_events_requires_auth_without_token() {
+        let service = ConvergeServiceImpl::new();
+
+        let result = service
+            .get_events(Request::new(GetEventsRequest {
+                job_id: "job-1".to_string(),
+                since_sequence: 42,
+                limit: 100,
+                entry_types: Vec::new(),
+            }))
+            .await;
+
+        let error = result.expect_err("GetEvents should reject unauthenticated requests");
+        assert_eq!(error.code(), Code::Unauthenticated);
+    }
+
+    #[cfg(not(feature = "auth"))]
+    #[tokio::test]
+    async fn get_events_returns_unimplemented_without_store() {
+        let service = ConvergeServiceImpl::new();
+
+        let result = service
+            .get_events(Request::new(GetEventsRequest {
+                job_id: "job-1".to_string(),
+                since_sequence: 42,
+                limit: 100,
+                entry_types: Vec::new(),
+            }))
+            .await;
+
+        let error = result.expect_err("GetEvents should fail without an event store");
+        assert_eq!(error.code(), Code::Unimplemented);
+        assert!(error.message().contains("event store"));
     }
 }

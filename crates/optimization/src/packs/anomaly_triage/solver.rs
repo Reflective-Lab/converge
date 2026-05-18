@@ -51,7 +51,7 @@ impl ThresholdSolver {
 
             let ord = severity_order(a.1).cmp(&severity_order(b.1));
             if ord == std::cmp::Ordering::Equal {
-                b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal)
+                b.2.total_cmp(&a.2).then_with(|| a.0.id.cmp(&b.0.id))
             } else {
                 ord
             }

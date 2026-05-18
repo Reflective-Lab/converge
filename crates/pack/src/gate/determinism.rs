@@ -1,7 +1,6 @@
 //! Determinism specification for reproducible results
 
 use serde::{Deserialize, Serialize};
-use std::hash::{Hash, Hasher};
 
 /// Determinism specification for reproducible results
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,19 +50,35 @@ impl DeterminismSpec {
     /// This ensures different phases get different but deterministic seeds
     /// derived from the main seed.
     pub fn sub_seed(&self, phase: &str) -> u64 {
-        let mut hasher = std::collections::hash_map::DefaultHasher::new();
-        self.seed.hash(&mut hasher);
-        phase.hash(&mut hasher);
-        hasher.finish()
+        stable_seed([
+            b"phase".as_slice(),
+            &self.seed.to_be_bytes(),
+            phase.as_bytes(),
+        ])
     }
 
     /// Generate a sub-seed for a numbered iteration
     pub fn iter_seed(&self, iteration: usize) -> u64 {
-        let mut hasher = std::collections::hash_map::DefaultHasher::new();
-        self.seed.hash(&mut hasher);
-        iteration.hash(&mut hasher);
-        hasher.finish()
+        stable_seed([
+            b"iteration".as_slice(),
+            &self.seed.to_be_bytes(),
+            &iteration.to_be_bytes(),
+        ])
     }
+}
+
+fn stable_seed<const N: usize>(parts: [&[u8]; N]) -> u64 {
+    use sha2::{Digest, Sha256};
+
+    let mut hasher = Sha256::new();
+    for part in parts {
+        hasher.update((part.len() as u64).to_be_bytes());
+        hasher.update(part);
+    }
+    let digest = hasher.finalize();
+    let mut bytes = [0u8; 8];
+    bytes.copy_from_slice(&digest[..8]);
+    u64::from_be_bytes(bytes)
 }
 
 /// Strategy for breaking ties when multiple solutions are equally good

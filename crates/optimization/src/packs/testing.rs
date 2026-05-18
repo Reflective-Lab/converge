@@ -334,21 +334,17 @@ impl ScenarioSummary {
 pub fn test_problem_spec(_pack_name: &str, inputs: serde_json::Value) -> GateResult<ProblemSpec> {
     use converge_pack::gate::ObjectiveSpec;
 
-    ProblemSpec::builder(format!("test-{}", uuid_v4()), "test-tenant")
+    ProblemSpec::builder(format!("test-{}", test_id()), "test-tenant")
         .objective(ObjectiveSpec::maximize("score"))
         .inputs_raw(inputs)
         .seed(42) // Fixed seed for determinism
         .build()
 }
 
-/// Generate a simple UUID v4 for testing
-fn uuid_v4() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
-    format!("{:032x}", now)
+fn test_id() -> String {
+    static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+    let id = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    format!("{id:032x}")
 }
 
 #[cfg(test)]

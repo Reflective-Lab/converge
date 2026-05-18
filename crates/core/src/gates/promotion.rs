@@ -236,6 +236,21 @@ impl PromotionGate {
         evidence: Vec<EvidenceRef>,
         trace: TraceLink,
     ) -> Result<Fact, PromotionError> {
+        self.promote_to_fact_at(validated, approver, evidence, trace, Timestamp::now())
+    }
+
+    /// Promote a validated proposal to a Fact with a caller-supplied timestamp.
+    ///
+    /// Deterministic engine paths use this with Lamport logical time so
+    /// promotion records do not depend on hidden wall-clock reads.
+    pub(crate) fn promote_to_fact_at(
+        &self,
+        validated: ValidatedProposal,
+        approver: Actor,
+        evidence: Vec<EvidenceRef>,
+        trace: TraceLink,
+        timestamp: Timestamp,
+    ) -> Result<Fact, PromotionError> {
         let ValidatedProposal { proposal, report } = validated;
 
         // Verify report matches proposal
@@ -262,7 +277,7 @@ impl PromotionGate {
             summary,
             evidence,
             trace,
-            Timestamp::now(),
+            timestamp.clone(),
         );
 
         // Create fact content from proposal content
@@ -276,7 +291,7 @@ impl PromotionGate {
             FactId::new(format!("fact:{}", proposal.id())),
             fact_content,
             record,
-            Timestamp::now(),
+            timestamp,
         );
 
         Ok(fact)

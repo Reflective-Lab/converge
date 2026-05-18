@@ -4,7 +4,7 @@ use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 /// Input for pricing guardrails optimization
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PricingGuardrailsInput {
     /// Products to price
     pub products: Vec<Product>,

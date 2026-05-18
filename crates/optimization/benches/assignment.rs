@@ -3,13 +3,13 @@
 use converge_optimization::assignment::{AssignmentProblem, auction, hungarian};
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+use rand::{RngExt, SeedableRng};
 use std::hint::black_box;
 
 fn random_costs(n: usize, seed: u64) -> Vec<Vec<i64>> {
     let mut rng = StdRng::seed_from_u64(seed);
     (0..n)
-        .map(|_| (0..n).map(|_| rng.gen_range(1..1000)).collect())
+        .map(|_| (0..n).map(|_| rng.random_range(1..1000)).collect())
         .collect()
 }
 

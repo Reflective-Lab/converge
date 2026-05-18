@@ -6,7 +6,6 @@
 //! Registries in this module hold already-constructed backend handles. They do
 //! not inspect credentials, instantiate vendor SDKs, or import adapter crates.
 
-use std::cmp::Ordering;
 use std::sync::Arc;
 
 use thiserror::Error;
@@ -598,7 +597,25 @@ impl ChatBackendRegistry {
             });
         }
 
-        candidates.sort_by(|left, right| right.1.partial_cmp(&left.1).unwrap_or(Ordering::Equal));
+        candidates.sort_by(|left, right| {
+            right
+                .1
+                .total_cmp(&left.1)
+                .then_with(|| {
+                    left.0
+                        .descriptor()
+                        .provider()
+                        .as_str()
+                        .cmp(right.0.descriptor().provider().as_str())
+                })
+                .then_with(|| {
+                    left.0
+                        .descriptor()
+                        .model()
+                        .as_str()
+                        .cmp(right.0.descriptor().model().as_str())
+                })
+        });
 
         let selected = candidates[0].0;
         Ok(ResolvedChatBackend {

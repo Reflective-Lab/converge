@@ -89,6 +89,18 @@ fabricate snapshot internals with a struct literal.
 **Remaining downstream migration:** Helms `application-storage` still needs to
 replace its custom persisted-fact reconstruction with `ContextSnapshot`.
 
+### Core Clock and Stable Replay Hashing (Axiom 6) — CLOSED
+
+Closed on 2026-05-18. Core no longer sources wall-clock time internally:
+promotion timestamps are derived from the tracked Lamport clock, HITL resume
+preserves that logical clock, and `Timestamp::now()` is a deterministic
+`lamport:0` boundary helper rather than a hidden host clock read.
+
+Replay/provenance hashing no longer uses `DefaultHasher`; recall fingerprints,
+pack determinism sub-seeds, and storage cache key prefixes use stable SHA-256
+derivations. Runtime-facing code may still stamp transport, auth, and audit
+events with host wall-clock time at the runtime boundary.
+
 ## Open
 
 ### External Tool and Provider Implementations Still Sit In-Repo — CLOSED
@@ -126,12 +138,6 @@ newspaper engagement call sites as lower-priority research exposure.
 The provider boundary now validates `Json`, `Yaml`, and `Toml` responses and rejects prose wrappers with `LlmError::ResponseFormatMismatch`. But it still does not enforce an exact output schema such as required keys, field types, enum values, or nested object shape.
 
 **Resolution:** Add a schema-aware structured output surface above `ResponseFormat` rather than overloading the format enum with shape semantics.
-
-### Medium: SystemTime in Core (Axiom 6)
-
-Core still sources wall-clock time internally through both `SystemTime::now()` and `Timestamp::now()`. This breaks replay determinism.
-
-**Resolution:** Replace with an injectable `Clock` trait at the kernel/application boundary.
 
 ### Low: RetryPolicy in Core (Axiom 8)
 

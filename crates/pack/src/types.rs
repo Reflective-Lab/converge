@@ -533,13 +533,17 @@ mod hex_bytes {
     }
 }
 
-/// ISO-8601 timestamp string.
+/// Timestamp string used at Converge boundaries.
+///
+/// Runtime-visible timestamps may be wall-clock strings supplied by a host or
+/// logical Lamport clock stamps produced by the kernel. Core deterministic
+/// promotion paths use Lamport stamps instead of reading wall-clock time.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Timestamp(String);
 
 impl Timestamp {
-    /// Create a new timestamp from an ISO-8601 string.
+    /// Create a new timestamp from an already formatted string.
     #[must_use]
     pub fn new(value: impl Into<String>) -> Self {
         Self(value.into())
@@ -557,15 +561,19 @@ impl Timestamp {
         Self::new("1970-01-01T00:00:00Z")
     }
 
-    /// A best-effort timestamp for "now".
+    /// Create a deterministic timestamp from Lamport logical time.
+    #[must_use]
+    pub fn lamport(time: u64) -> Self {
+        Self(format!("lamport:{time}"))
+    }
+
+    /// A deterministic zero logical timestamp.
+    ///
+    /// Hosts that need wall-clock timestamps should construct them explicitly at
+    /// the runtime boundary rather than letting core code read a hidden clock.
     #[must_use]
     pub fn now() -> Self {
-        use std::time::{SystemTime, UNIX_EPOCH};
-
-        let duration = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default();
-        Self(format!("{}Z", duration.as_secs()))
+        Self::lamport(0)
     }
 }
 
@@ -674,6 +682,16 @@ mod tests {
             hash.to_hex(),
             "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
         );
+    }
+
+    #[test]
+    fn timestamp_now_is_deterministic_logical_zero() {
+        assert_eq!(Timestamp::now().as_str(), "lamport:0");
+    }
+
+    #[test]
+    fn timestamp_can_represent_lamport_time() {
+        assert_eq!(Timestamp::lamport(42).as_str(), "lamport:42");
     }
 
     #[test]

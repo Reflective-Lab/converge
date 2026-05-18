@@ -41,8 +41,8 @@ impl GreedySolver {
         // Sort by score descending (higher is better)
         scored_slots.sort_by(|a, b| {
             b.score
-                .partial_cmp(&a.score)
-                .unwrap_or(std::cmp::Ordering::Equal)
+                .total_cmp(&a.score)
+                .then_with(|| a.slot.id.cmp(&b.slot.id))
         });
 
         // Apply tie-breaking for equal scores

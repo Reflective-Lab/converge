@@ -73,6 +73,12 @@ impl LamportClock {
         Self { time: 0 }
     }
 
+    /// Creates a Lamport clock at an already observed logical time.
+    #[must_use]
+    pub const fn at(time: u64) -> Self {
+        Self { time }
+    }
+
     /// Returns the current logical time.
     #[must_use]
     pub const fn time(&self) -> u64 {
@@ -334,6 +340,17 @@ impl TrackedContext {
     /// Ticks the clock and returns the new time.
     pub fn tick(&mut self) -> u64 {
         self.clock.tick()
+    }
+
+    /// Returns the Lamport time assigned to the next local context event.
+    #[must_use]
+    pub fn next_logical_time(&self) -> u64 {
+        self.clock_time() + 1
+    }
+
+    /// Restores the tracked logical clock to an already observed time.
+    pub(crate) fn set_clock_time(&mut self, time: u64) {
+        self.clock = LamportClock::at(time);
     }
 
     /// Computes and returns the Merkle root.

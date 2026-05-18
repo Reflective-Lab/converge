@@ -39,15 +39,10 @@ impl ScoreBasedRoutingSolver {
         // Sort leads by priority (ascending = higher priority) then by score (descending)
         let mut sorted_leads: Vec<&Lead> = input.leads.iter().collect();
         sorted_leads.sort_by(|a, b| {
-            match a.priority.cmp(&b.priority) {
-                std::cmp::Ordering::Equal => {
-                    // Higher score first
-                    b.score
-                        .partial_cmp(&a.score)
-                        .unwrap_or(std::cmp::Ordering::Equal)
-                }
-                other => other,
-            }
+            a.priority
+                .cmp(&b.priority)
+                .then_with(|| b.score.total_cmp(&a.score))
+                .then_with(|| a.id.cmp(&b.id))
         });
 
         let mut assignments = Vec::new();
@@ -191,12 +186,7 @@ impl ScoreBasedRoutingSolver {
         }
 
         // Sort by fit score descending, then by rep ID for determinism
-        candidates.sort_by(|a, b| {
-            match b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal) {
-                std::cmp::Ordering::Equal => a.0.id.cmp(&b.0.id),
-                other => other,
-            }
-        });
+        candidates.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.id.cmp(&b.0.id)));
 
         // Handle ties deterministically using tie_break
         let best_score = candidates[0].1;

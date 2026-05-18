@@ -20,13 +20,10 @@
 //! not validate freshness.
 
 use std::path::{Path, PathBuf};
-use std::{
-    collections::hash_map::DefaultHasher,
-    hash::{Hash, Hasher},
-};
 
 use anyhow::{Result, anyhow};
 use polars::prelude::*;
+use sha2::{Digest, Sha256};
 
 use crate::object_store::ObjectStoreExt;
 use crate::{ObjectPath, ObjectStore};
@@ -83,9 +80,14 @@ pub async fn fetch_to_cache(
 /// basename (`tenant-a/data.parquet` and `tenant-b/data.parquet`) get
 /// distinct cache files because the key itself feeds the hash prefix.
 fn cache_path_for_key(key: &str, cache_dir: &Path) -> PathBuf {
-    let mut hasher = DefaultHasher::new();
-    key.hash(&mut hasher);
-    let hash = hasher.finish();
+    let mut hasher = Sha256::new();
+    hasher.update((key.len() as u64).to_be_bytes());
+    hasher.update(key.as_bytes());
+    let digest = hasher.finalize();
+    let hash = digest[..8]
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
 
     let filename = key
         .rsplit('/')
@@ -101,7 +103,7 @@ fn cache_path_for_key(key: &str, cache_dir: &Path) -> PathBuf {
         })
         .collect::<String>();
 
-    cache_dir.join(format!("{hash:016x}-{filename}"))
+    cache_dir.join(format!("{hash}-{filename}"))
 }
 
 /// Write a Polars `DataFrame` as parquet to an object store.

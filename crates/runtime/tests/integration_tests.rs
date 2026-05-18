@@ -11,7 +11,7 @@ use axum::{
     body::Body,
     http::{Request, StatusCode},
 };
-use converge_runtime::{handlers, state::AppState};
+use converge_runtime::{handlers, sse, state::AppState};
 use http_body_util::BodyExt;
 use serde_json::Value;
 use tower::ServiceExt;
@@ -23,6 +23,11 @@ use tower::ServiceExt;
 /// Create a test router with default state.
 fn test_router() -> Router {
     handlers::router(AppState::new())
+}
+
+/// Create a test router with SSE endpoints.
+fn sse_test_router() -> Router {
+    sse::router().with_state(AppState::new())
 }
 
 /// Helper to parse JSON response body.
@@ -160,7 +165,7 @@ async fn test_ready_endpoint_services_engine_ok() {
 // =============================================================================
 
 #[tokio::test]
-async fn test_jobs_endpoint_accepts_post() {
+async fn test_jobs_endpoint_rejects_context_only_execution() {
     let app = test_router();
 
     let response = app
@@ -175,11 +180,15 @@ async fn test_jobs_endpoint_accepts_post() {
         .await
         .unwrap();
 
-    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
+
+    let body = body_json(response.into_body()).await;
+    assert_eq!(body["status"], 501);
+    assert!(body["error"].as_str().unwrap().contains("context-only"));
 }
 
 #[tokio::test]
-async fn test_jobs_endpoint_empty_context() {
+async fn test_jobs_endpoint_empty_context_is_not_implemented() {
     let app = test_router();
 
     let response = app
@@ -194,11 +203,11 @@ async fn test_jobs_endpoint_empty_context() {
         .await
         .unwrap();
 
-    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
 }
 
 #[tokio::test]
-async fn test_jobs_endpoint_returns_job_response() {
+async fn test_jobs_endpoint_returns_error_response() {
     let app = test_router();
 
     let response = app
@@ -213,15 +222,17 @@ async fn test_jobs_endpoint_returns_job_response() {
         .await
         .unwrap();
 
+    assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
+
     let body = body_json(response.into_body()).await;
-    assert!(body.get("cycles").is_some());
-    assert!(body.get("converged").is_some());
-    assert!(body.get("metadata").is_some());
-    assert!(body.get("context_summary").is_some());
+    assert!(body.get("error").is_some());
+    assert!(body.get("status").is_some());
+    assert!(body.get("cycles").is_none());
+    assert!(body.get("context_summary").is_none());
 }
 
 #[tokio::test]
-async fn test_jobs_endpoint_returns_metadata() {
+async fn test_jobs_endpoint_error_points_to_supported_job_routes() {
     let app = test_router();
 
     let response = app
@@ -237,10 +248,9 @@ async fn test_jobs_endpoint_returns_metadata() {
         .unwrap();
 
     let body = body_json(response.into_body()).await;
-    let metadata = &body["metadata"];
-    assert!(metadata.get("cycles").is_some());
-    assert!(metadata.get("converged").is_some());
-    assert!(metadata.get("duration_ms").is_some());
+    let error = body["error"].as_str().unwrap();
+    assert!(error.contains("/api/v1/templates/jobs"));
+    assert!(error.contains("/api/v1/stream/jobs"));
 }
 
 #[tokio::test]
@@ -278,6 +288,109 @@ async fn test_jobs_endpoint_get_not_allowed() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
+}
+
+// =============================================================================
+// SSE Runtime Endpoint Tests
+// =============================================================================
+
+#[tokio::test]
+async fn test_sse_submit_observation_is_not_implemented() {
+    let app = sse_test_router();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/stream/observations")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"run_id":"run-1","key":"facts","payload":{},"idempotency_key":"idem-1"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
+
+    let body = body_json(response.into_body()).await;
+    assert_eq!(body["status"], 501);
+    assert!(body["error"].as_str().unwrap().contains("not wired"));
+}
+
+#[tokio::test]
+async fn test_sse_approve_proposal_is_not_implemented() {
+    let app = sse_test_router();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/stream/approve")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"run_id":"run-1","proposal_id":"proposal-1"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
+
+    let body = body_json(response.into_body()).await;
+    assert_eq!(body["status"], 501);
+    assert!(body["error"].as_str().unwrap().contains("approval"));
+}
+
+#[tokio::test]
+async fn test_sse_reject_proposal_is_not_implemented() {
+    let app = sse_test_router();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/stream/reject")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"run_id":"run-1","proposal_id":"proposal-1","reason":"no"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
+
+    let body = body_json(response.into_body()).await;
+    assert_eq!(body["status"], 501);
+    assert!(body["error"].as_str().unwrap().contains("rejection"));
+}
+
+#[tokio::test]
+async fn test_streaming_job_invalid_pack_name_returns_sse_error() {
+    let app = sse_test_router();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/stream/jobs")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"pack":"Invalid Pack","seeds":[]}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = body_string(response.into_body()).await;
+    assert!(body.contains("event: error"));
+    assert!(body.contains("invalid_pack"));
+    assert!(body.contains("pack name"));
 }
 
 // =============================================================================
@@ -663,6 +776,6 @@ async fn test_concurrent_job_requests() {
 
     for handle in handles {
         let status = handle.await.unwrap();
-        assert_eq!(status, StatusCode::OK);
+        assert_eq!(status, StatusCode::NOT_IMPLEMENTED);
     }
 }

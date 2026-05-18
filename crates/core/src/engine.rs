@@ -34,7 +34,7 @@ use crate::truth::{CriterionEvaluator, CriterionOutcome, CriterionResult};
 use crate::types::{
     Actor, BackendId, CaptureContext, ChainId, ContentHash, Draft, EvidenceRef, GateId, LocalTrace,
     ObservationId, ObservationProvenance, PackId, Proposal, ProposalId, ProposedContent,
-    ProposedContentKind, TraceLink, TypesRootIntent,
+    ProposedContentKind, Timestamp, TraceLink, TypesRootIntent,
 };
 
 /// Callback trait for streaming fact emissions during convergence.
@@ -196,6 +196,8 @@ pub struct HitlPause {
     pub(crate) remaining_effects: Vec<(SuggestorId, AgentEffect)>,
     /// Facts already added in the current merge pass.
     pub(crate) facts_added: usize,
+    /// Lamport clock time at the pause point.
+    pub(crate) clock_time: u64,
     /// Audit trail of gate events.
     pub gate_events: Vec<GateEvent>,
 }
@@ -381,11 +383,18 @@ impl Engine {
         pause.gate_events.push(event);
 
         let mut tracked = TrackedContext::new(pause.context);
+        tracked.set_clock_time(pause.clock_time);
         let mut facts_added = pause.facts_added;
 
         if decision.is_approved() {
             let promoted_by = format!("suggestor-{}", pause.agent_id.0);
-            match self.promote_pack_proposal(&pause.proposal, pause.cycle, &promoted_by) {
+            let logical_time = tracked.next_logical_time();
+            match self.promote_pack_proposal(
+                &pause.proposal,
+                pause.cycle,
+                &promoted_by,
+                logical_time,
+            ) {
                 Ok(fact) => {
                     info!(gate_id = %decision.gate_id.as_str(), "HITL gate approved, promoting proposal");
                     tracked
@@ -949,6 +958,7 @@ impl Engine {
         proposal: &ProposedFact,
         cycle: u32,
         promoted_by: &str,
+        logical_time: u64,
     ) -> Result<ContextFact, ValidationError> {
         self.validate_pack_proposal(proposal)?;
         let summary = proposal_summary(proposal)?;
@@ -969,13 +979,14 @@ impl Engine {
         );
 
         let gate = PromotionGate::new(GateId::new("engine-promotion"), ValidationPolicy::new());
+        let timestamp = Timestamp::lamport(logical_time);
         let validated = gate
             .validate_proposal(draft, &ValidationContext::default())
             .map_err(|error| ValidationError {
                 reason: error.to_string(),
             })?;
         let governed = gate
-            .promote_to_fact(
+            .promote_to_fact_at(
                 validated,
                 Actor::system("converge-engine"),
                 vec![EvidenceRef::observation(ObservationId::new(format!(
@@ -986,6 +997,7 @@ impl Engine {
                     format!("cycle-{cycle}"),
                     promoted_by.to_string(),
                 )),
+                timestamp,
             )
             .map_err(|error| ValidationError {
                 reason: error.to_string(),
@@ -1008,7 +1020,8 @@ impl Engine {
         let mut facts_added = 0usize;
 
         for proposal in proposals {
-            match self.promote_pack_proposal(&proposal, cycle, "context-input") {
+            let logical_time = tracked.next_logical_time();
+            match self.promote_pack_proposal(&proposal, cycle, "context-input", logical_time) {
                 Ok(fact) => {
                     emit_experience_event(
                         event_observer,
@@ -1060,7 +1073,8 @@ impl Engine {
                 let proposal_id = proposal.id.clone();
                 let _span =
                     info_span!("validate_proposal", agent = %id, proposal = %proposal_id).entered();
-                match self.promote_pack_proposal(&proposal, cycle, &promoted_by) {
+                let logical_time = tracked.next_logical_time();
+                match self.promote_pack_proposal(&proposal, cycle, &promoted_by, logical_time) {
                     Ok(fact) => {
                         info!(agent = %id, fact = %fact.id(), "Proposal promoted to fact");
                         emit_experience_event(
@@ -1517,6 +1531,7 @@ impl Engine {
                             dirty_keys: tracked.context.dirty_keys().to_vec(),
                             remaining_effects: remaining,
                             facts_added,
+                            clock_time: tracked.clock_time(),
                             gate_events: vec![gate_event],
                         }));
                     }
@@ -1525,7 +1540,8 @@ impl Engine {
                 let _span =
                     info_span!("validate_proposal", agent = %id, proposal = %proposal.id).entered();
                 let promoted_by = format!("agent-{}", id.0);
-                match self.promote_pack_proposal(&proposal, cycle, &promoted_by) {
+                let logical_time = tracked.next_logical_time();
+                match self.promote_pack_proposal(&proposal, cycle, &promoted_by, logical_time) {
                     Ok(fact) => {
                         info!(agent = %id, fact = %fact.id(), "Proposal promoted to fact");
                         if let Some(ref cb) = self.streaming_callback {
@@ -1572,7 +1588,8 @@ impl Engine {
         for (id, effect) in effects {
             for proposal in effect.into_proposals() {
                 let promoted_by = format!("agent-{}", id.0);
-                match self.promote_pack_proposal(&proposal, cycle, &promoted_by) {
+                let logical_time = tracked.next_logical_time();
+                match self.promote_pack_proposal(&proposal, cycle, &promoted_by, logical_time) {
                     Ok(fact) => {
                         if let Some(ref cb) = self.streaming_callback {
                             cb.on_fact(cycle, &fact);
@@ -1747,30 +1764,10 @@ mod tests {
         ProposedFact::new(key, id, TextPayload::new(content), provenance.into())
     }
 
-    // Promotion stamps wall-clock `promoted_at` / `created_at` on each fact, so
-    // direct equality is non-deterministic across runs. Strip those fields for
-    // determinism checks — every other field is engine-derived and stable.
+    // Promotion timestamps come from the tracked Lamport clock, so the full
+    // fact wire shape should be stable across identical runs.
     fn fingerprint(facts: &[ContextFact]) -> serde_json::Value {
-        fn strip_timestamps(value: &mut serde_json::Value) {
-            match value {
-                serde_json::Value::Object(map) => {
-                    map.remove("promoted_at");
-                    map.remove("created_at");
-                    for child in map.values_mut() {
-                        strip_timestamps(child);
-                    }
-                }
-                serde_json::Value::Array(items) => {
-                    for item in items {
-                        strip_timestamps(item);
-                    }
-                }
-                _ => {}
-            }
-        }
-        let mut value = serde_json::to_value(facts).expect("facts serialize");
-        strip_timestamps(&mut value);
-        value
+        serde_json::to_value(facts).expect("facts serialize")
     }
 
     #[tokio::test]
@@ -1796,6 +1793,12 @@ mod tests {
             "clock should tick on fact promotion"
         );
         assert!(result.integrity.fact_count > 0, "facts should be counted");
+        let facts = result.context.get(ContextKey::Seeds);
+        assert_eq!(facts[0].created_at().as_str(), "lamport:1");
+        assert_eq!(
+            facts[0].promotion_record().promoted_at().as_str(),
+            "lamport:1"
+        );
     }
 
     #[tokio::test]

@@ -15,6 +15,7 @@ use crate::StorageUri;
 /// prefix = "datasets/"
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct StorageConfig {
     pub uri: StorageUri,
 
@@ -91,6 +92,24 @@ mod tests {
         let toml_str = r#"uri = "gs://my-bucket""#;
         let config: StorageConfig = toml::from_str(toml_str).unwrap();
         assert_eq!(config.resolve_key("file.parquet"), "file.parquet");
+    }
+
+    #[test]
+    fn unknown_field_fails_loudly() {
+        let toml_str = r#"
+            uri = "./data/parquet"
+            cache = true
+        "#;
+        let err = toml::from_str::<StorageConfig>(toml_str).unwrap_err();
+        let message = err.to_string();
+        assert!(
+            message.contains("unknown field"),
+            "expected unknown field error, got: {message}"
+        );
+        assert!(
+            message.contains("cache"),
+            "expected error to mention unknown field, got: {message}"
+        );
     }
 
     #[test]

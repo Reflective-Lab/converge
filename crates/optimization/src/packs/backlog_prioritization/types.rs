@@ -4,7 +4,7 @@ use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 /// Input for backlog prioritization optimization
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BacklogPrioritizationInput {
     /// Backlog items to prioritize
     pub items: Vec<BacklogItem>,
@@ -30,6 +30,25 @@ impl BacklogPrioritizationInput {
                 return Err(converge_pack::GateError::invalid_input(format!(
                     "Item {} has invalid effort_points: {}",
                     item.id, item.effort_points
+                )));
+            }
+            if !item.business_value.is_finite() || !(0.0..=100.0).contains(&item.business_value) {
+                return Err(converge_pack::GateError::invalid_input(format!(
+                    "Item {} has invalid business_value: must be finite and between 0 and 100",
+                    item.id
+                )));
+            }
+            if !item.time_criticality.is_finite() || !(0.0..=100.0).contains(&item.time_criticality)
+            {
+                return Err(converge_pack::GateError::invalid_input(format!(
+                    "Item {} has invalid time_criticality: must be finite and between 0 and 100",
+                    item.id
+                )));
+            }
+            if !item.risk_reduction.is_finite() || !(0.0..=100.0).contains(&item.risk_reduction) {
+                return Err(converge_pack::GateError::invalid_input(format!(
+                    "Item {} has invalid risk_reduction: must be finite and between 0 and 100",
+                    item.id
                 )));
             }
         }
@@ -239,6 +258,26 @@ mod tests {
         assert!(input.validate().is_ok());
 
         input.capacity_points = 0;
+        assert!(input.validate().is_err());
+    }
+
+    #[test]
+    fn test_rejects_non_finite_or_out_of_range_scores() {
+        let mut input = BacklogPrioritizationInput {
+            items: vec![create_test_item("i1", f64::NAN, 3)],
+            capacity_points: 10,
+        };
+        assert!(input.validate().is_err());
+
+        input.items[0].business_value = 101.0;
+        assert!(input.validate().is_err());
+
+        input.items[0].business_value = 50.0;
+        input.items[0].time_criticality = f64::INFINITY;
+        assert!(input.validate().is_err());
+
+        input.items[0].time_criticality = 50.0;
+        input.items[0].risk_reduction = -1.0;
         assert!(input.validate().is_err());
     }
 }

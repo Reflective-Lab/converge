@@ -417,23 +417,15 @@ pub(crate) struct PendingGate {
 // Helpers
 // ============================================================================
 
-/// Generate a simple pseudo-UUID from timestamp.
+/// Generate a deterministic pseudo-UUID from a process-local sequence.
 /// Good enough for gate IDs; not cryptographic.
 #[allow(dead_code)]
 fn pseudo_uuid() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default();
-    let nanos = now.as_nanos();
+    static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+    let id = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     format!(
-        "{:08x}-{:04x}-4{:03x}-{:04x}-{:012x}",
-        (nanos >> 96) as u32,
-        (nanos >> 80) as u16,
-        (nanos >> 64) as u16 & 0x0fff,
-        ((nanos >> 48) as u16 & 0x3fff) | 0x8000,
-        nanos as u64 & 0xffffffffffff,
+        "00000000-0000-4000-8000-{:012x}",
+        id & 0x0000_ffff_ffff_ffff,
     )
 }
 

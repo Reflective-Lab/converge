@@ -26,13 +26,13 @@ typed-builder.workspace = true
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
-tracing-test = "0.2"
+tracing-test.workspace = true
 proptest.workspace = true
-insta = { version = "1.42", features = ["json"] }
-static_assertions = "1.1"
-serde_test = "1.0"
-trybuild = "1.0"
-criterion = { version = "0.8", default-features = false, features = ["cargo_bench_support"] }
+insta = { workspace = true, features = ["json"] }
+static_assertions.workspace = true
+serde_test.workspace = true
+trybuild.workspace = true
+criterion = { workspace = true, default-features = false, features = ["cargo_bench_support"] }
 
 [lib]
 bench = false

@@ -40,6 +40,10 @@ pub enum RuntimeError {
     #[error("conflict: {0}")]
     Conflict(String),
 
+    /// Functionality is intentionally not implemented by this runtime.
+    #[error("not implemented: {0}")]
+    Unimplemented(String),
+
     /// Authentication error.
     #[error("authentication error: {0}")]
     Authentication(String),
@@ -113,6 +117,10 @@ impl axum::response::IntoResponse for RuntimeError {
             RuntimeError::Conflict(msg) => {
                 (axum::http::StatusCode::CONFLICT, format!("Conflict: {msg}"))
             }
+            RuntimeError::Unimplemented(msg) => (
+                axum::http::StatusCode::NOT_IMPLEMENTED,
+                format!("Not implemented: {msg}"),
+            ),
             RuntimeError::Authentication(msg) => (
                 axum::http::StatusCode::UNAUTHORIZED,
                 format!("Authentication failed: {msg}"),
@@ -167,6 +175,15 @@ mod tests {
     fn test_conflict_error_display() {
         let error = RuntimeError::Conflict("job already running".to_string());
         assert_eq!(error.to_string(), "conflict: job already running");
+    }
+
+    #[test]
+    fn test_unimplemented_error_display() {
+        let error = RuntimeError::Unimplemented("job store not configured".to_string());
+        assert_eq!(
+            error.to_string(),
+            "not implemented: job store not configured"
+        );
     }
 
     #[test]
@@ -389,6 +406,13 @@ mod tests {
         let error = RuntimeError::Converge(converge_err);
         let response = error.into_response();
         assert_eq!(response.status(), axum::http::StatusCode::CONFLICT);
+    }
+
+    #[tokio::test]
+    async fn test_unimplemented_returns_not_implemented() {
+        let error = RuntimeError::Unimplemented("job execution is not wired".to_string());
+        let response = error.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::NOT_IMPLEMENTED);
     }
 
     // -------------------------------------------------------------------------

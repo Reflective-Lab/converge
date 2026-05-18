@@ -4,7 +4,7 @@ use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 /// Input for vendor shortlist optimization
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VendorShortlistInput {
     /// Vendors to evaluate
     pub vendors: Vec<Vendor>,
@@ -24,6 +24,34 @@ impl VendorShortlistInput {
             return Err(converge_pack::GateError::invalid_input(
                 "max_vendors must be positive",
             ));
+        }
+        if !self.requirements.min_score.is_finite()
+            || !(0.0..=100.0).contains(&self.requirements.min_score)
+        {
+            return Err(converge_pack::GateError::invalid_input(
+                "min_score must be finite and between 0 and 100",
+            ));
+        }
+        if !self.requirements.max_risk_score.is_finite()
+            || !(0.0..=100.0).contains(&self.requirements.max_risk_score)
+        {
+            return Err(converge_pack::GateError::invalid_input(
+                "max_risk_score must be finite and between 0 and 100",
+            ));
+        }
+        for vendor in &self.vendors {
+            if !vendor.score.is_finite() || !(0.0..=100.0).contains(&vendor.score) {
+                return Err(converge_pack::GateError::invalid_input(format!(
+                    "Vendor {} has invalid score: must be finite and between 0 and 100",
+                    vendor.id
+                )));
+            }
+            if !vendor.risk_score.is_finite() || !(0.0..=100.0).contains(&vendor.risk_score) {
+                return Err(converge_pack::GateError::invalid_input(format!(
+                    "Vendor {} has invalid risk_score: must be finite and between 0 and 100",
+                    vendor.id
+                )));
+            }
         }
         Ok(())
     }
@@ -77,7 +105,7 @@ impl Vendor {
 }
 
 /// Shortlist requirements
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShortlistRequirements {
     /// Maximum vendors to include in shortlist
     pub max_vendors: usize,
@@ -87,6 +115,17 @@ pub struct ShortlistRequirements {
     pub max_risk_score: f64,
     /// Required certifications
     pub required_certifications: Vec<String>,
+}
+
+impl Default for ShortlistRequirements {
+    fn default() -> Self {
+        Self {
+            max_vendors: 3,
+            min_score: 0.0,
+            max_risk_score: 100.0,
+            required_certifications: vec![],
+        }
+    }
 }
 
 /// Output for vendor shortlist optimization
@@ -211,6 +250,27 @@ mod tests {
         assert!(input.validate().is_ok());
 
         input.requirements.max_vendors = 0;
+        assert!(input.validate().is_err());
+    }
+
+    #[test]
+    fn test_rejects_non_finite_or_out_of_range_scores() {
+        let mut input = VendorShortlistInput {
+            vendors: vec![create_test_vendor("v1", f64::NAN, 20.0)],
+            requirements: ShortlistRequirements::default(),
+        };
+        assert!(input.validate().is_err());
+
+        input.vendors[0].score = 80.0;
+        input.vendors[0].risk_score = 101.0;
+        assert!(input.validate().is_err());
+
+        input.vendors[0].risk_score = 20.0;
+        input.requirements.min_score = f64::INFINITY;
+        assert!(input.validate().is_err());
+
+        input.requirements.min_score = 50.0;
+        input.requirements.max_risk_score = -1.0;
         assert!(input.validate().is_err());
     }
 }
