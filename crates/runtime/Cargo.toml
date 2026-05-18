@@ -52,12 +52,12 @@ anyhow.workspace = true
 # Observability
 tracing.workspace = true
 tracing-subscriber.workspace = true
-tracing-opentelemetry.workspace = true
-opentelemetry.workspace = true
-opentelemetry-otlp.workspace = true
-opentelemetry_sdk.workspace = true
-metrics.workspace = true
-metrics-exporter-prometheus.workspace = true
+tracing-opentelemetry = { workspace = true, optional = true }
+opentelemetry = { workspace = true, optional = true }
+opentelemetry-otlp = { workspace = true, optional = true }
+opentelemetry_sdk = { workspace = true, optional = true }
+metrics = { workspace = true, optional = true }
+metrics-exporter-prometheus = { workspace = true, optional = true }
 
 # Crypto
 chacha20poly1305.workspace = true
@@ -121,8 +121,13 @@ wasm = ["dep:wasmtime"]
 gcp = ["dep:firestore"]
 auth = []
 firebase = ["auth"]
-metrics = []
-telemetry = []
+metrics = ["dep:metrics", "dep:metrics-exporter-prometheus"]
+telemetry = [
+    "dep:opentelemetry",
+    "dep:opentelemetry-otlp",
+    "dep:opentelemetry_sdk",
+    "dep:tracing-opentelemetry",
+]
 security = []
 nats = []
 crypto = []

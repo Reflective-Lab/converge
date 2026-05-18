@@ -91,6 +91,44 @@ OpenTelemetry. That matches the current user concern: the runtime shell pulls in
 implementation-heavy surfaces too early, while `converge-kernel` remains small
 enough for the embedding story.
 
+### 2026-05-18 Observability Dependency Gate
+
+The first dependency-gating cut made the existing `metrics` and `telemetry`
+feature names own their heavy dependencies instead of compiling them
+unconditionally.
+
+Measured effect:
+
+| Surface | Before | After | Delta |
+|---|---:|---:|---:|
+| runtime minimal dependency lines | `398` | `352` | `-46` |
+| runtime standard dependency lines | `425` | `383` | `-42` |
+| runtime minimal artifact | `7.91 MiB` | `7.91 MiB` | no linked-size change |
+| runtime standard artifact | `9.57 MiB` | `9.57 MiB` | no meaningful linked-size change |
+
+This is a compile/disk blast-radius improvement, not a linked-binary-size
+improvement. It removes Prometheus and OpenTelemetry from minimal/default
+runtime dependency graphs, but the runtime binary still links enough HTTP,
+auth, TLS, request, NATS, and shell machinery that the final executable size
+does not move yet.
+
+Verification:
+
+- `cargo check -p converge-runtime --no-default-features`
+- `cargo check -p converge-runtime`
+- `cargo check -p converge-runtime --features metrics`
+- `cargo check -p converge-runtime --no-default-features --features metrics`
+- `just size-audit`
+
+Remaining observability split:
+
+- `tracing` and `tracing-subscriber` are still unconditional because the runtime
+  binary initializes logging directly in `main.rs`
+- `telemetry` still fails when enabled because the OpenTelemetry API set is
+  stale and version-skewed
+- Sentry remains only a feature stub in this workspace and is not a measured
+  packaging variant yet
+
 ## Current Reality
 
 The old milestone wording talks about `converge-application`. That crate no
