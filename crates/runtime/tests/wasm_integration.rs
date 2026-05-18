@@ -11,7 +11,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use converge_core::{ContextState, Engine};
+use converge_core::{Context, ContextState, Engine};
 use converge_runtime::wasm::contract::*;
 use converge_runtime::wasm::engine::WasmEngine;
 use converge_runtime::wasm::integration::{load_and_register, register_wasm_invariants};
@@ -264,7 +264,7 @@ impl converge_core::Invariant for NativeAlwaysOk {
         converge_core::InvariantClass::Acceptance
     }
 
-    fn check(&self, _ctx: &Context) -> converge_core::InvariantResult {
+    fn check(&self, _ctx: &dyn Context) -> converge_core::InvariantResult {
         converge_core::InvariantResult::Ok
     }
 }

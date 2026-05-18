@@ -22,11 +22,6 @@ pub struct Config {
     /// NATS configuration (optional).
     #[serde(default)]
     pub nats: Option<NatsConfig>,
-
-    /// Billing / Stripe configuration (optional, requires billing feature).
-    #[cfg(feature = "billing")]
-    #[serde(default)]
-    pub billing: Option<BillingConfig>,
 }
 
 #[cfg(feature = "grpc")]
@@ -213,35 +208,6 @@ impl Default for AuditConfig {
     }
 }
 
-/// Billing / Stripe configuration.
-#[cfg(feature = "billing")]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct BillingConfig {
-    /// Stripe API key (secret key, starts with `sk_`).
-    pub stripe_api_key: String,
-    /// Stripe webhook signing secret (starts with `whsec_`).
-    pub stripe_webhook_secret: Option<String>,
-    /// Stripe API base URL (default: `https://api.stripe.com/v1`).
-    pub stripe_base_url: Option<String>,
-    /// Stripe meter event name (default: `convergence_cycles`).
-    #[serde(default = "default_meter_event_name")]
-    pub meter_event_name: String,
-    /// Credit cost per convergence cycle (default: 1).
-    #[serde(default = "default_credits_per_cycle")]
-    pub credits_per_cycle: u32,
-}
-
-#[cfg(feature = "billing")]
-fn default_meter_event_name() -> String {
-    "convergence_cycles".to_string()
-}
-
-#[cfg(feature = "billing")]
-fn default_credits_per_cycle() -> u32 {
-    1
-}
-
 impl Config {
     /// Load configuration from environment and files.
     ///
@@ -251,8 +217,6 @@ impl Config {
     /// - `SECURITY_CERT_PATH`, `SECURITY_KEY_PATH`, `SECURITY_CA_PATH` - TLS paths
     /// - `SECURITY_SERVICE_ID` - explicit service identifier
     /// - `JWT_SECRET`, `JWT_ISSUER`, `JWT_AUDIENCE` - JWT validation config
-    /// - `STRIPE_API_KEY` - Stripe secret key (billing feature)
-    /// - `STRIPE_WEBHOOK_SECRET` - Stripe webhook signing secret (billing feature)
     pub fn load() -> anyhow::Result<Self> {
         let http_bind = if let Ok(bind) = std::env::var("HTTP_BIND") {
             bind.parse()?
@@ -269,20 +233,6 @@ impl Config {
             },
             security: load_security_config(),
             nats: None,
-            #[cfg(feature = "billing")]
-            billing: std::env::var("STRIPE_API_KEY")
-                .ok()
-                .map(|key| BillingConfig {
-                    stripe_api_key: key,
-                    stripe_webhook_secret: std::env::var("STRIPE_WEBHOOK_SECRET").ok(),
-                    stripe_base_url: std::env::var("STRIPE_BASE_URL").ok(),
-                    meter_event_name: std::env::var("STRIPE_METER_EVENT_NAME")
-                        .unwrap_or_else(|_| default_meter_event_name()),
-                    credits_per_cycle: std::env::var("STRIPE_CREDITS_PER_CYCLE")
-                        .ok()
-                        .and_then(|v| v.parse().ok())
-                        .unwrap_or_else(default_credits_per_cycle),
-                }),
         })
     }
 }
@@ -422,8 +372,6 @@ mod tests {
             http: HttpConfig::default(),
             security: None,
             nats: None,
-            #[cfg(feature = "billing")]
-            billing: None,
         };
         let debug_str = format!("{:?}", config);
         assert!(debug_str.contains("Config"));
@@ -436,8 +384,6 @@ mod tests {
             http: HttpConfig::default(),
             security: None,
             nats: None,
-            #[cfg(feature = "billing")]
-            billing: None,
         };
         let cloned = config.clone();
         assert_eq!(config.http.bind, cloned.http.bind);
@@ -449,8 +395,6 @@ mod tests {
             http: HttpConfig::default(),
             security: None,
             nats: None,
-            #[cfg(feature = "billing")]
-            billing: None,
         };
         let json = serde_json::to_string(&config).unwrap();
         assert!(json.contains("http"));
@@ -493,8 +437,6 @@ mod tests {
             http: HttpConfig::default(),
             security: None,
             nats: None,
-            #[cfg(feature = "billing")]
-            billing: None,
         };
         let grpc = config.grpc();
         assert_eq!(grpc.bind.port(), 50051);
@@ -576,13 +518,6 @@ mod tests {
         assert_unknown_field::<GrpcConfig>(json, "reflection");
     }
 
-    #[cfg(feature = "billing")]
-    #[test]
-    fn test_billing_config_deserialize_unknown_field_fails_loudly() {
-        let json = r#"{"stripe_api_key":"sk_test","currency":"usd"}"#;
-        assert_unknown_field::<BillingConfig>(json, "currency");
-    }
-
     // -------------------------------------------------------------------------
     // Round-trip Tests
     // -------------------------------------------------------------------------
@@ -608,8 +543,6 @@ mod tests {
             },
             security: None,
             nats: None,
-            #[cfg(feature = "billing")]
-            billing: None,
         };
         let json = serde_json::to_string(&original).unwrap();
         let restored: Config = serde_json::from_str(&json).unwrap();

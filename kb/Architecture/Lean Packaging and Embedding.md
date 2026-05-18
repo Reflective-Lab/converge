@@ -124,10 +124,61 @@ Remaining observability split:
 
 - `tracing` and `tracing-subscriber` are still unconditional because the runtime
   binary initializes logging directly in `main.rs`
-- `telemetry` still fails when enabled because the OpenTelemetry API set is
-  stale and version-skewed
-- Sentry remains only a feature stub in this workspace and is not a measured
-  packaging variant yet
+- `telemetry` now compiles when enabled, but remains a heavyweight optional
+  runtime adapter
+
+### 2026-05-18 Full Runtime Feature Repair
+
+The full runtime feature set is now measurable instead of failing during
+compilation.
+
+Changes:
+
+- removed the stale `billing` runtime feature and Stripe wiring; Commerce Rails
+  owns billing semantics and provider-specific Stripe state outside this runtime
+- removed the stale `sentry` feature stub rather than adding a new heavy
+  reporting stack to make an unused flag compile
+- aligned OpenTelemetry dependencies with `tracing-opentelemetry` so telemetry
+  uses one compatible OpenTelemetry API family
+- removed the X.509 parser dependency expectation from file identity loading;
+  explicit service identity remains configuration-owned
+- made `wasm-runtime` own the `hex` dependency used by WASM signing/storage and
+  repaired stale WASM/core type conversions
+
+Measured result:
+
+| Variant | Command | Result |
+|---|---|---|
+| runtime minimal | `cargo build -p converge-runtime --release --no-default-features` | `8,251,648` bytes / `7.87 MiB` |
+| runtime standard | `cargo build -p converge-runtime --release` | `10,010,032` bytes / `9.55 MiB` |
+| runtime full | `cargo build -p converge-runtime --release --all-features` | `15,417,280` bytes / `14.70 MiB` |
+| kernel | `cargo build -p converge-kernel --release --lib` | `328,112` bytes / `0.31 MiB` |
+
+Dependency graph shape:
+
+| Surface | Unique lines |
+|---|---:|
+| runtime minimal | `352` |
+| runtime standard | `383` |
+| runtime full | `564` |
+| kernel | `100` |
+
+Disk footprint after the audit:
+
+| Path | Size |
+|---|---:|
+| `/tmp/converge-size-audit` | `2.3G` |
+| `/tmp/converge-size-audit/release/deps` | `2.0G` |
+| workspace `target/` | `21G` |
+
+Verification:
+
+- `cargo check -p converge-runtime --no-default-features`
+- `cargo check -p converge-runtime --all-features`
+- `cargo test -p converge-runtime --all-features`
+- `just check`
+- `just lint`
+- `just size-audit`
 
 ### 2026-05-18 Serialization Boundary Cut
 
@@ -296,8 +347,7 @@ That is a v3.6-style split question, not the first cut of v3.4.
 
 ## What Comes Next
 
-1. Fix or quarantine the broken `--all-features` runtime surfaces so `full`
-   becomes measurable.
-2. Gate telemetry, metrics, NATS, cloud, and WASM dependencies honestly.
-3. Re-run `just size-audit` and compare deltas.
-4. Write the embedding guide around `converge-kernel`.
+1. Gate NATS, cloud, auth/security, and WASM dependencies more tightly so
+   minimal stays boring.
+2. Decide whether telemetry/audit deserve a later runtime-adapter crate split.
+3. Write the embedding guide around `converge-kernel`.

@@ -33,11 +33,11 @@
 //! telemetry::shutdown();
 //! ```
 
-use opentelemetry::KeyValue;
+use opentelemetry::{KeyValue, global, trace::TracerProvider as _};
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{
-    Resource, runtime,
-    trace::{RandomIdGenerator, Sampler, Tracer},
+    Resource,
+    trace::{RandomIdGenerator, Sampler, SdkTracer, SdkTracerProvider},
 };
 use tracing_opentelemetry::OpenTelemetryLayer;
 
@@ -55,7 +55,7 @@ pub enum TelemetryError {
 ///
 /// This sets up the OTLP exporter and integrates with the tracing subscriber.
 /// Call this once at application startup, before any tracing calls.
-pub fn init() -> Result<Tracer, TelemetryError> {
+pub fn init() -> Result<SdkTracer, TelemetryError> {
     // Get configuration from environment
     let endpoint = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
         .unwrap_or_else(|_| "http://localhost:4317".to_string());
@@ -71,32 +71,32 @@ pub fn init() -> Result<Tracer, TelemetryError> {
         "Initializing OpenTelemetry"
     );
 
-    // Build the OTLP exporter
-    let exporter = opentelemetry_otlp::new_exporter()
-        .tonic()
-        .with_endpoint(&endpoint);
+    let exporter = opentelemetry_otlp::SpanExporter::builder()
+        .with_tonic()
+        .with_endpoint(endpoint)
+        .build()
+        .map_err(|e| TelemetryError::Exporter(e.to_string()))?;
 
-    // Build the tracer (install_batch returns a Tracer directly)
-    let tracer = opentelemetry_otlp::new_pipeline()
-        .tracing()
-        .with_exporter(exporter)
-        .with_trace_config(
-            opentelemetry_sdk::trace::Config::default()
-                .with_sampler(get_sampler())
-                .with_id_generator(RandomIdGenerator::default())
-                .with_resource(Resource::new(vec![
-                    KeyValue::new("service.name", service_name.clone()),
-                    KeyValue::new("service.version", service_version),
-                    KeyValue::new("service.namespace", "converge"),
-                    KeyValue::new(
-                        "deployment.environment",
-                        std::env::var("OTEL_ENVIRONMENT")
-                            .unwrap_or_else(|_| "development".to_string()),
-                    ),
-                ])),
-        )
-        .install_batch(runtime::Tokio)
-        .map_err(|e| TelemetryError::Init(e.to_string()))?;
+    let resource = Resource::builder()
+        .with_service_name(service_name)
+        .with_attributes([
+            KeyValue::new("service.version", service_version),
+            KeyValue::new("service.namespace", "converge"),
+            KeyValue::new(
+                "deployment.environment",
+                std::env::var("OTEL_ENVIRONMENT").unwrap_or_else(|_| "development".to_string()),
+            ),
+        ])
+        .build();
+
+    let provider = SdkTracerProvider::builder()
+        .with_batch_exporter(exporter)
+        .with_sampler(get_sampler())
+        .with_id_generator(RandomIdGenerator::default())
+        .with_resource(resource)
+        .build();
+    let tracer = provider.tracer("converge-runtime");
+    global::set_tracer_provider(provider);
 
     tracing::info!("OpenTelemetry initialized successfully");
 
@@ -106,7 +106,7 @@ pub fn init() -> Result<Tracer, TelemetryError> {
 /// Create the OpenTelemetry tracing layer.
 ///
 /// This should be added to the tracing subscriber registry.
-pub fn layer<S>(tracer: Tracer) -> OpenTelemetryLayer<S, Tracer>
+pub fn layer<S>(tracer: SdkTracer) -> OpenTelemetryLayer<S, SdkTracer>
 where
     S: tracing::Subscriber + for<'span> tracing_subscriber::registry::LookupSpan<'span>,
 {
@@ -118,7 +118,6 @@ where
 /// This flushes any pending traces and shuts down the exporter.
 /// Call this before application exit.
 pub fn shutdown() {
-    opentelemetry::global::shutdown_tracer_provider();
     tracing::info!("OpenTelemetry shut down");
 }
 

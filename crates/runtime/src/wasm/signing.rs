@@ -235,12 +235,15 @@ fn parse_verifying_key(hex_key: &str) -> Option<VerifyingKey> {
 mod tests {
     use super::*;
     use ed25519_dalek::SigningKey;
-    use rand::rngs::OsRng;
 
-    fn generate_keypair() -> (SigningKey, VerifyingKey) {
-        let signing_key = SigningKey::generate(&mut OsRng);
+    fn keypair_from_seed(seed: u8) -> (SigningKey, VerifyingKey) {
+        let signing_key = SigningKey::from_bytes(&[seed; 32]);
         let verifying_key = signing_key.verifying_key();
         (signing_key, verifying_key)
+    }
+
+    fn generate_keypair() -> (SigningKey, VerifyingKey) {
+        keypair_from_seed(7)
     }
 
     fn sample_wasm_bytes() -> Vec<u8> {
@@ -359,7 +362,7 @@ mod tests {
     #[test]
     fn untrusted_signer_is_rejected() {
         let (signing_key, _) = generate_keypair();
-        let (_, other_verifying_key) = generate_keypair();
+        let (_, other_verifying_key) = keypair_from_seed(8);
         let wasm = sample_wasm_bytes();
         let sig = sign_module(&wasm, &signing_key);
 

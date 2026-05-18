@@ -127,10 +127,9 @@ impl FileIdentity {
         }
         debug!(count = root_store.len(), "Loaded CA certificates");
 
-        // Extract service ID from certificate CN or use provided value
-        let service_id = config.service_id.unwrap_or_else(|| {
-            extract_cn_from_cert(&certs[0]).unwrap_or_else(|| "unknown-service".to_string())
-        });
+        let service_id = config
+            .service_id
+            .unwrap_or_else(|| "unknown-service".to_string());
         info!(service_id = %service_id, "Identity loaded successfully");
 
         Ok(Self {
@@ -188,36 +187,6 @@ impl Identity for FileIdentity {
     fn service_id(&self) -> &str {
         &self.service_id
     }
-}
-
-/// Extract the Common Name (CN) from a certificate's subject.
-#[cfg(feature = "security")]
-fn extract_cn_from_cert(cert: &CertificateDer<'_>) -> Option<String> {
-    use x509_parser::prelude::*;
-
-    let (_, cert) = X509Certificate::from_der(cert.as_ref()).ok()?;
-
-    // Try to find CN in subject
-    for rdn in cert.subject().iter_rdn() {
-        for attr in rdn.iter() {
-            if attr.attr_type() == &oid_registry::OID_X509_COMMON_NAME {
-                return attr.as_str().ok().map(String::from);
-            }
-        }
-    }
-
-    // Try to find SPIFFE ID in SAN
-    if let Ok(Some(san)) = cert.subject_alternative_name() {
-        for name in &san.value.general_names {
-            if let GeneralName::URI(uri) = name {
-                if uri.starts_with("spiffe://") {
-                    return Some(uri.to_string());
-                }
-            }
-        }
-    }
-
-    None
 }
 
 #[cfg(test)]

@@ -51,11 +51,6 @@ pub enum RuntimeError {
     /// Authorization error.
     #[error("authorization error: {0}")]
     Authorization(String),
-
-    /// Billing/payment error.
-    #[cfg(feature = "billing")]
-    #[error("billing error: {0}")]
-    Billing(String),
 }
 
 /// Error response for API.
@@ -128,11 +123,6 @@ impl axum::response::IntoResponse for RuntimeError {
             RuntimeError::Authorization(msg) => (
                 axum::http::StatusCode::FORBIDDEN,
                 format!("Access denied: {msg}"),
-            ),
-            #[cfg(feature = "billing")]
-            RuntimeError::Billing(msg) => (
-                axum::http::StatusCode::PAYMENT_REQUIRED,
-                format!("Billing error: {msg}"),
             ),
         };
 

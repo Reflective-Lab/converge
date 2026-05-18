@@ -216,6 +216,10 @@ impl converge_pack::Context for ContextState {
     fn get_proposals(&self, key: ContextKey) -> &[ProposedFact] {
         self.proposals.get(&key).map_or(&[], Vec::as_slice)
     }
+
+    fn version(&self) -> u64 {
+        self.version
+    }
 }
 
 impl ContextState {

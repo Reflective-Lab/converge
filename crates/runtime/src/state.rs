@@ -19,26 +19,6 @@ pub struct AppState {
     /// Database connection (when gcp feature is enabled).
     #[cfg(feature = "gcp")]
     pub db: Option<Arc<Database>>,
-
-    /// Stripe billing client (when billing feature is enabled).
-    #[cfg(feature = "billing")]
-    pub billing: Option<Arc<crate::billing::StripeClient>>,
-
-    /// Stripe webhook signing secret (when billing feature is enabled).
-    #[cfg(feature = "billing")]
-    pub billing_webhook_secret: Option<String>,
-
-    /// Credit ledger for usage-based billing (billing + gcp features).
-    #[cfg(all(feature = "billing", feature = "gcp"))]
-    pub credit_ledger: Option<Arc<crate::billing::CreditLedger>>,
-
-    /// Stripe meter event name (when billing feature is enabled).
-    #[cfg(feature = "billing")]
-    pub meter_event_name: Option<String>,
-
-    /// Credit cost per convergence cycle (when billing feature is enabled).
-    #[cfg(feature = "billing")]
-    pub credits_per_cycle: u32,
 }
 
 impl std::fmt::Debug for AppState {
@@ -56,16 +36,6 @@ impl AppState {
             templates: Arc::new(TemplateRegistry::with_defaults()),
             #[cfg(feature = "gcp")]
             db: None,
-            #[cfg(feature = "billing")]
-            billing: None,
-            #[cfg(feature = "billing")]
-            billing_webhook_secret: None,
-            #[cfg(all(feature = "billing", feature = "gcp"))]
-            credit_ledger: None,
-            #[cfg(feature = "billing")]
-            meter_event_name: None,
-            #[cfg(feature = "billing")]
-            credits_per_cycle: 1,
         }
     }
 
@@ -75,16 +45,6 @@ impl AppState {
             templates: Arc::new(templates),
             #[cfg(feature = "gcp")]
             db: None,
-            #[cfg(feature = "billing")]
-            billing: None,
-            #[cfg(feature = "billing")]
-            billing_webhook_secret: None,
-            #[cfg(all(feature = "billing", feature = "gcp"))]
-            credit_ledger: None,
-            #[cfg(feature = "billing")]
-            meter_event_name: None,
-            #[cfg(feature = "billing")]
-            credits_per_cycle: 1,
         }
     }
 
@@ -94,16 +54,6 @@ impl AppState {
         Self {
             templates: Arc::new(TemplateRegistry::with_defaults()),
             db: Some(Arc::new(db)),
-            #[cfg(feature = "billing")]
-            billing: None,
-            #[cfg(feature = "billing")]
-            billing_webhook_secret: None,
-            #[cfg(all(feature = "billing", feature = "gcp"))]
-            credit_ledger: None,
-            #[cfg(feature = "billing")]
-            meter_event_name: None,
-            #[cfg(feature = "billing")]
-            credits_per_cycle: 1,
         }
     }
 
@@ -113,53 +63,7 @@ impl AppState {
         Self {
             templates: Arc::new(templates),
             db: Some(Arc::new(db)),
-            #[cfg(feature = "billing")]
-            billing: None,
-            #[cfg(feature = "billing")]
-            billing_webhook_secret: None,
-            #[cfg(all(feature = "billing", feature = "gcp"))]
-            credit_ledger: None,
-            #[cfg(feature = "billing")]
-            meter_event_name: None,
-            #[cfg(feature = "billing")]
-            credits_per_cycle: 1,
         }
-    }
-
-    /// Configure billing from a `BillingConfig`.
-    #[cfg(feature = "billing")]
-    pub fn with_billing(mut self, config: &crate::config::BillingConfig) -> Self {
-        self.billing = Some(Arc::new(crate::billing::StripeClient::new(config)));
-        self.billing_webhook_secret
-            .clone_from(&config.stripe_webhook_secret);
-        self.meter_event_name = Some(config.meter_event_name.clone());
-        self.credits_per_cycle = config.credits_per_cycle;
-        self
-    }
-
-    /// Configure credit ledger from a Firestore database.
-    #[cfg(all(feature = "billing", feature = "gcp"))]
-    pub fn with_credit_ledger(mut self, firestore_db: firestore::FirestoreDb) -> Self {
-        self.credit_ledger = Some(Arc::new(crate::billing::CreditLedger::new(firestore_db)));
-        self
-    }
-
-    /// Get a reference to the billing client (if configured).
-    #[cfg(feature = "billing")]
-    pub fn billing_client(&self) -> Option<&crate::billing::StripeClient> {
-        self.billing.as_deref()
-    }
-
-    /// Get a reference to the credit ledger (if configured).
-    #[cfg(all(feature = "billing", feature = "gcp"))]
-    pub fn credit_ledger(&self) -> Option<&crate::billing::CreditLedger> {
-        self.credit_ledger.as_deref()
-    }
-
-    /// Get the webhook signing secret (if configured).
-    #[cfg(feature = "billing")]
-    pub fn billing_webhook_secret(&self) -> Option<String> {
-        self.billing_webhook_secret.clone()
     }
 }
 

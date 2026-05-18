@@ -411,7 +411,7 @@ impl ModuleStore {
 pub fn content_hash(bytes: &[u8]) -> ModuleId {
     let hash = Sha256::digest(bytes);
     ModuleId {
-        content_hash: format!("sha256:{hash:x}"),
+        content_hash: format!("sha256:{}", hex::encode(hash)),
     }
 }
 
@@ -989,11 +989,10 @@ mod tests {
 
     #[test]
     fn enforce_policy_accepts_signed_upload() {
-        use super::signing::sign_module;
+        use crate::wasm::signing::sign_module;
         use ed25519_dalek::SigningKey;
-        use rand::rngs::OsRng;
 
-        let signing_key = SigningKey::generate(&mut OsRng);
+        let signing_key = SigningKey::from_bytes(&[11; 32]);
         let verifying_key = signing_key.verifying_key();
 
         let mut trusted = TrustedKeySet::empty();
@@ -1010,11 +1009,10 @@ mod tests {
 
     #[test]
     fn enforce_policy_rejects_tampered_module() {
-        use super::signing::sign_module;
+        use crate::wasm::signing::sign_module;
         use ed25519_dalek::SigningKey;
-        use rand::rngs::OsRng;
 
-        let signing_key = SigningKey::generate(&mut OsRng);
+        let signing_key = SigningKey::from_bytes(&[12; 32]);
         let verifying_key = signing_key.verifying_key();
 
         let mut trusted = TrustedKeySet::empty();
@@ -1040,15 +1038,14 @@ mod tests {
 
     #[test]
     fn enforce_policy_rejects_untrusted_signer() {
-        use super::signing::sign_module;
+        use crate::wasm::signing::sign_module;
         use ed25519_dalek::SigningKey;
-        use rand::rngs::OsRng;
 
         // Sign with key A
-        let signing_key_a = SigningKey::generate(&mut OsRng);
+        let signing_key_a = SigningKey::from_bytes(&[13; 32]);
 
         // Trust only key B
-        let signing_key_b = SigningKey::generate(&mut OsRng);
+        let signing_key_b = SigningKey::from_bytes(&[14; 32]);
         let verifying_key_b = signing_key_b.verifying_key();
 
         let mut trusted = TrustedKeySet::empty();

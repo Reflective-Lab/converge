@@ -61,6 +61,14 @@ pub trait Context: Send + Sync {
         &[]
     }
 
+    /// Monotonic context version, when the backing implementation tracks one.
+    ///
+    /// Stateless test contexts and simple external implementations can keep the
+    /// default `0`.
+    fn version(&self) -> u64 {
+        0
+    }
+
     /// Count of facts under a key.
     fn count(&self, key: ContextKey) -> usize {
         self.get(key).len()

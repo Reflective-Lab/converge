@@ -13,7 +13,7 @@
 
 use std::sync::Arc;
 
-use converge_core::{ContextKey, ContextState, InvariantClass, InvariantResult, Violation};
+use converge_core::{ContextKey, InvariantClass, InvariantResult, Violation};
 use strum::IntoEnumIterator;
 
 use super::contract::*;
@@ -192,7 +192,7 @@ impl converge_core::Invariant for WasmInvariant {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use converge_core::{ContextFact, ContextKey, ContextState};
+    use converge_core::{ContextKey, ContextState, Engine};
     use std::collections::HashMap;
 
     /// Build the WAT for an invariant that always returns ok.
@@ -346,7 +346,9 @@ mod tests {
         for (key, id, content) in entries {
             ctx.add_input(*key, *id, *content).unwrap();
         }
-        Engine::new().run(ctx).unwrap().context
+        tokio_test::block_on(Engine::new().run(ctx))
+            .unwrap()
+            .context
     }
 
     fn context_with_strategies() -> ContextState {

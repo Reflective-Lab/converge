@@ -1014,53 +1014,6 @@ pub async fn execute_template_job(
         "Executing template job with domain agents"
     );
 
-    // Extract billing-relevant values before moving request
-    #[cfg(all(feature = "billing", feature = "gcp"))]
-    let max_cycles = request
-        .overrides
-        .budget
-        .as_ref()
-        .map(|b| b.max_cycles)
-        .unwrap_or(template.budget.max_cycles);
-    #[cfg(all(feature = "billing", feature = "gcp"))]
-    let seed_user_id: Option<String> = request
-        .overrides
-        .seeds
-        .iter()
-        .find(|s| s.id == "user_id")
-        .map(|s| s.content.clone());
-    #[cfg(feature = "billing")]
-    let seed_stripe_customer_id: Option<String> = request
-        .overrides
-        .seeds
-        .iter()
-        .find(|s| s.id == "stripe_customer_id")
-        .map(|s| s.content.clone());
-
-    // Pre-execution credit check (billing + gcp)
-    #[cfg(all(feature = "billing", feature = "gcp"))]
-    {
-        if let Some(ref ledger) = state.credit_ledger {
-            if let Some(ref user_id) = seed_user_id {
-                let required = i64::from(max_cycles) * i64::from(state.credits_per_cycle);
-                if !ledger
-                    .has_sufficient_credits(user_id, required)
-                    .await
-                    .unwrap_or(false)
-                {
-                    let balance = ledger
-                        .get_balance(user_id)
-                        .await
-                        .map(|b| b.balance)
-                        .unwrap_or(0);
-                    return Err(RuntimeError::Billing(format!(
-                        "Insufficient credits: required {required}, available {balance}"
-                    )));
-                }
-            }
-        }
-    }
-
     // Clone what we need for the blocking task
     let pack_id = request.pack.clone();
     let template = (*template).clone();
@@ -1107,70 +1060,6 @@ pub async fn execute_template_job(
         duration_ms = result.duration_ms,
         "Template job completed"
     );
-
-    #[cfg(feature = "billing")]
-    let actual_cycles = result.cycles;
-
-    // Post-execution: deduct credits (billing + gcp)
-    #[cfg(all(feature = "billing", feature = "gcp"))]
-    {
-        if let Some(ref ledger) = state.credit_ledger {
-            if let Some(ref user_id) = seed_user_id {
-                let deduct_amount = i64::from(actual_cycles) * i64::from(state.credits_per_cycle);
-                let job_id = uuid::Uuid::new_v4().to_string();
-                let idempotency_key = format!("job_{job_id}_deduct");
-
-                if let Err(e) = ledger
-                    .deduct(
-                        user_id,
-                        deduct_amount,
-                        &format!("Job execution: {actual_cycles} cycles"),
-                        Some(&job_id),
-                        Some(&idempotency_key),
-                    )
-                    .await
-                {
-                    tracing::warn!(
-                        user_id = %user_id,
-                        error = %e,
-                        "Failed to deduct credits post-execution"
-                    );
-                }
-            }
-        }
-    }
-
-    // Post-execution: report usage to Stripe (billing, fire-and-forget)
-    #[cfg(feature = "billing")]
-    {
-        if let (Some(billing), Some(event_name)) = (state.billing_client(), &state.meter_event_name)
-        {
-            if let Some(ref customer_id) = seed_stripe_customer_id {
-                let billing = billing.clone();
-                let event_name = event_name.clone();
-                let customer_id = customer_id.clone();
-                let idempotency_key = format!("meter_{}_{}", uuid::Uuid::new_v4(), actual_cycles);
-
-                tokio::spawn(async move {
-                    if let Err(e) = billing
-                        .report_usage(
-                            &event_name,
-                            &customer_id,
-                            actual_cycles,
-                            Some(&idempotency_key),
-                        )
-                        .await
-                    {
-                        tracing::warn!(
-                            customer_id,
-                            error = %e,
-                            "Failed to report usage to Stripe"
-                        );
-                    }
-                });
-            }
-        }
-    }
 
     Ok(Json(JobResponse {
         metadata: JobMetadata {
@@ -1220,9 +1109,6 @@ pub fn protected_router(state: AppState) -> Router<()> {
         .route("/api/v1/store/jobs/{job_id}/cancel", post(cancel_job))
         .route("/api/v1/store/users/{user_id}/jobs", get(list_user_jobs))
         .with_state(state.clone());
-
-    #[cfg(feature = "billing")]
-    let router = router.merge(crate::billing::handlers::billing_router(state));
 
     router
 }

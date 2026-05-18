@@ -785,7 +785,12 @@ pub mod convert {
 
             converge_core::InvariantResult::Violated(converge_core::Violation::with_facts(
                 reason.to_string(),
-                guest.fact_ids.clone(),
+                guest
+                    .fact_ids
+                    .iter()
+                    .cloned()
+                    .map(converge_core::FactId::from)
+                    .collect(),
             ))
         }
     }

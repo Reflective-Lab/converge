@@ -145,13 +145,13 @@ impl WasmEngine {
                             call_start.elapsed().as_micros() as u64,
                             false,
                         );
-                        return Err(anyhow::anyhow!("ReadContext capability denied"));
+                        return Err(wasmtime::Error::msg("ReadContext capability denied"));
                     }
 
                     // Check host call quota
                     let within_quota = caller.data_mut().check_host_call_quota();
                     if !within_quota {
-                        return Err(anyhow::anyhow!("host call quota exceeded"));
+                        return Err(wasmtime::Error::msg("host call quota exceeded"));
                     }
 
                     // Resolve key name and serialize facts
@@ -175,17 +175,17 @@ impl WasmEngine {
                     let alloc_fn = caller
                         .get_export("alloc")
                         .and_then(|e| e.into_func())
-                        .ok_or_else(|| anyhow::anyhow!("guest missing 'alloc' export"))?;
+                        .ok_or_else(|| wasmtime::Error::msg("guest missing 'alloc' export"))?;
                     let alloc_typed = alloc_fn
                         .typed::<i32, i32>(&caller)
-                        .map_err(|e| anyhow::anyhow!("alloc type mismatch: {e}"))?;
+                        .map_err(|e| wasmtime::Error::msg(format!("alloc type mismatch: {e}")))?;
                     let ptr = alloc_typed.call(&mut caller, json_len as i32)?;
 
                     // Write to guest memory
                     let memory = caller
                         .get_export("memory")
                         .and_then(|e| e.into_memory())
-                        .ok_or_else(|| anyhow::anyhow!("guest missing 'memory' export"))?;
+                        .ok_or_else(|| wasmtime::Error::msg("guest missing 'memory' export"))?;
                     memory.write(&mut caller, ptr as usize, &json)?;
 
                     // Record
@@ -221,20 +221,20 @@ impl WasmEngine {
                             call_start.elapsed().as_micros() as u64,
                             false,
                         );
-                        return Err(anyhow::anyhow!("Log capability denied"));
+                        return Err(wasmtime::Error::msg("Log capability denied"));
                     }
 
                     // Check host call quota
                     let within_quota = caller.data_mut().check_host_call_quota();
                     if !within_quota {
-                        return Err(anyhow::anyhow!("host call quota exceeded"));
+                        return Err(wasmtime::Error::msg("host call quota exceeded"));
                     }
 
                     // Read message from guest memory
                     let memory = caller
                         .get_export("memory")
                         .and_then(|e| e.into_memory())
-                        .ok_or_else(|| anyhow::anyhow!("guest missing 'memory' export"))?;
+                        .ok_or_else(|| wasmtime::Error::msg("guest missing 'memory' export"))?;
 
                     let mut buf = vec![0u8; len as usize];
                     memory.read(&caller, ptr as usize, &mut buf)?;
@@ -272,13 +272,13 @@ impl WasmEngine {
                             call_start.elapsed().as_micros() as u64,
                             false,
                         );
-                        return Err(anyhow::anyhow!("Clock capability denied"));
+                        return Err(wasmtime::Error::msg("Clock capability denied"));
                     }
 
                     // Check host call quota
                     let within_quota = caller.data_mut().check_host_call_quota();
                     if !within_quota {
-                        return Err(anyhow::anyhow!("host call quota exceeded"));
+                        return Err(wasmtime::Error::msg("host call quota exceeded"));
                     }
 
                     // Return elapsed millis since invocation start (monotonic, not wall clock)

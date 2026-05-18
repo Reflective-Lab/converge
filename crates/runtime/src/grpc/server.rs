@@ -61,7 +61,7 @@ impl GrpcServer {
         let service = ConvergeServiceImpl::new();
 
         #[cfg(feature = "security")]
-        if let Some(security_config) = self.security_config.take() {
+        if let Some(security_config) = self.security_config {
             return Self::start_with_tls(addr, service, &security_config).await;
         }
 
