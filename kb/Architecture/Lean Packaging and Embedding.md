@@ -138,7 +138,7 @@ longer exists in this workspace. The service shell that needs trimming now is
 ## First v3.4 Cut
 
 The first lean-packaging cleanup removed dead direct dependencies from
-`converge-runtime`:
+`converge-runtime` and later pruned their stale workspace entries:
 
 - `clap`
 - `config`
@@ -146,6 +146,10 @@ The first lean-packaging cleanup removed dead direct dependencies from
 
 Those were inflating the runtime dependency graph without owning any real
 behavior in the current shell.
+
+As of 2026-05-18, `config` and `dotenv` are not present in the workspace
+dependency graph. `clap` still appears only through Criterion dev tooling, not
+as a Converge runtime dependency.
 
 ## Scope
 
