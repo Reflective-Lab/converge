@@ -129,6 +129,32 @@ Remaining observability split:
 - Sentry remains only a feature stub in this workspace and is not a measured
   packaging variant yet
 
+### 2026-05-18 Serialization Boundary Cut
+
+The first serialization pass deliberately avoided making `serde` optional
+across the public crates. In this workspace, serialization is not only a
+transport convenience:
+
+- `converge-pack::FactPayload` requires `serde::Serialize`
+- core fact, proposal, provider, and formation DTOs derive `Serialize` /
+  `Deserialize`
+- several public payload fields intentionally use `serde_json::Value` as the
+  open boundary representation
+
+The safe cleanup was therefore limited to dependencies that are not part of a
+normal public contract:
+
+- moved `converge-experience`'s `serde_json` dependency to dev-dependencies
+  because it is used only by test roundtrips
+- kept `serde` in `converge-kernel`; provider-selection payloads implement
+  `FactPayload`, which requires `Serialize`
+
+Verification:
+
+- `cargo check -p converge-experience`
+- `cargo test -p converge-experience --lib`
+- `cargo check -p converge-kernel`
+
 ## Current Reality
 
 The old milestone wording talks about `converge-application`. That crate no
