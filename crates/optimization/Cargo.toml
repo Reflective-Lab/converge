@@ -44,10 +44,10 @@ varisat = { workspace = true, optional = true }
 
 [dev-dependencies]
 converge-provider.workspace = true
-criterion = { version = "0.8" }
+criterion = { workspace = true, features = ["default"] }
 proptest.workspace = true
 rand.workspace = true
-approx = "0.5"
+approx.workspace = true
 tokio = { workspace = true, features = ["macros", "rt"] }
 
 [features]

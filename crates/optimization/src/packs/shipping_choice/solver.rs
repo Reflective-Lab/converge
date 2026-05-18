@@ -57,8 +57,9 @@ impl CostMinimizingSolver {
 
         candidates.sort_by(|a, b| {
             a.cost
-                .partial_cmp(&b.cost)
-                .unwrap_or(std::cmp::Ordering::Equal)
+                .total_cmp(&b.cost)
+                .then_with(|| a.carrier_id.cmp(&b.carrier_id))
+                .then_with(|| a.service_level.cmp(&b.service_level))
         });
 
         // Apply tie-breaking for equal costs

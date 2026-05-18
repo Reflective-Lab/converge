@@ -14,9 +14,9 @@ pub struct BinPackingInput {
 
 impl BinPackingInput {
     pub fn validate(&self) -> Result<()> {
-        if self.bin_capacity <= 0.0 {
+        if !self.bin_capacity.is_finite() || self.bin_capacity <= 0.0 {
             return Err(converge_pack::GateError::invalid_input(
-                "Bin capacity must be positive",
+                "Bin capacity must be finite and positive",
             ));
         }
         if self.items.is_empty() {
@@ -25,9 +25,9 @@ impl BinPackingInput {
             ));
         }
         for (i, &size) in self.items.iter().enumerate() {
-            if size <= 0.0 {
+            if !size.is_finite() || size <= 0.0 {
                 return Err(converge_pack::GateError::invalid_input(format!(
-                    "Item {} has non-positive size",
+                    "Item {} must have finite positive size",
                     i
                 )));
             }
@@ -54,5 +54,24 @@ pub struct BinPackingOutput {
 impl BinPackingOutput {
     pub fn summary(&self) -> String {
         format!("Packed all items into {} bins", self.bins_used)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rejects_non_finite_capacity_and_items() {
+        let mut input = BinPackingInput {
+            bin_capacity: f64::NAN,
+            items: vec![1.0],
+        };
+
+        assert!(input.validate().is_err());
+
+        input.bin_capacity = 10.0;
+        input.items = vec![f64::INFINITY];
+        assert!(input.validate().is_err());
     }
 }

@@ -16,7 +16,7 @@ impl FirstFitDecreasingSolver {
         // Sort items by size descending, keeping original indices
         let mut indexed_items: Vec<(usize, f64)> =
             input.items.iter().copied().enumerate().collect();
-        indexed_items.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        indexed_items.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
 
         let mut bins: Vec<Vec<usize>> = Vec::new();
         let mut bin_remaining: Vec<f64> = Vec::new();

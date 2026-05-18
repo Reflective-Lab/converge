@@ -35,8 +35,8 @@ impl EoqSolver {
         // Sort by urgency (days until stockout, ascending)
         candidates.sort_by(|a, b| {
             a.days_until_stockout
-                .partial_cmp(&b.days_until_stockout)
-                .unwrap_or(std::cmp::Ordering::Equal)
+                .total_cmp(&b.days_until_stockout)
+                .then_with(|| a.product.id.cmp(&b.product.id))
         });
 
         // Apply tie-breaking for equal urgency

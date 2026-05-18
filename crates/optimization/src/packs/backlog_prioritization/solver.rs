@@ -30,7 +30,7 @@ impl WsjfSolver {
             .collect();
 
         // Sort by WSJF descending
-        scored_items.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        scored_items.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.id.cmp(&b.0.id)));
 
         // Apply tie-breaking for equal scores
         let _tie_break = &spec.determinism.tie_break;

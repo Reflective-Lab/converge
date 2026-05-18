@@ -89,7 +89,10 @@ impl Pack for InventoryReplenishmentPack {
         let output: InventoryReplenishmentOutput = plan.plan_as()?;
         // We need the input for some invariant checks, but we'll use a simplified version
         // that can work with just the output where possible
-        let input = InventoryReplenishmentInput::default();
+        let input = InventoryReplenishmentInput {
+            products: Vec::new(),
+            constraints: ReplenishmentConstraints::default(),
+        };
         Ok(check_all_invariants(&output, &input))
     }
 

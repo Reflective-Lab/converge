@@ -54,8 +54,11 @@ fn bench_engine_multi_suggestor(c: &mut Criterion) {
             &[]
         }
 
-        fn accepts(&self, _ctx: &dyn converge_core::Context) -> bool {
-            true
+        fn accepts(&self, ctx: &dyn converge_core::Context) -> bool {
+            let id = format!("{}-proposal", self.name);
+            !ctx.get(self.key)
+                .iter()
+                .any(|fact| fact.id().as_str() == id)
         }
 
         async fn execute(&self, _ctx: &dyn converge_core::Context) -> AgentEffect {
@@ -65,6 +68,10 @@ fn bench_engine_multi_suggestor(c: &mut Criterion) {
                 TextPayload::new(format!("proposal from {}", self.name)),
                 self.name.clone(),
             ))
+        }
+
+        fn provenance(&self) -> &'static str {
+            "converge-core-benchmark"
         }
     }
 
@@ -125,6 +132,10 @@ fn bench_engine_budget_pressure(c: &mut Criterion) {
                 TextPayload::new("will exhaust budget"),
                 self.name().to_string(),
             ))
+        }
+
+        fn provenance(&self) -> &'static str {
+            "converge-core-benchmark"
         }
     }
 

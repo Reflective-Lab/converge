@@ -4,7 +4,7 @@ use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 /// Input for budget allocation optimization
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BudgetAllocationInput {
     /// Total budget to allocate
     pub total_budget: f64,
@@ -17,9 +17,9 @@ pub struct BudgetAllocationInput {
 impl BudgetAllocationInput {
     /// Validate the input
     pub fn validate(&self) -> Result<()> {
-        if self.total_budget <= 0.0 {
+        if !self.total_budget.is_finite() || self.total_budget <= 0.0 {
             return Err(converge_pack::GateError::invalid_input(
-                "Total budget must be positive",
+                "Total budget must be finite and positive",
             ));
         }
         if self.categories.is_empty() {
@@ -27,10 +27,55 @@ impl BudgetAllocationInput {
                 "At least one category is required",
             ));
         }
+        if !self.constraints.min_roi_threshold.is_finite()
+            || !(0.0..=1.0).contains(&self.constraints.min_roi_threshold)
+        {
+            return Err(converge_pack::GateError::invalid_input(
+                "Minimum ROI threshold must be finite and between 0 and 1",
+            ));
+        }
+        if matches!(self.constraints.max_categories, Some(0)) {
+            return Err(converge_pack::GateError::invalid_input(
+                "max_categories must be positive when set",
+            ));
+        }
+
+        for category in &self.categories {
+            if !category.expected_roi.is_finite() || !(0.0..=1.0).contains(&category.expected_roi) {
+                return Err(converge_pack::GateError::invalid_input(format!(
+                    "Category {} has invalid expected_roi: must be finite and between 0 and 1",
+                    category.id
+                )));
+            }
+            if !category.priority_weight.is_finite() || category.priority_weight < 0.0 {
+                return Err(converge_pack::GateError::invalid_input(format!(
+                    "Category {} has invalid priority_weight: must be finite and non-negative",
+                    category.id
+                )));
+            }
+            if !category.min_allocation.is_finite() || category.min_allocation < 0.0 {
+                return Err(converge_pack::GateError::invalid_input(format!(
+                    "Category {} has invalid min_allocation: must be finite and non-negative",
+                    category.id
+                )));
+            }
+            if !category.max_allocation.is_finite() || category.max_allocation < 0.0 {
+                return Err(converge_pack::GateError::invalid_input(format!(
+                    "Category {} has invalid max_allocation: must be finite and non-negative",
+                    category.id
+                )));
+            }
+            if category.max_allocation < category.min_allocation {
+                return Err(converge_pack::GateError::invalid_input(format!(
+                    "Category {} has max_allocation below min_allocation",
+                    category.id
+                )));
+            }
+        }
 
         // Check minimum allocations don't exceed budget
         let total_min: f64 = self.categories.iter().map(|c| c.min_allocation).sum();
-        if total_min > self.total_budget {
+        if !total_min.is_finite() || total_min > self.total_budget {
             return Err(converge_pack::GateError::invalid_input(format!(
                 "Minimum allocations ({:.2}) exceed total budget ({:.2})",
                 total_min, self.total_budget
@@ -192,6 +237,34 @@ mod tests {
             constraints: AllocationConstraints::default(),
         };
 
+        assert!(input.validate().is_err());
+    }
+
+    #[test]
+    fn test_rejects_non_finite_or_out_of_range_values() {
+        let mut input = BudgetAllocationInput {
+            total_budget: f64::NAN,
+            categories: vec![create_test_category("c1", 0.15, 2.0)],
+            constraints: AllocationConstraints::default(),
+        };
+        assert!(input.validate().is_err());
+
+        input.total_budget = 100000.0;
+        input.categories[0].expected_roi = 1.1;
+        assert!(input.validate().is_err());
+
+        input.categories[0].expected_roi = 0.15;
+        input.categories[0].priority_weight = f64::INFINITY;
+        assert!(input.validate().is_err());
+
+        input.categories[0].priority_weight = 2.0;
+        input.categories[0].min_allocation = 60000.0;
+        input.categories[0].max_allocation = 50000.0;
+        assert!(input.validate().is_err());
+
+        input.categories[0].min_allocation = 1000.0;
+        input.categories[0].max_allocation = 50000.0;
+        input.constraints.min_roi_threshold = -0.1;
         assert!(input.validate().is_err());
     }
 }

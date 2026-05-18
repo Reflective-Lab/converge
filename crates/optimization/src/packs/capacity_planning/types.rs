@@ -4,7 +4,7 @@ use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 /// Input for capacity planning optimization
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CapacityPlanningInput {
     /// Demand forecasts by period
     pub demand_forecasts: Vec<DemandForecast>,

@@ -42,11 +42,13 @@ use axum::{
     routing::get,
 };
 use futures::StreamExt as FuturesStreamExt;
-use futures::stream::{self, Stream};
+use futures::stream::{self, BoxStream, Stream};
 use serde::{Deserialize, Serialize};
 use tokio::time::interval;
 use tracing::info;
 
+use crate::error::RuntimeError;
+use crate::semantic::PackName;
 use crate::state::AppState;
 
 // =============================================================================
@@ -456,11 +458,9 @@ pub struct RejectProposalRequest {
 ///
 /// SSE equivalent of the gRPC SubmitObservation control message.
 pub async fn submit_observation(
-    State(sse_state): State<SseState>,
+    State(_sse_state): State<SseState>,
     axum::Json(request): axum::Json<SubmitObservationRequest>,
-) -> axum::Json<serde_json::Value> {
-    let seq = sse_state.next_sequence();
-
+) -> Result<axum::Json<serde_json::Value>, RuntimeError> {
     info!(
         run_id = %request.run_id,
         key = %request.key,
@@ -468,47 +468,36 @@ pub async fn submit_observation(
         "Submitting observation via SSE control"
     );
 
-    // TODO: Actually stage the observation into the running context
-
-    axum::Json(serde_json::json!({
-        "success": true,
-        "sequence": seq,
-        "entry_id": format!("observation_{}", uuid::Uuid::new_v4())
-    }))
+    Err(RuntimeError::Unimplemented(
+        "SSE observation submission is not wired to a running context store".to_string(),
+    ))
 }
 
 /// Approve a pending proposal.
 ///
 /// SSE equivalent of the gRPC ApproveProposal control message.
 pub async fn approve_proposal(
-    State(sse_state): State<SseState>,
+    State(_sse_state): State<SseState>,
     axum::Json(request): axum::Json<ApproveProposalRequest>,
-) -> axum::Json<serde_json::Value> {
-    let seq = sse_state.next_sequence();
-
+) -> Result<axum::Json<serde_json::Value>, RuntimeError> {
     info!(
         run_id = %request.run_id,
         proposal_id = %request.proposal_id,
         "Approving proposal via SSE control"
     );
 
-    // TODO: Actually approve the proposal
-
-    axum::Json(serde_json::json!({
-        "success": true,
-        "sequence": seq
-    }))
+    Err(RuntimeError::Unimplemented(
+        "SSE proposal approval is not wired to a running context store".to_string(),
+    ))
 }
 
 /// Reject a pending proposal.
 ///
 /// SSE equivalent of the gRPC RejectProposal control message.
 pub async fn reject_proposal(
-    State(sse_state): State<SseState>,
+    State(_sse_state): State<SseState>,
     axum::Json(request): axum::Json<RejectProposalRequest>,
-) -> axum::Json<serde_json::Value> {
-    let seq = sse_state.next_sequence();
-
+) -> Result<axum::Json<serde_json::Value>, RuntimeError> {
     info!(
         run_id = %request.run_id,
         proposal_id = %request.proposal_id,
@@ -516,12 +505,9 @@ pub async fn reject_proposal(
         "Rejecting proposal via SSE control"
     );
 
-    // TODO: Actually reject the proposal
-
-    axum::Json(serde_json::json!({
-        "success": true,
-        "sequence": seq
-    }))
+    Err(RuntimeError::Unimplemented(
+        "SSE proposal rejection is not wired to a running context store".to_string(),
+    ))
 }
 
 // =============================================================================
@@ -588,50 +574,159 @@ pub struct AskStreamingRequest {
     pub budget: Option<BudgetRequest>,
 }
 
+fn sse_error_event(
+    code: impl Into<String>,
+    message: impl Into<String>,
+    recoverable: bool,
+) -> Event {
+    Event::default()
+        .event("error")
+        .json_data(SseError {
+            code: code.into(),
+            message: message.into(),
+            recoverable,
+        })
+        .unwrap()
+}
+
+fn sse_error_stream(
+    code: impl Into<String>,
+    message: impl Into<String>,
+    recoverable: bool,
+) -> BoxStream<'static, Result<Event, Infallible>> {
+    let code = code.into();
+    let message = message.into();
+    stream::once(async move { Ok(sse_error_event(code, message, recoverable)) }).boxed()
+}
+
+fn streaming_event_to_sse_event(event: &crate::execution::StreamingEvent) -> Event {
+    use crate::execution::StreamingEvent;
+
+    match event {
+        StreamingEvent::Fact {
+            sequence,
+            cycle,
+            key,
+            id,
+            content,
+            timestamp_ns,
+        } => Event::default()
+            .event("fact")
+            .id(sequence.to_string())
+            .json_data(serde_json::json!({
+                "sequence": sequence,
+                "cycle": cycle,
+                "key": key,
+                "id": id,
+                "content": content,
+                "timestamp_ns": timestamp_ns,
+            }))
+            .unwrap(),
+        StreamingEvent::CycleStart {
+            sequence,
+            cycle,
+            timestamp_ns,
+        } => Event::default()
+            .event("cycle_start")
+            .id(sequence.to_string())
+            .json_data(serde_json::json!({
+                "sequence": sequence,
+                "cycle": cycle,
+                "timestamp_ns": timestamp_ns,
+            }))
+            .unwrap(),
+        StreamingEvent::CycleEnd {
+            sequence,
+            cycle,
+            facts_added,
+            timestamp_ns,
+        } => Event::default()
+            .event("cycle_end")
+            .id(sequence.to_string())
+            .json_data(serde_json::json!({
+                "sequence": sequence,
+                "cycle": cycle,
+                "facts_added": facts_added,
+                "timestamp_ns": timestamp_ns,
+            }))
+            .unwrap(),
+        StreamingEvent::Converged {
+            sequence,
+            cycles,
+            total_facts,
+            duration_ms,
+            timestamp_ns,
+        } => Event::default()
+            .event("converged")
+            .id(sequence.to_string())
+            .json_data(serde_json::json!({
+                "sequence": sequence,
+                "cycles": cycles,
+                "total_facts": total_facts,
+                "duration_ms": duration_ms,
+                "timestamp_ns": timestamp_ns,
+            }))
+            .unwrap(),
+        StreamingEvent::Halted {
+            sequence,
+            cycles,
+            reason,
+            timestamp_ns,
+        } => Event::default()
+            .event("halted")
+            .id(sequence.to_string())
+            .json_data(serde_json::json!({
+                "sequence": sequence,
+                "cycles": cycles,
+                "reason": reason,
+                "timestamp_ns": timestamp_ns,
+            }))
+            .unwrap(),
+    }
+}
+
 fn build_streaming_job_stream(
     pack_id: String,
     seeds: Vec<crate::templates::SeedFact>,
     budget: converge_core::Budget,
     use_llm: bool,
-) -> impl Stream<Item = Result<Event, Infallible>> {
-    use crate::execution::{JobExecutor, StreamingEvent};
+) -> BoxStream<'static, Result<Event, Infallible>> {
+    use crate::execution::JobExecutor;
 
-    // Create channel for events
-    let (tx, mut rx) = tokio::sync::mpsc::channel::<StreamingEvent>(256);
-
-    // Spawn execution in background task
-    tokio::spawn({
-        let pack_id = pack_id.clone();
-        let seeds = seeds.clone();
-        async move {
-            let mut builder = JobExecutor::builder()
-                .with_pack(&pack_id)
-                .with_seeds(seeds)
-                .with_budget(budget)
-                .with_streaming(256);
-
-            // Use real LLM if requested, otherwise use mock
-            if use_llm {
-                builder = builder.with_real_llm();
-            } else {
-                builder = builder.with_mock_llm();
-            }
-
-            let (handle, mut event_rx) = builder
-                .execute_with_streaming()
-                .expect("Failed to start streaming job");
-
-            // Forward events from the execution to our channel.
-            while let Some(event) = event_rx.recv().await {
-                if tx.send(event).await.is_err() {
-                    break; // Client disconnected
-                }
-            }
-
-            // Wait for execution to complete
-            let _ = handle.await;
+    let pack_name = match PackName::try_new(pack_id.clone()) {
+        Ok(pack_name) => pack_name,
+        Err(error) => {
+            return sse_error_stream(
+                "invalid_pack",
+                format!("invalid pack name '{pack_id}': {error}"),
+                false,
+            );
         }
-    });
+    };
+
+    let mut builder = JobExecutor::builder()
+        .with_pack(pack_name)
+        .with_seeds(seeds)
+        .with_budget(budget)
+        .with_streaming(256);
+
+    // Use real LLM if requested, otherwise use mock
+    if use_llm {
+        builder = builder.with_real_llm();
+    } else {
+        builder = builder.with_mock_llm();
+    }
+
+    let (handle, mut event_rx) = match builder.execute_with_streaming() {
+        Ok(streaming) => streaming,
+        Err(error) => {
+            return sse_error_stream(
+                "job_start_failed",
+                format!("failed to start streaming job: {error}"),
+                false,
+            );
+        }
+    };
 
     async_stream::stream! {
         // Initial job started event
@@ -647,74 +742,29 @@ fn build_streaming_job_stream(
         yield Ok(started_event);
 
         // Stream events from the execution
-        while let Some(event) = rx.recv().await {
-            let sse_event = match &event {
-                StreamingEvent::Fact { sequence, cycle, key, id, content, timestamp_ns } => {
-                    Event::default()
-                        .event("fact")
-                        .id(sequence.to_string())
-                        .json_data(serde_json::json!({
-                            "sequence": sequence,
-                            "cycle": cycle,
-                            "key": key,
-                            "id": id,
-                            "content": content,
-                            "timestamp_ns": timestamp_ns,
-                        }))
-                        .unwrap()
-                }
-                StreamingEvent::CycleStart { sequence, cycle, timestamp_ns } => {
-                    Event::default()
-                        .event("cycle_start")
-                        .id(sequence.to_string())
-                        .json_data(serde_json::json!({
-                            "sequence": sequence,
-                            "cycle": cycle,
-                            "timestamp_ns": timestamp_ns,
-                        }))
-                        .unwrap()
-                }
-                StreamingEvent::CycleEnd { sequence, cycle, facts_added, timestamp_ns } => {
-                    Event::default()
-                        .event("cycle_end")
-                        .id(sequence.to_string())
-                        .json_data(serde_json::json!({
-                            "sequence": sequence,
-                            "cycle": cycle,
-                            "facts_added": facts_added,
-                            "timestamp_ns": timestamp_ns,
-                        }))
-                        .unwrap()
-                }
-                StreamingEvent::Converged { sequence, cycles, total_facts, duration_ms, timestamp_ns } => {
-                    Event::default()
-                        .event("converged")
-                        .id(sequence.to_string())
-                        .json_data(serde_json::json!({
-                            "sequence": sequence,
-                            "cycles": cycles,
-                            "total_facts": total_facts,
-                            "duration_ms": duration_ms,
-                            "timestamp_ns": timestamp_ns,
-                        }))
-                        .unwrap()
-                }
-                StreamingEvent::Halted { sequence, cycles, reason, timestamp_ns } => {
-                    Event::default()
-                        .event("halted")
-                        .id(sequence.to_string())
-                        .json_data(serde_json::json!({
-                            "sequence": sequence,
-                            "cycles": cycles,
-                            "reason": reason,
-                            "timestamp_ns": timestamp_ns,
-                        }))
-                        .unwrap()
-                }
-            };
-            yield Ok(sse_event);
+        while let Some(event) = event_rx.recv().await {
+            yield Ok(streaming_event_to_sse_event(&event));
+        }
+
+        match handle.await {
+            Ok(Ok(_)) => {}
+            Ok(Err(error)) => {
+                yield Ok(sse_error_event(
+                    "job_execution_failed",
+                    format!("streaming job failed: {error}"),
+                    false,
+                ));
+            }
+            Err(error) => {
+                yield Ok(sse_error_event(
+                    "job_task_failed",
+                    format!("streaming job task failed: {error}"),
+                    false,
+                ));
+            }
         }
     }
+    .boxed()
 }
 
 /// Execute a job with SSE streaming.

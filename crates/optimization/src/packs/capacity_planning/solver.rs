@@ -45,12 +45,12 @@ impl MatchAllocationSolver {
         // Sort demands by priority
         let mut sorted_demands: Vec<&DemandForecast> = input.demand_forecasts.iter().collect();
         sorted_demands.sort_by(|a, b| {
-            a.priority.cmp(&b.priority).then_with(|| {
-                // Tie-break by demand_units (higher demand first)
-                b.demand_units
-                    .partial_cmp(&a.demand_units)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            })
+            a.priority
+                .cmp(&b.priority)
+                .then_with(|| b.demand_units.total_cmp(&a.demand_units))
+                .then_with(|| a.period_id.cmp(&b.period_id))
+                .then_with(|| a.resource_type.cmp(&b.resource_type))
+                .then_with(|| a.required_skill.cmp(&b.required_skill))
         });
 
         let tie_break = &spec.determinism.tie_break;
@@ -88,11 +88,9 @@ impl MatchAllocationSolver {
 
             // Sort by remaining capacity (prefer teams with more capacity for load balancing)
             matching_teams.sort_by(|a, b| {
-                let cap_a = team_remaining.get(&a.id).unwrap_or(&0.0);
-                let cap_b = team_remaining.get(&b.id).unwrap_or(&0.0);
-                cap_b
-                    .partial_cmp(cap_a)
-                    .unwrap_or(std::cmp::Ordering::Equal)
+                let cap_a = *team_remaining.get(&a.id).unwrap_or(&0.0);
+                let cap_b = *team_remaining.get(&b.id).unwrap_or(&0.0);
+                cap_b.total_cmp(&cap_a).then_with(|| a.id.cmp(&b.id))
             });
 
             // Apply deterministic tie-breaking for teams with similar capacity

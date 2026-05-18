@@ -9,9 +9,7 @@ use axum::{
     extract::{Json, Path, State},
     routing::{get, post},
 };
-use converge_core::{ContextKey, ContextState, Engine};
 use serde::{Deserialize, Serialize};
-use strum::IntoEnumIterator;
 use tracing::{info, info_span};
 use utoipa::ToSchema;
 
@@ -282,6 +280,7 @@ pub async fn metrics() -> (
         (status = 422, description = "Invariant violation", body = RuntimeErrorResponse),
         (status = 413, description = "Budget exhausted", body = RuntimeErrorResponse),
         (status = 409, description = "Conflict detected", body = RuntimeErrorResponse),
+        (status = 501, description = "Context-only job execution is not implemented", body = RuntimeErrorResponse),
         (status = 500, description = "Internal server error", body = RuntimeErrorResponse)
     )
 )]
@@ -293,59 +292,12 @@ pub async fn handle_job(
     let _guard = _span.enter();
     info!("Received job request");
 
-    let start = std::time::Instant::now();
+    let _ = request.context;
 
-    // Extract request data
-    let context_data = request.context.clone();
-
-    // Drop the span guard before await (it's not Send)
-    drop(_guard);
-
-    let mut engine = Engine::new();
-
-    // TODO: Register agents based on request or configuration
-    // For now, create a minimal engine
-
-    // Create context from request or use empty
-    // TODO: Properly deserialize RootIntent and create Context
-    // For now, use empty context
-    let _context_data = context_data;
-    let context = ContextState::new();
-
-    let result = engine.run(context).await.map_err(RuntimeError::Converge)?;
-
-    let duration = start.elapsed();
-
-    // Build context summary
-    let fact_counts: std::collections::HashMap<String, usize> = ContextKey::iter()
-        .map(|key| {
-            let count = result.context.get(key).len();
-            (format!("{key:?}"), count)
-        })
-        .collect();
-
-    let context_summary = ContextSummary {
-        fact_counts,
-        version: result.context.version(),
-    };
-
-    info!(
-        cycles = result.cycles,
-        converged = result.converged,
-        duration_ms = duration.as_millis(),
-        "Job completed"
-    );
-
-    Ok(Json(JobResponse {
-        metadata: JobMetadata {
-            cycles: result.cycles,
-            converged: result.converged,
-            duration_ms: duration.as_millis() as u64,
-        },
-        cycles: result.cycles,
-        converged: result.converged,
-        context_summary,
-    }))
+    Err(RuntimeError::Unimplemented(
+        "context-only job execution is not wired in converge-runtime; use /api/v1/templates/jobs or /api/v1/stream/jobs with a pack"
+            .to_string(),
+    ))
 }
 
 /// Request to validate Converge Rules.
@@ -635,6 +587,8 @@ pub async fn run_job(
     #[cfg(feature = "gcp")]
     {
         use crate::db::JobStatus;
+        use converge_core::{Budget, ContextKey, ContextState, Engine};
+        use strum::IntoEnumIterator;
 
         let db = state
             .db
@@ -669,8 +623,6 @@ pub async fn run_job(
         // Run the engine
         let seeds = job.seeds.clone();
         let max_cycles = job.max_cycles;
-
-        use converge_core::Budget;
 
         let budget = Budget {
             max_cycles,

@@ -1,7 +1,7 @@
 //! Provenance information for audit trail
 
 use serde::{Deserialize, Serialize};
-use std::time::SystemTime;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Audit trail envelope for gate-level operations.
 ///
@@ -40,7 +40,7 @@ impl Default for AuditEnvelope {
     fn default() -> Self {
         Self {
             input_hash: String::new(),
-            submitted_at: SystemTime::now(),
+            submitted_at: UNIX_EPOCH,
             source_system: String::new(),
             submitted_by: String::new(),
             correlation_id: String::new(),
@@ -201,7 +201,15 @@ mod system_time_serde {
         D: Deserializer<'de>,
     {
         let secs = f64::deserialize(deserializer)?;
-        Ok(UNIX_EPOCH + Duration::from_secs_f64(secs))
+        if !secs.is_finite() || secs < 0.0 {
+            return Err(serde::de::Error::custom(
+                "system time must be a finite non-negative unix timestamp",
+            ));
+        }
+        let duration = Duration::try_from_secs_f64(secs).map_err(serde::de::Error::custom)?;
+        UNIX_EPOCH
+            .checked_add(duration)
+            .ok_or_else(|| serde::de::Error::custom("system time exceeds supported range"))
     }
 }
 
@@ -219,6 +227,29 @@ mod tests {
         assert_eq!(prov.submitted_by, "test-user");
         assert_eq!(prov.correlation_id, "corr-123");
         assert_eq!(prov.input_hash, "sha256:abc");
+    }
+
+    #[test]
+    fn default_audit_envelope_uses_deterministic_epoch_timestamp() {
+        assert_eq!(AuditEnvelope::default().submitted_at, UNIX_EPOCH);
+    }
+
+    #[test]
+    fn provenance_rejects_negative_timestamp() {
+        let json = r#"{
+            "input_hash": "",
+            "submitted_at": -1.0,
+            "source_system": "system",
+            "submitted_by": "user",
+            "correlation_id": "",
+            "metadata": null
+        }"#;
+
+        let error = serde_json::from_str::<AuditEnvelope>(json).unwrap_err();
+        assert!(
+            error.to_string().contains("finite non-negative"),
+            "unexpected error: {error}"
+        );
     }
 
     #[test]

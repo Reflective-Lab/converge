@@ -4,7 +4,7 @@ use converge_pack::gate::GateResult as Result;
 use serde::{Deserialize, Serialize};
 
 /// Input for anomaly triage optimization
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnomalyTriageInput {
     /// Detected anomalies to triage
     pub anomalies: Vec<Anomaly>,
@@ -17,6 +17,21 @@ pub struct AnomalyTriageInput {
 impl AnomalyTriageInput {
     /// Validate the input
     pub fn validate(&self) -> Result<()> {
+        if !self.thresholds.critical.is_finite() || self.thresholds.critical < 0.0 {
+            return Err(converge_pack::GateError::invalid_input(
+                "Critical threshold must be finite and non-negative",
+            ));
+        }
+        if !self.thresholds.high.is_finite() || self.thresholds.high < 0.0 {
+            return Err(converge_pack::GateError::invalid_input(
+                "High threshold must be finite and non-negative",
+            ));
+        }
+        if !self.thresholds.medium.is_finite() || self.thresholds.medium < 0.0 {
+            return Err(converge_pack::GateError::invalid_input(
+                "Medium threshold must be finite and non-negative",
+            ));
+        }
         if self.thresholds.critical <= self.thresholds.high {
             return Err(converge_pack::GateError::invalid_input(
                 "Critical threshold must be greater than high threshold",
@@ -26,6 +41,14 @@ impl AnomalyTriageInput {
             return Err(converge_pack::GateError::invalid_input(
                 "High threshold must be greater than medium threshold",
             ));
+        }
+        for anomaly in &self.anomalies {
+            if !anomaly.z_score.is_finite() {
+                return Err(converge_pack::GateError::invalid_input(format!(
+                    "Anomaly {} has non-finite z_score",
+                    anomaly.id
+                )));
+            }
         }
         Ok(())
     }
@@ -218,6 +241,24 @@ mod tests {
         assert!(input.validate().is_ok());
 
         input.thresholds.high = 5.0; // Higher than critical
+        assert!(input.validate().is_err());
+    }
+
+    #[test]
+    fn test_rejects_non_finite_threshold_and_z_score() {
+        let mut input = AnomalyTriageInput {
+            anomalies: vec![create_test_anomaly("a1", 1.0)],
+            thresholds: SeverityThresholds {
+                critical: f64::NAN,
+                high: 3.0,
+                medium: 2.0,
+            },
+            escalation_policies: vec![],
+        };
+        assert!(input.validate().is_err());
+
+        input.thresholds = SeverityThresholds::default();
+        input.anomalies[0].z_score = f64::INFINITY;
         assert!(input.validate().is_err());
     }
 }

@@ -33,6 +33,7 @@ use crate::kernel_boundary::DecisionStep;
 use crate::types::TenantId;
 use converge_pack::UnitInterval;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 // ============================================================================
 // Recall Use/Consumer Types (Recall ≠ Training boundary)
@@ -165,22 +166,19 @@ impl RecallPolicy {
     /// Note: Includes `allowed_uses` in the hash for full provenance.
     #[must_use]
     pub fn snapshot_hash(&self) -> String {
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
-
-        let mut hasher = DefaultHasher::new();
-        self.enabled.hash(&mut hasher);
-        self.max_k_total.hash(&mut hasher);
-        self.max_tokens_injection.hash(&mut hasher);
-        self.min_score_threshold.to_basis_points().hash(&mut hasher);
-        self.budgets.max_latency_ms.hash(&mut hasher);
-        self.budgets.max_embedding_calls.hash(&mut hasher);
-        self.budgets.max_tokens_per_candidate.hash(&mut hasher);
+        let mut hasher = StableHash::new("recall-policy-v1");
+        hasher.bool(self.enabled);
+        hasher.usize(self.max_k_total);
+        hasher.usize(self.max_tokens_injection);
+        hasher.u16(self.min_score_threshold.to_basis_points());
+        hasher.u64(self.budgets.max_latency_ms);
+        hasher.usize(self.budgets.max_embedding_calls);
+        hasher.usize(self.budgets.max_tokens_per_candidate);
         for use_type in &self.allowed_uses {
-            (*use_type as u8).hash(&mut hasher);
+            hasher.u8(*use_type as u8);
         }
-        self.prior_weight.to_basis_points().hash(&mut hasher);
-        format!("{:016x}", hasher.finish())
+        hasher.u16(self.prior_weight.to_basis_points());
+        hasher.finish_hex()
     }
 }
 
@@ -260,19 +258,20 @@ impl RecallQuery {
     /// Compute a deterministic hash of this query for provenance tracking.
     #[must_use]
     pub fn query_hash(&self) -> String {
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
-
-        let mut hasher = DefaultHasher::new();
-        self.query_text.hash(&mut hasher);
-        self.top_k.hash(&mut hasher);
+        let mut hasher = StableHash::new("recall-query-v1");
+        hasher.str(&self.query_text);
+        hasher.usize(self.top_k);
         if let Some(ref step) = self.step_context {
-            step.as_str().hash(&mut hasher);
+            hasher.str(step.as_str());
+        } else {
+            hasher.none();
         }
         if let Some(ref tenant) = self.tenant_scope {
-            tenant.hash(&mut hasher);
+            hasher.str(tenant);
+        } else {
+            hasher.none();
         }
-        format!("{:016x}", hasher.finish())
+        hasher.finish_hex()
     }
 }
 
@@ -479,30 +478,27 @@ impl RecallProvenanceEnvelope {
     /// This can be used for quick equality checks and audit trails.
     #[must_use]
     pub fn envelope_hash(&self) -> String {
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
-
-        let mut hasher = DefaultHasher::new();
-        self.query_hash.hash(&mut hasher);
-        self.embedding_input_hash.hash(&mut hasher);
-        self.embedding_hash.hash(&mut hasher);
-        self.embedder_id.hash(&mut hasher);
-        self.embedder_settings_hash.hash(&mut hasher);
-        self.corpus_fingerprint.hash(&mut hasher);
-        self.policy_snapshot_hash.hash(&mut hasher);
-        (self.purpose as u8).hash(&mut hasher);
+        let mut hasher = StableHash::new("recall-envelope-v1");
+        hasher.str(&self.query_hash);
+        hasher.str(&self.embedding_input_hash);
+        hasher.str(&self.embedding_hash);
+        hasher.str(&self.embedder_id);
+        hasher.str(&self.embedder_settings_hash);
+        hasher.str(&self.corpus_fingerprint);
+        hasher.str(&self.policy_snapshot_hash);
+        hasher.u8(self.purpose as u8);
         for consumer in &self.consumers {
-            (*consumer as u8).hash(&mut hasher);
+            hasher.u8(*consumer as u8);
         }
         for cs in &self.candidate_scores {
-            cs.id.hash(&mut hasher);
-            cs.score.to_basis_points().hash(&mut hasher);
+            hasher.str(&cs.id);
+            hasher.u16(cs.score.to_basis_points());
         }
-        self.candidates_searched.hash(&mut hasher);
-        self.candidates_returned.hash(&mut hasher);
-        self.latency_ms.hash(&mut hasher);
-        self.timestamp.hash(&mut hasher);
-        format!("{:016x}", hasher.finish())
+        hasher.usize(self.candidates_searched);
+        hasher.usize(self.candidates_returned);
+        hasher.u64(self.latency_ms);
+        hasher.str(&self.timestamp);
+        hasher.finish_hex()
     }
 
     /// Check if this envelope matches another for replay verification.
@@ -539,6 +535,57 @@ impl RecallProvenanceEnvelope {
             self.candidates_searched,
             self.latency_ms
         )
+    }
+}
+
+struct StableHash {
+    hasher: Sha256,
+}
+
+impl StableHash {
+    fn new(domain: &'static str) -> Self {
+        let mut stable = Self {
+            hasher: Sha256::new(),
+        };
+        stable.str(domain);
+        stable
+    }
+
+    fn bytes(&mut self, bytes: &[u8]) {
+        self.hasher.update((bytes.len() as u64).to_be_bytes());
+        self.hasher.update(bytes);
+    }
+
+    fn str(&mut self, value: &str) {
+        self.bytes(value.as_bytes());
+    }
+
+    fn bool(&mut self, value: bool) {
+        self.u8(u8::from(value));
+    }
+
+    fn none(&mut self) {
+        self.bytes(&[]);
+    }
+
+    fn u8(&mut self, value: u8) {
+        self.bytes(&[value]);
+    }
+
+    fn u16(&mut self, value: u16) {
+        self.bytes(&value.to_be_bytes());
+    }
+
+    fn u64(&mut self, value: u64) {
+        self.bytes(&value.to_be_bytes());
+    }
+
+    fn usize(&mut self, value: usize) {
+        self.u64(value as u64);
+    }
+
+    fn finish_hex(self) -> String {
+        hex::encode(self.hasher.finalize())
     }
 }
 

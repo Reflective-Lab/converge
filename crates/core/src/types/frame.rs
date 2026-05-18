@@ -81,15 +81,9 @@ impl IntentId {
     /// Generates a new unique intent ID.
     #[must_use]
     pub fn generate() -> Self {
-        use std::time::{SystemTime, UNIX_EPOCH};
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_nanos();
-        static COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
-        let counter = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        let pid = std::process::id();
-        Self(format!("intent-{timestamp:x}-{pid:08x}-{counter:04x}"))
+        static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+        let id = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        Self(format!("intent-{id:016x}"))
     }
 }
 

@@ -22,6 +22,7 @@ thiserror.workspace = true
 anyhow = { workspace = true, optional = true }
 parquet = { workspace = true, optional = true }
 polars = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 tracing = { workspace = true, optional = true }
 
@@ -33,6 +34,7 @@ polars = [
     "dep:anyhow",
     "dep:parquet",
     "dep:polars",
+    "dep:sha2",
     "dep:tokio",
     "dep:tracing",
 ]

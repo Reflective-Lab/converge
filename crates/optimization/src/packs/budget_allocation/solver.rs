@@ -41,8 +41,8 @@ impl EfficiencySolver {
         // Sort by efficiency score descending
         qualifying.sort_by(|a, b| {
             b.efficiency_score()
-                .partial_cmp(&a.efficiency_score())
-                .unwrap_or(std::cmp::Ordering::Equal)
+                .total_cmp(&a.efficiency_score())
+                .then_with(|| a.id.cmp(&b.id))
         });
 
         // Apply tie-breaking

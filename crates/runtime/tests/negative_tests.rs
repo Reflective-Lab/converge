@@ -480,7 +480,7 @@ async fn test_jobs_very_large_context() {
 
     // Should either accept or reject, but not crash
     assert!(
-        response.status() == StatusCode::OK
+        response.status() == StatusCode::NOT_IMPLEMENTED
             || response.status() == StatusCode::PAYLOAD_TOO_LARGE
             || response.status() == StatusCode::BAD_REQUEST
     );
@@ -514,7 +514,10 @@ async fn test_jobs_deeply_nested_context() {
         .unwrap();
 
     // Should handle without stack overflow
-    assert!(response.status() == StatusCode::OK || response.status() == StatusCode::BAD_REQUEST);
+    assert!(
+        response.status() == StatusCode::NOT_IMPLEMENTED
+            || response.status() == StatusCode::BAD_REQUEST
+    );
 }
 
 #[tokio::test]
@@ -535,7 +538,7 @@ async fn test_jobs_unicode_in_context() {
         .await
         .unwrap();
 
-    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
 }
 
 #[tokio::test]
@@ -558,7 +561,7 @@ async fn test_jobs_null_characters_in_json() {
         .unwrap();
 
     // Should handle without issues
-    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
 }
 
 // =============================================================================

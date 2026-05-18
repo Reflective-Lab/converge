@@ -10,6 +10,7 @@ use std::path::PathBuf;
 
 /// Runtime configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
     /// HTTP server configuration.
     pub http: HttpConfig,
@@ -38,6 +39,7 @@ impl Config {
 
 /// HTTP server configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct HttpConfig {
     /// Bind address for HTTP server.
     pub bind: SocketAddr,
@@ -57,6 +59,7 @@ impl Default for HttpConfig {
 /// gRPC server configuration (prepared, not implemented).
 #[cfg(feature = "grpc")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct GrpcConfig {
     /// Bind address for gRPC server.
     pub bind: SocketAddr,
@@ -73,6 +76,7 @@ impl Default for GrpcConfig {
 
 /// Security configuration for mTLS and authentication.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SecurityConfig {
     /// Identity source: "file" or "spiffe".
     #[serde(default = "default_identity_source")]
@@ -114,6 +118,7 @@ impl Default for SecurityConfig {
 
 /// JWT validation configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct JwtConfig {
     /// Secret key for HS256 validation (base64 encoded or raw).
     pub secret: Option<String>,
@@ -137,6 +142,7 @@ impl Default for JwtConfig {
 
 /// NATS client configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct NatsConfig {
     /// NATS server addresses.
     pub servers: Vec<String>,
@@ -170,6 +176,7 @@ impl Default for NatsConfig {
 
 /// Audit logging configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct AuditConfig {
     /// JetStream stream name for audit events.
     #[serde(default = "default_audit_stream")]
@@ -209,6 +216,7 @@ impl Default for AuditConfig {
 /// Billing / Stripe configuration.
 #[cfg(feature = "billing")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct BillingConfig {
     /// Stripe API key (secret key, starts with `sk_`).
     pub stripe_api_key: String,
@@ -334,6 +342,25 @@ fn load_security_config() -> Option<SecurityConfig> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn assert_unknown_field<T>(json: &str, field: &str)
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        let err = match serde_json::from_str::<T>(json) {
+            Ok(_) => panic!("expected unknown field error for {field:?}"),
+            Err(err) => err,
+        };
+        let message = err.to_string();
+        assert!(
+            message.contains("unknown field"),
+            "expected unknown field error, got: {message}"
+        );
+        assert!(
+            message.contains(field),
+            "expected error to mention {field:?}, got: {message}"
+        );
+    }
 
     // -------------------------------------------------------------------------
     // Unit Tests: HttpConfig
@@ -504,6 +531,56 @@ mod tests {
         let json = r#"{}"#;
         let result: Result<Config, _> = serde_json::from_str(json);
         assert!(result.is_err()); // http field is required
+    }
+
+    #[test]
+    fn test_config_deserialize_unknown_field_fails_loudly() {
+        let json = r#"{"http":{"bind":"0.0.0.0:9000","max_body_size":2048},"workers":4}"#;
+        assert_unknown_field::<Config>(json, "workers");
+    }
+
+    #[test]
+    fn test_http_config_deserialize_unknown_field_fails_loudly() {
+        let json = r#"{"bind":"127.0.0.1:8080","max_body_size":1024,"timeout_ms":5000}"#;
+        assert_unknown_field::<HttpConfig>(json, "timeout_ms");
+    }
+
+    #[test]
+    fn test_security_config_deserialize_unknown_field_fails_loudly() {
+        let json = r#"{"identity_source":"file","unexpected":true}"#;
+        assert_unknown_field::<SecurityConfig>(json, "unexpected");
+    }
+
+    #[test]
+    fn test_jwt_config_deserialize_unknown_field_fails_loudly() {
+        let json = r#"{"issuer":"converge","scope":"admin"}"#;
+        assert_unknown_field::<JwtConfig>(json, "scope");
+    }
+
+    #[test]
+    fn test_nats_config_deserialize_unknown_field_fails_loudly() {
+        let json = r#"{"servers":["nats://localhost:4222"],"token":"secret"}"#;
+        assert_unknown_field::<NatsConfig>(json, "token");
+    }
+
+    #[test]
+    fn test_audit_config_deserialize_unknown_field_fails_loudly() {
+        let json = r#"{"stream":"AUDIT","subject_prefix":"audit.runtime","retention_days":90,"bucket":"cold"}"#;
+        assert_unknown_field::<AuditConfig>(json, "bucket");
+    }
+
+    #[cfg(feature = "grpc")]
+    #[test]
+    fn test_grpc_config_deserialize_unknown_field_fails_loudly() {
+        let json = r#"{"bind":"127.0.0.1:50051","reflection":true}"#;
+        assert_unknown_field::<GrpcConfig>(json, "reflection");
+    }
+
+    #[cfg(feature = "billing")]
+    #[test]
+    fn test_billing_config_deserialize_unknown_field_fails_loudly() {
+        let json = r#"{"stripe_api_key":"sk_test","currency":"usd"}"#;
+        assert_unknown_field::<BillingConfig>(json, "currency");
     }
 
     // -------------------------------------------------------------------------
