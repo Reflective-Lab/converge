@@ -37,15 +37,12 @@ pub enum ConvergeError {
     #[error("agent failed: {agent_id}")]
     AgentFailed { agent_id: String },
 
-    /// A fact-emitting suggestor returned an empty `provenance()` string.
-    /// The empty-provenance contract reserves `""` for filter / observer
-    /// suggestors that never emit proposals. If a suggestor produced
-    /// proposals it MUST override `provenance()` to return its crate's
-    /// canonical `*_PROVENANCE.as_str()`.
+    /// A fact-emitting suggestor returned a proposal with empty provenance.
+    /// Provenance is validated on the proposal because the proposal is the
+    /// kernel boundary object that carries audit metadata into promotion.
     #[error(
         "suggestor '{suggestor}' emitted proposals with empty provenance — \
-        override Suggestor::provenance() to return your crate's canonical \
-        ProvenanceSource string"
+        stamp each ProposedFact with a non-empty ProvenanceSource string"
     )]
     EmptyProvenance {
         /// Name of the offending suggestor (from `Suggestor::name()`).

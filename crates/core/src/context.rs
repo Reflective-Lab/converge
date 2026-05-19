@@ -13,8 +13,8 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 // Re-export canonical types from converge-pack
 pub use converge_pack::{
-    ContextFact, ContextKey, FactId, FactPayload, ProposalId, ProposedFact, TextPayload, Timestamp,
-    ValidationError,
+    ContextFact, ContextKey, FactId, FactPayload, PayloadError, PayloadRegistry, ProposalId,
+    ProposedFact, TextPayload, Timestamp, ValidationError, WireContextFact, WireProposedFact,
 };
 
 /// Durable, verified context snapshot for storage adapters.
@@ -29,6 +29,16 @@ pub struct ContextSnapshot {
     merkle_root: crate::integrity::MerkleRoot,
     facts: BTreeMap<ContextKey, Vec<ContextFact>>,
     proposals: BTreeMap<ContextKey, Vec<ProposedFact>>,
+}
+
+/// Stable serialized form of a [`ContextSnapshot`].
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WireContextSnapshot {
+    version: u64,
+    merkle_root: crate::integrity::MerkleRoot,
+    facts: BTreeMap<ContextKey, Vec<WireContextFact>>,
+    proposals: BTreeMap<ContextKey, Vec<WireProposedFact>>,
 }
 
 impl ContextSnapshot {
@@ -76,6 +86,75 @@ impl ContextSnapshot {
     #[must_use]
     pub fn proposals(&self) -> &BTreeMap<ContextKey, Vec<ProposedFact>> {
         &self.proposals
+    }
+
+    /// Converts the snapshot into its stable wire envelope.
+    pub fn to_wire(&self) -> Result<WireContextSnapshot, PayloadError> {
+        let facts = self
+            .facts
+            .iter()
+            .map(|(key, facts)| {
+                facts
+                    .iter()
+                    .map(ContextFact::to_wire)
+                    .collect::<Result<Vec<_>, _>>()
+                    .map(|facts| (*key, facts))
+            })
+            .collect::<Result<BTreeMap<_, _>, _>>()?;
+        let proposals = self
+            .proposals
+            .iter()
+            .map(|(key, proposals)| {
+                proposals
+                    .iter()
+                    .map(ProposedFact::to_wire)
+                    .collect::<Result<Vec<_>, _>>()
+                    .map(|proposals| (*key, proposals))
+            })
+            .collect::<Result<BTreeMap<_, _>, _>>()?;
+
+        Ok(WireContextSnapshot {
+            version: self.version,
+            merkle_root: self.merkle_root.clone(),
+            facts,
+            proposals,
+        })
+    }
+
+    /// Rehydrates a snapshot from its stable wire envelope.
+    pub fn from_wire(
+        wire: WireContextSnapshot,
+        registry: &PayloadRegistry,
+    ) -> Result<Self, PayloadError> {
+        let facts = wire
+            .facts
+            .into_iter()
+            .map(|(key, facts)| {
+                facts
+                    .into_iter()
+                    .map(|fact| ContextFact::from_wire(fact, registry))
+                    .collect::<Result<Vec<_>, _>>()
+                    .map(|facts| (key, facts))
+            })
+            .collect::<Result<BTreeMap<_, _>, _>>()?;
+        let proposals = wire
+            .proposals
+            .into_iter()
+            .map(|(key, proposals)| {
+                proposals
+                    .into_iter()
+                    .map(|proposal| ProposedFact::from_wire(proposal, registry))
+                    .collect::<Result<Vec<_>, _>>()
+                    .map(|proposals| (key, proposals))
+            })
+            .collect::<Result<BTreeMap<_, _>, _>>()?;
+
+        Ok(Self {
+            version: wire.version,
+            merkle_root: wire.merkle_root,
+            facts,
+            proposals,
+        })
     }
 
     fn validate(&self) -> Result<(), ConvergeError> {
@@ -547,6 +626,38 @@ mod tests {
         assert_eq!(
             restored.get_proposals(ContextKey::Hypotheses)[0].id(),
             "hyp-1"
+        );
+    }
+
+    #[test]
+    fn wire_snapshot_round_trips_through_payload_registry() {
+        let mut ctx = ContextState::new();
+        ctx.add_fact(crate::context::new_fact(
+            ContextKey::Seeds,
+            "seed-1",
+            "persisted seed",
+        ))
+        .unwrap();
+        ctx.add_proposal(ProposedFact::new(
+            ContextKey::Hypotheses,
+            "hyp-1",
+            TextPayload::new("staged hypothesis"),
+            "test",
+        ))
+        .unwrap();
+
+        let registry = PayloadRegistry::with_pack_payloads();
+        let wire = ctx.snapshot().to_wire().unwrap();
+        let snapshot = ContextSnapshot::from_wire(wire, &registry).unwrap();
+        let restored = ContextState::from_snapshot(snapshot).unwrap();
+
+        assert_eq!(
+            restored.get(ContextKey::Seeds)[0].text(),
+            Some("persisted seed")
+        );
+        assert_eq!(
+            restored.get_proposals(ContextKey::Hypotheses)[0].text(),
+            Some("staged hypothesis")
         );
     }
 

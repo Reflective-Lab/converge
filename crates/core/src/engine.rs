@@ -826,12 +826,14 @@ impl Engine {
             );
             let effect = agent.execute(context).instrument(span).await;
 
-            // Empty-provenance contract enforcement. A suggestor that
-            // produced proposals must declare its provenance. Filter /
-            // observer suggestors that emit no proposals are the only
-            // legitimate consumers of the default empty provenance. See
-            // `kb/Standards/Suggestor Contract.md`.
-            if !effect.proposals().is_empty() && agent.provenance().is_empty() {
+            // Empty-provenance contract enforcement belongs on the emitted
+            // proposal. `Suggestor::provenance()` is only a span label; the
+            // fact's provenance is what crosses the kernel boundary.
+            if effect
+                .proposals()
+                .iter()
+                .any(|proposal| proposal.provenance().trim().is_empty())
+            {
                 return Err(ConvergeError::EmptyProvenance {
                     suggestor: agent.name().to_string(),
                 });
@@ -1816,6 +1818,80 @@ mod tests {
             r1.integrity.merkle_root, r2.integrity.merkle_root,
             "different fact sets must produce different merkle roots"
         );
+    }
+
+    #[tokio::test]
+    async fn proposal_provenance_satisfies_kernel_boundary() {
+        struct ProposalProvenanceOnlyAgent;
+
+        #[async_trait::async_trait]
+        impl Suggestor for ProposalProvenanceOnlyAgent {
+            fn name(&self) -> &'static str {
+                "ProposalProvenanceOnlyAgent"
+            }
+
+            fn dependencies(&self) -> &[ContextKey] {
+                &[]
+            }
+
+            fn accepts(&self, ctx: &dyn crate::Context) -> bool {
+                !ctx.has(ContextKey::Seeds)
+            }
+
+            async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
+                AgentEffect::with_proposal(proposal(
+                    ContextKey::Seeds,
+                    "proposal-provenance-only",
+                    "proposal carries provenance",
+                    "proposal-boundary",
+                ))
+            }
+        }
+
+        let mut engine = Engine::new();
+        engine.register_suggestor(ProposalProvenanceOnlyAgent);
+        let result = engine.run(ContextState::new()).await.unwrap();
+
+        assert!(result.context.has(ContextKey::Seeds));
+    }
+
+    #[tokio::test]
+    async fn empty_proposal_provenance_is_rejected() {
+        struct EmptyProposalProvenanceAgent;
+
+        #[async_trait::async_trait]
+        impl Suggestor for EmptyProposalProvenanceAgent {
+            fn name(&self) -> &'static str {
+                "EmptyProposalProvenanceAgent"
+            }
+
+            fn dependencies(&self) -> &[ContextKey] {
+                &[]
+            }
+
+            fn accepts(&self, _ctx: &dyn crate::Context) -> bool {
+                true
+            }
+
+            async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
+                AgentEffect::with_proposal(proposal(
+                    ContextKey::Seeds,
+                    "empty-provenance",
+                    "missing provenance",
+                    "",
+                ))
+            }
+
+            fn provenance(&self) -> &'static str {
+                "span-only"
+            }
+        }
+
+        let mut engine = Engine::new();
+        engine.register_suggestor(EmptyProposalProvenanceAgent);
+        let err = engine.run(ContextState::new()).await.unwrap_err();
+
+        assert!(matches!(err, ConvergeError::EmptyProvenance { .. }));
     }
 
     /// Suggestor that emits a seed fact once.

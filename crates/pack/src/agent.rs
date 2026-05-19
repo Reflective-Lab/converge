@@ -86,28 +86,23 @@ pub trait Suggestor: Send + Sync {
     ///   not directly to the target key.
     async fn execute(&self, ctx: &dyn Context) -> AgentEffect;
 
-    /// Canonical provenance string carried on every fact this
-    /// suggestor emits, as produced by its
-    /// [`ProvenanceSource`](crate::ProvenanceSource).
+    /// Optional provenance label for this suggestor's execution span.
     ///
     /// The engine reads this when it wraps `execute` in the
-    /// `suggestor.execute` tracing span so every emitted fact's
-    /// origin is observable from a single log query without each
-    /// extension hand-rolling its own span.
+    /// `suggestor.execute` tracing span. The emitted proposal still
+    /// remains the authoritative audit boundary: every
+    /// [`ProposedFact`](crate::ProposedFact) must carry a non-empty
+    /// [`Provenance`](crate::Provenance).
     ///
-    /// Default is the empty string for non-fact-emitting suggestors
-    /// (filters, observers). Fact-emitting suggestors must override
-    /// using their crate's canonical
-    /// `*_PROVENANCE` const (the value, not the marker ZST):
+    /// Fact-emitting suggestors may override this with their crate's
+    /// canonical `*_PROVENANCE` const (the value, not the marker ZST):
     ///
     /// ```ignore
     /// fn provenance(&self) -> &'static str { ARBITER_PROVENANCE.as_str() }
     /// ```
     ///
-    /// **Kernel contract:** any `Suggestor` that emits a
-    /// `ProposedFact` in `execute` must override this method.
-    /// Empty `provenance()` on a fact-emitting suggestor is a
-    /// kernel error.
+    /// Empty `provenance()` is allowed for this optional span label.
+    /// Empty provenance on an emitted proposal is a kernel error.
     fn provenance(&self) -> &'static str {
         ""
     }

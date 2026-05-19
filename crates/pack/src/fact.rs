@@ -704,6 +704,16 @@ impl PayloadRegistry {
         Self::default()
     }
 
+    /// Creates a registry with payloads owned by `converge-pack`.
+    #[must_use]
+    pub fn with_pack_payloads() -> Self {
+        let mut registry = Self::new();
+        registry.register::<TextPayload>();
+        registry.register::<DiagnosticPayload>();
+        registry.register::<ExecutionIdentityEvidence>();
+        registry
+    }
+
     /// Registers one frozen payload type.
     pub fn register<T>(&mut self)
     where
