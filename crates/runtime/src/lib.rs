@@ -97,6 +97,3 @@ pub mod crypto;
 
 #[cfg(feature = "auth")]
 pub mod secrets;
-
-#[cfg(feature = "wasm")]
-pub mod wasm;

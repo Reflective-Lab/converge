@@ -18,8 +18,8 @@ If it's your first session, `/focus` will point you to the key kb pages. Read th
 
 Before you start implementation:
 1. Check `git status --short --branch`
-2. Keep the root checkout on clean `main`
-3. Create a topic branch, and a dedicated worktree if the task is more than trivial
+2. Work on `next`, not `main`
+3. Do not create topic branches or worktrees unless a human explicitly approves it
 4. Use `just git-hygiene` when branch, worktree, or release state is unclear
 
 See [[Workflow/Git Strategy]].
@@ -33,8 +33,8 @@ See [[Workflow/Git Strategy]].
 /pr [title]         Create a PR from current branch
 ```
 
-Do not stack unrelated work on one branch. If the task splits, split the branch
-or open another worktree.
+Keep work visible on `next`. If the task truly splits, pause and coordinate
+rather than creating hidden branch/worktree state by default.
 
 ## Reviewing
 
@@ -58,8 +58,8 @@ The kb is shared. Keep it current. Your teammates and their agents read it too.
 /wip                Save and push everything
 ```
 
-If the branch merged, remove the worktree and delete the remote branch. Do not
-leave stale refs behind for archaeology.
+Remove temporary worktrees and branches before handoff. Do not leave stale refs
+behind for archaeology.
 
 ## Weekly
 

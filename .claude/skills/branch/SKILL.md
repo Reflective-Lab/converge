@@ -1,52 +1,22 @@
 ---
 name: branch
-description: Start a topic branch + worktree for new work, following the converge git strategy.
+description: Deprecated. Converge uses main + next; temporary branches/worktrees require explicit human approval.
 model: haiku
 user-invocable: true
-argument-hint: <type/slug>  (e.g. feat/promotion-boundary)
+argument-hint: <temporary-branch>
 allowed-tools: Bash
 ---
 # Branch
-Start a clean topic branch with an isolated worktree.
-
-## Branch types
-| Prefix | Use |
-|---|---|
-| `feat/<slug>` | new capability |
-| `fix/<slug>` | bug fix |
-| `docs/<slug>` | KB or API docs |
-| `ci/<slug>` | workflows, hooks, badges |
-| `chore/<slug>` | maintenance |
-| `release/<version>` | version bump + tag prep |
-| `spike/<slug>` | disposable investigation |
+Do not create a topic branch or worktree by default.
 
 ## Steps
 
-If `$ARGUMENTS` is provided, use it as the branch name. Otherwise ask.
-
-1. Verify root checkout is on `main` and clean:
-   ```bash
-   git status --short --branch
-   ```
-   If dirty or not on main, warn and stop.
-
-2. Pull latest:
-   ```bash
-   git pull --ff-only origin main
-   ```
-
-3. Create the worktree + branch:
-   ```bash
-   just git-worktree <branch>
-   ```
-   This runs: `git worktree add ../converge-<branch> -b <branch>`
-
-4. Tell the user:
-   - Worktree path: `../converge-<branch>`
-   - How to enter: `cd ../converge-<branch>`
-   - How to clean up when done: `just git-worktree-rm <branch>`
+1. Explain that the normal workflow is `main` + `next`.
+2. If the user explicitly approves a temporary branch/worktree, create the
+   smallest temporary branch needed and record how it will be removed.
+3. Otherwise, switch to `next` and continue there.
 
 ## Rules
-- One concern per branch. If the task expands, split it.
-- Never start from a dirty root checkout.
-- Spike branches must not outlive their session without a note in the PR.
+- Durable branches are only `main` and `next`.
+- Temporary branches/worktrees require explicit human approval.
+- Remove temporary branches/worktrees before handoff.

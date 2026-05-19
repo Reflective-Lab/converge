@@ -77,13 +77,14 @@ Disk footprint after the audit:
 | workspace `target/` | `15G` |
 
 The failed full build is itself part of the baseline. Enabling all runtime
-features currently exposes bitrot in several optional surfaces:
+features exposed bitrot in several optional surfaces:
 
 - `security` references missing `x509_parser` and `oid_registry` dependencies
 - `billing` references a missing `crate::billing` module
 - `telemetry` is incompatible with the current OpenTelemetry dependency set and
   pulls conflicting OpenTelemetry versions into the graph
-- `wasm` has stale API/type mismatches and missing `hex` wiring
+- `wasm` belonged above Converge's runtime boundary and pulled Wasmtime/Cranelift
+  into the foundation graph
 
 The biggest release-deps artifacts observed during the failed full attempt were
 Wasmtime/Cranelift, `async-nats`, GCP/Firestore, duplicate transport stacks, and
@@ -142,8 +143,8 @@ Changes:
   uses one compatible OpenTelemetry API family
 - removed the X.509 parser dependency expectation from file identity loading;
   explicit service identity remains configuration-owned
-- made `wasm-runtime` own the `hex` dependency used by WASM signing/storage and
-  repaired stale WASM/core type conversions
+- repaired stale WASM/core type conversions long enough to measure the full
+  runtime graph before moving the plugin runtime to Helm
 
 Measured result:
 
@@ -176,6 +177,47 @@ Verification:
 - `cargo check -p converge-runtime --no-default-features`
 - `cargo check -p converge-runtime --all-features`
 - `cargo test -p converge-runtime --all-features`
+- `just check`
+- `just lint`
+- `just size-audit`
+
+### 2026-05-18 WASM Plugin Runtime Moved to Helm
+
+Sandboxed WASM execution is no longer a `converge-runtime` feature. Helm owns
+the application plugin runtime because plugin lifecycle, module signing, tenant
+quotas, and executable app extensions are product concerns above the Converge
+foundation.
+
+Converge keeps the typed convergence contracts and kernel boundary. Helm may
+adapt a verified plugin into Converge proposals or invariants, but Converge does
+not embed Wasmtime or expose a WASM feature flag.
+
+The cross-layer agreement is:
+
+| Layer | Responsibility |
+|---|---|
+| Axiom | Produce WASM-facing invariant artifacts, manifests, hashes, lineage, replay metadata, and proof obligations from a Truth Package. |
+| Helm | Host executable plugins in `helm-plugin-runtime`, enforce signing/quota/host-call policy, and adapt sandbox output into Converge-facing contracts. |
+| Converge | Recompute authority, enforce promotion gates and stop reasons, attach evidence refs and trace links, and record run integrity. |
+
+Plugin execution is never promotion. A successful sandbox run can produce
+evidence, a proposal, or an invariant verdict; Converge still decides whether
+anything becomes governed fact.
+
+Measured effect:
+
+| Surface | Before | After | Delta |
+|---|---:|---:|---:|
+| runtime full dependency lines | `564` | `454` | `-110` |
+| runtime full artifact | `15,417,280` bytes / `14.70 MiB` | `14,886,384` bytes / `14.20 MiB` | `-530,896` bytes / `-0.50 MiB` |
+
+The minimal and standard runtime artifacts did not move because WASM was already
+outside those feature sets. The full feature set now excludes Wasmtime/Cranelift
+from Converge entirely.
+
+Verification:
+
+- `cargo check -p converge-runtime --all-features`
 - `just check`
 - `just lint`
 - `just size-audit`
@@ -347,7 +389,7 @@ That is a v3.6-style split question, not the first cut of v3.4.
 
 ## What Comes Next
 
-1. Gate NATS, cloud, auth/security, and WASM dependencies more tightly so
-   minimal stays boring.
+1. Gate NATS, cloud, and auth/security dependencies more tightly so minimal
+   stays boring.
 2. Decide whether telemetry/audit deserve a later runtime-adapter crate split.
 3. Write the embedding guide around `converge-kernel`.

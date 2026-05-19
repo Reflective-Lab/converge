@@ -26,9 +26,9 @@ Use those when you want deterministic output from the repo itself.
 
 ## Git Discipline
 
-- Keep the root checkout on clean `main`
-- Do non-trivial work on a topic branch
-- Prefer a dedicated worktree for parallel work
+- Do normal work on `next`
+- Keep `main` for validated integration and release reference
+- Do not create topic branches or worktrees without explicit human approval
 - Treat the latest annotated tag, not `HEAD`, as the latest release
 
 See [[Workflow/Git Strategy]].

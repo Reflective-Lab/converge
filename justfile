@@ -49,10 +49,6 @@ test-layout:
         exit 1
     fi
 
-# Run the feature-gated WASM property suite explicitly
-test-runtime-wasm:
-    cargo test -p converge-runtime --features wasm-runtime wasm_property_tests
-
 # Run a single test by name
 test-one name:
     cargo test --all-targets -- {{name}}
@@ -339,17 +335,6 @@ dev-down mode="auto":
     bash scripts/dev-down.sh {{mode}}
 
 # ── Git ────────────────────────────────────────────────────────────────
-
-# Create a worktree for parallel work (e.g., just git-worktree fix-auth)
-git-worktree branch:
-    git worktree add ../converge-{{branch}} -b {{branch}}
-    @echo "Worktree ready at ../converge-{{branch}}"
-    @echo "When done: just git-worktree-rm {{branch}}"
-
-# Remove a worktree
-git-worktree-rm branch:
-    git worktree remove ../converge-{{branch}}
-    @echo "Worktree removed. Branch '{{branch}}' still exists — delete with: git branch -d {{branch}}"
 
 # List active worktrees
 git-worktrees:

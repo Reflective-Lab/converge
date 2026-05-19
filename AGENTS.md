@@ -55,7 +55,6 @@ just test-bench     # run benchmarks (compile only)
 just test-bench-run # run benchmarks (with execution)
 just test-soak      # run long-running soak tests
 just test-layout    # guard non-standard Rust test file placement
-just test-runtime-wasm # run the feature-gated WASM property suite
 just sec-gate       # security regression gate
 just sec-deny       # audit dependencies (cargo-deny)
 just lint           # cargo fmt --check && cargo clippy -- -D warnings
@@ -84,8 +83,9 @@ These are not suggestions.
 - Agents emit proposals, not direct facts — Converge promotes them.
 - Every mutation needs an Actor.
 - `just lint` clean before considering work done.
-- The root checkout stays on clean `main`; use a topic branch and preferably a dedicated worktree for any non-trivial change.
-- `main` is the integration branch, not a scratch branch. One branch/worktree = one concern.
+- Git uses two long-lived branches only: `main` and `next`.
+- Do normal implementation work on `next`; advance `main` only from validated `next`.
+- Do not create topic branches or worktrees by default. Temporary branches/worktrees require explicit human approval and must be removed before handoff.
 - Releases are defined by annotated tags, not by the current tip of `main`.
 - Delete merged or abandoned remote branches; do not use remote refs as archival storage.
 - Routine Dependabot cargo and GitHub Actions bumps are usually safe to auto-merge after green CI; majors or code-touching updates still need review.

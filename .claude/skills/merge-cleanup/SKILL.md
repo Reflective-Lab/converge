@@ -1,13 +1,13 @@
 ---
 name: merge-cleanup
-description: Post-merge cleanup — delete local branch, remove worktree, delete remote branch.
+description: Cleanup for approved temporary branches/worktrees.
 model: haiku
 user-invocable: true
 argument-hint: <branch>  (e.g. feat/promotion-boundary)
 allowed-tools: Bash
 ---
 # Merge Cleanup
-After a PR merges, clean up the branch and worktree completely.
+Clean up an approved temporary branch/worktree completely.
 
 ## Steps
 
@@ -19,15 +19,14 @@ If `$ARGUMENTS` is provided, use it as the branch name. Otherwise ask.
    ```
    If no merged PR found, warn and ask before proceeding.
 
-2. Switch root checkout to main and pull:
+2. Switch root checkout to `next`:
    ```bash
-   git switch main
-   git pull --ff-only origin main
+   git switch next
    ```
 
 3. Remove worktree (if it exists):
    ```bash
-   just git-worktree-rm <branch>
+   git worktree remove ../converge-<branch>
    ```
    If `../converge-<branch>` does not exist, skip silently.
 

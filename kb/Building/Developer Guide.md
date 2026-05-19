@@ -476,7 +476,6 @@ Common commands:
 | `just test` | default test suite |
 | `just test-all` | all workspace targets |
 | `just test-layout` | Rust test file placement guard |
-| `just test-runtime-wasm` | feature-gated WASM property suite |
 | `just lint` | format and clippy gate |
 | `just sec-gate` | security regression gate |
 | `just sec-deny` | dependency audit |

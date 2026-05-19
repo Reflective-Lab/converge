@@ -17,7 +17,7 @@ The goal is simple: **make the right thing easy to use**.
 | Providers | External capabilities | provider SDKs behind adapter traits | adapter maintainers, controlled product integrations |
 | Converge | Governance, authority, convergence, promotion | `converge-pack`, `converge-provider`, `converge-model`, `converge-kernel`, `converge-client`, `converge-protocol` | Organism, Axiom, Helm, Wolfgang, other apps |
 | Organism | Intent interpretation, planning, debate, simulation, reusable organizational workflows | `organism-pack`, `organism-runtime`, `organism-intelligence`, `organism-notes`, `organism-domain` | Helm and other apps that need reusable reasoning above Converge |
-| Axiom | Truth authoring, validation, simulation, compilation | Axiom CLI/library + produced WASM/manifests | Helm, truth authors, CI pipelines |
+| Axiom | Truth authoring, validation, simulation, compilation | Axiom CLI/library + produced WASM/manifests | Helm plugin runtime, truth authors, CI pipelines |
 | Helm | Operator-facing control surface | product UI and app APIs | humans |
 
 ## Converge Layer
@@ -57,13 +57,19 @@ Rules:
 | Need | Start here | Add when needed | Avoid by default |
 |---|---|---|---|
 | Validate and compile truths | Axiom CLI/library | `converge-provider` + `converge-provider` for live LLM-backed validation | `converge-core` |
-| Consume Axiom output in Converge | produced WASM + manifest ABI | `converge-model` for truth metadata if needed | direct dependence on Axiom internals from runtime code |
+| Consume Axiom executable output in Helm | produced WASM + manifest ABI | `converge-model` for truth metadata if needed | direct dependence on Axiom internals from Converge runtime code |
 
 Rules:
 
 - Axiom is the truth-definition and validation layer.
 - Axiom consumes provider capability contracts; it does not need the Converge engine crate for chat vocabulary.
-- Converge consumes Axiom artifacts, not Axiom authority.
+- WASM from Axiom is an executable contract artifact, not a Converge runtime
+  feature.
+- Helm owns executable plugin hosting, signing policy, tenant quotas, and
+  sandbox lifecycle.
+- Converge consumes adapted proposals, invariant verdicts, evidence refs, and
+  trace links through public kernel/pack contracts. It does not load Axiom
+  plugins or embed Wasmtime/Cranelift.
 
 ## Helm And Product Layers
 

@@ -21,9 +21,9 @@ This project uses Gemini CLI as a first-class collaborator. Gemini follows the s
 
 ## Git Discipline
 
-- Keep the root checkout on clean `main`
-- Use a short-lived topic branch for implementation work
-- Use extra worktrees for parallel tasks instead of stacking changes
+- Do normal work on `next`
+- Keep `main` for validated integration and release reference
+- Do not create topic branches or worktrees without explicit human approval
 - Treat the latest annotated tag as the latest release
 
 See [[Workflow/Git Strategy]].

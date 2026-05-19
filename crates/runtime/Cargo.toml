@@ -85,9 +85,6 @@ async-trait.workspace = true
 # OpenAPI
 utoipa.workspace = true
 
-# WASM runtime
-wasmtime = { workspace = true, optional = true }
-
 # Database
 firestore = { workspace = true, optional = true }
 
@@ -96,7 +93,6 @@ hostname.workspace = true
 regex.workspace = true
 base64.workspace = true
 rand.workspace = true
-hex = { workspace = true, optional = true }
 
 [build-dependencies]
 tonic-build = { workspace = true, optional = true }
@@ -109,7 +105,6 @@ http-body-util.workspace = true
 
 [features]
 default = ["grpc", "auth"]
-wasm-runtime = ["wasm", "dep:hex"]
 grpc = [
     "dep:converge-protocol",
     "dep:tonic",
@@ -117,7 +112,6 @@ grpc = [
     "dep:prost-types",
     "dep:tonic-build",
 ]
-wasm = ["dep:wasmtime"]
 gcp = ["dep:firestore"]
 auth = []
 firebase = ["auth"]

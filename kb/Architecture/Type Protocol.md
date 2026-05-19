@@ -200,21 +200,16 @@ Rust test files live in one of two places:
 
 Do not leave live-looking Rust tests in ad hoc directories. They will rot and silently stop running.
 
-`just test-layout` exists to catch the directory mistake. Feature-gated suites still need explicit run commands.
+`just test-layout` exists to catch the directory mistake.
 
 ## Current Non-Default Coverage
 
-The notable remaining property suite that is real but not default is:
-
-- `crates/runtime/tests/wasm_property_tests.rs`
-
-It only runs with `converge-runtime/wasm-runtime`.
-
-Use:
-
-```bash
-just test-runtime-wasm
-```
+Converge no longer owns a feature-gated WASM property suite. Sandboxed
+application plugins are a Helm concern, so their ABI and guest-boundary
+properties live with Helm's plugin runtime rather than with `converge-runtime`.
+Axiom may produce WASM artifacts and manifests, but Converge only consumes the
+adapted proposal, invariant verdict, evidence refs, trace links, and typed
+payloads that cross public kernel/pack contracts.
 
 ## Remaining Cleanup
 

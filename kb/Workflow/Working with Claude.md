@@ -32,9 +32,9 @@ This project has two layers of automation: **Claude Code skills** (slash command
 
 ## Git Discipline
 
-- Keep the root checkout on clean `main`
-- Use a short-lived topic branch for non-trivial work
-- Prefer a dedicated worktree for parallel streams
+- Do normal work on `next`
+- Keep `main` for validated integration and release reference
+- Do not create topic branches or worktrees without explicit human approval
 - Treat annotated tags as releases; do not infer "latest release" from `main`
 
 See [[Workflow/Git Strategy]].

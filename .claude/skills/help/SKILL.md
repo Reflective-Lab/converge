@@ -16,14 +16,13 @@ Monday:     /audit
 ── Developer ──────────────────────────────────────
 /dev            Start local dev environment
 /check          Lint + test. Am I clean?
-/fix <issue>    Fix GitHub issue → branch → PR
+/fix <issue>    Fix GitHub issue on next → PR
 /test [crate]   Expand test coverage (unit→soak pyramid)
 /pr [title]     Push and create PR
 /wip            Save WIP, push, switch devices
 
 ── Git ────────────────────────────────────────────
-/branch <type/slug>     Start topic branch + worktree
-/merge-cleanup <branch> Post-merge: delete branch + worktree
+/merge-cleanup <branch> Remove an approved temporary branch/worktree
 
 ── Product Owner ──────────────────────────────────
 /focus          Session opener. Where are we?
@@ -41,6 +40,6 @@ Monday:     /audit
 /deploy [target] Deploy to production
 ```
 
-Justfile equivalents: `just git-hygiene`, `just worktree <branch>`, `just worktree-rm <branch>`, `just worktrees`
+Justfile equivalents: `just git-hygiene`, `just git-worktrees`
 
 For the full reference: `kb/Workflow/Daily Journey.md`

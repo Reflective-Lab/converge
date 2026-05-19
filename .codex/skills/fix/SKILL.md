@@ -9,7 +9,7 @@ argument-hint: [issue-number]
 
 ## Steps
 1. Read the issue with `gh issue view <issue-number>`.
-2. Create a branch such as `fix/<issue-number>` if needed.
+2. Work on `next`; do not create a topic branch unless the user explicitly asks.
 3. Explore the relevant code and docs.
 4. Implement the smallest safe fix.
 5. Verify with `just check`, `just test`, and `just lint` unless you have a documented reason not to.
