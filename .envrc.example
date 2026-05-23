@@ -1,0 +1,22 @@
+# Copy to .envrc, fill in your GCP project, then run `direnv allow`.
+#
+# Production secrets live in Google Secret Manager, not in this file.
+# Local dev secrets via macOS Keychain:
+#   security add-generic-password -a "$USER" -s <name> -w
+
+export PORT=8080
+export RUST_LOG=info
+export LOCAL_DEV=true
+export GCLOUD_REGION=europe-west1
+export SERVICE_NAME=converge-runtime
+
+# Default hosted path: Google Cloud + Firebase
+export GCP_PROJECT_ID=your-gcp-project
+export GOOGLE_CLOUD_PROJECT=your-gcp-project
+export FIREBASE_PROJECT_ID=your-gcp-project
+export FIREBASE_AUTH_EMULATOR_HOST=""
+export CONVERGE_RUNTIME_FEATURES=gcp,auth,firebase
+export TF_STATE_BUCKET=your-terraform-state-bucket
+
+# Optional local emulator wiring
+# export FIRESTORE_EMULATOR_HOST=127.0.0.1:8081

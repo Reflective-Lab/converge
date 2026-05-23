@@ -13,7 +13,7 @@ Read and follow `AGENTS.md` — it is the canonical project documentation.
 **Keep the root clean.** Only GitHub-essential + config files at root level:
 - **Keep at root:** `README.md`, `LICENSE`, `CODE_OF_CONDUCT.md`, `SECURITY.md`
 - **Keep at root:** `AGENTS.md`, `CLAUDE.md`, `CODEX.md`, `GEMINI.md` (agent entrypoints)
-- **Keep at root:** `Cargo.toml`, `Cargo.lock`, `Justfile`, `deny.toml`, `.env.example`, `.gitignore`
+- **Keep at root:** `Cargo.toml`, `Cargo.lock`, `Justfile`, `deny.toml`, `.envrc.example`, `.gitignore`
 - **Everything else goes into:** `kb/` (docs), `schema/` (protocols), `crates/` (source), `examples/` (examples)
 - **Moved to `runway/`:** `ops/` (deployment/infra), `dev/` (local tooling), `crates/application` (distribution binary), `crates/llm` (local inference)
 
