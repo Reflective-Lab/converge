@@ -6,7 +6,7 @@ Authoritative spec for marquee-apps with concurrent multi-participant state. Sta
 
 | App | Adoption depth | Status |
 |---|---|---|
-| Quorum (`marquee-apps/quorum-sense`) | Full: Inquiry, Signal, Hypothesis, Probe, Round, BreakoutBranch, Synthesis | Live multi-participant survey product — primitives mandatory |
+| Quorum (`marquee-apps/quorum-sense`) | Full: `InquiryContract` (genesis), `InquiryThread`, `InquiryRound`, `Signal`, `Hypothesis`, `Probe`, `BreakoutBranch`, `Synthesis`, `FacilitatorRedirect`, `ResearchTask`, `HypothesisTrial`, `AgentContribution`, `DecisionApplication`, `ProcessReceipt` (assembled). | Guided Inquiry Run engine — not a consensus tool. Multi-mode (explore, diagnose, prioritize, decide, frontload, DD, align, facilitated path, hypothesis trial). Primitives mandatory because anonymous rounds, facilitator redirects, AI-agent contributions, and decision-rule application all require tamper-evident receipts. |
 | Tally (`marquee-apps/tally-escrow`) | Full: Engagement, Condition, StateTransition, Commitment, Release | Bilateral escrow — finality requires matching roots on both sides |
 | Atlas (`marquee-apps/atlas-integration`) | Partial today (`lamport_at` on `UnresolvedAcquisitionQuestion`); will gain `signal_history_root` and an event chain on `IntegrationCandidate` | Acquisition evidence spike was the first adopter at smaller scope |
 
@@ -59,8 +59,19 @@ Optional but recommended:
 
 | Field | Type | Semantics |
 |---|---|---|
-| `participant_id` | `Option<ParticipantId>` | who submitted; sets up the migration to per-participant clocks without a wire-shape break |
 | `received_lamport` | `Option<u64>` | the participant's local clock at submission; `apply_signal` uses `max(local, received) + 1` |
+
+### Provenance is mandatory
+
+Every event also carries an `actor_kind` + `actor_id` (pseudonymous when round visibility demands it). These fields ARE part of the canonical bytes — they hash into the chain. The implication is **load-bearing**: an AI agent contribution can never be retconned as a human signal (or vice versa) without breaking the chain.
+
+| Field | Type | Semantics |
+|---|---|---|
+| `actor_kind` | `ActorKind` enum (`human_participant \| facilitator \| ai_research_agent \| ai_synthesis_agent \| ai_red_team_agent \| external_expert`) | who/what contributed |
+| `actor_id` | `ActorId` (typed wrapper over either ParticipantId, FacilitatorId, AgentId, …) | identity at the visibility level the round permits; pseudonymous when anonymous-to-group, sealed when anonymous-to-facilitator, fully anonymous when configured |
+| `actor_provenance` | `Option<Provenance>` | for AI actors: vendor, model, prompt hash, source citations (mirrors existing `SignalProvenance` shape from Embassy) |
+
+Anonymous rounds use a deterministic pseudonymous id derived from the participant's real id + a per-round salt — the chain still commits to *which pseudonym* contributed each event, so within-round identity is preserved, but the real identity is sealed until visibility unlocks (or never, if the round is permanently anonymous).
 
 ### Per-aggregate
 
@@ -71,6 +82,37 @@ Every aggregate type (Inquiry, Engagement, IntegrationCandidate, …) carries:
 | `lamport_at` | `LamportClock` (wire: `u64`) | current engagement clock |
 | `event_history_root` | `Option<MerkleRoot>` (wire: hex `String`) | head of the linear chain over all admitted events |
 | `event_count` | `u64` | number of admitted events (for O(1) verification scaffolding) |
+
+## Going-in spec as genesis fact
+
+For apps where the engagement is bounded by an up-front contract (Quorum's `InquiryContract`, Tally's `EngagementTerms`, Atlas's `ConsolidationIntent`), **the contract itself is the chain's genesis fact**. The very first hash in the chain is:
+
+```rust
+let genesis_hash = ContentHash::compute(&canonical_bytes(&contract));
+let initial_root = MerkleRoot(genesis_hash);
+```
+
+Implications:
+
+- Any deviation from the contract is visible against the original hash (the contract content can be re-derived from the genesis fact and compared)
+- Mid-run amendments to the contract are themselves events on the chain, with their own hash + parent root — the chain records *exactly* when the going-in spec changed and what it changed to
+- Verifiers asking "did this run honor its declared decision rule?" can re-derive the contract, walk the chain, find the `DecisionApplication` event, and confirm the rule applied matches the rule in the genesis fact
+
+This is what turns "we ran a session" into "we ran a session that's provably this exact path under this exact going-in spec." Without contract-as-genesis, the chain proves event order but not whether the engagement obeyed its own rules.
+
+## Receipt-bearing transitions
+
+Some events are not just data — they are *authority moves* that need extra provenance on the chain. Apps MUST treat the following as receipt-bearing event kinds, where the canonical bytes include the authority claim that justified the move:
+
+| Event kind | Authority claim included in hash |
+|---|---|
+| `FacilitatorRedirect` (Quorum) | facilitator identity + reason + from-state + to-state + (optional) organizer-rule citation |
+| `DecisionApplication` (any app) | decision rule id, threshold evaluated, evidence cited, dissent recorded |
+| `SealReveal` (anonymous-round close) | round id, reveal time, list of pseudonym→participant disclosures (or "still sealed") |
+| `Finality` (Tally) | both parties' signatures, condition refs, releasing authority |
+| `OwnerApproval` (Atlas writeback) | named owner, scope of approval, evidence pack root cited |
+
+The receipt-bearing distinction matters because these events shift the engagement's authority — and verifiers, regulators, and reviewers must be able to point at a single chain entry and read off "who did this, on what authority, against what evidence."
 
 ## Canonical-bytes rule (for hashing)
 
