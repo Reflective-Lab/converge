@@ -4,6 +4,7 @@ use converge_core::suggestors::{ReactOnceSuggestor, SeedSuggestor};
 use converge_core::{
     AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor, TextPayload,
 };
+use converge_pack::Provenance;
 
 #[tokio::test]
 async fn five_seeds_all_converge() {
@@ -42,8 +43,8 @@ async fn seed_with_high_confidence_promoted() {
             )
         }
 
-        fn provenance(&self) -> &'static str {
-            "test-suggestor"
+        fn provenance(&self) -> Provenance {
+            Provenance::from("test-suggestor")
         }
     }
     let mut engine = Engine::new();
@@ -83,8 +84,8 @@ async fn multiple_context_keys_populated() {
             ))
         }
 
-        fn provenance(&self) -> &'static str {
-            "test-suggestor"
+        fn provenance(&self) -> Provenance {
+            Provenance::from("test-suggestor")
         }
     }
 

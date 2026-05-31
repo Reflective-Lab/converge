@@ -15,6 +15,7 @@
 //! request id — the suggestor reacts and the formation re-converges.
 
 use async_trait::async_trait;
+use converge_pack::Provenance;
 use converge_pack::ProvenanceSource;
 use converge_pack::{
     AgentEffect, Context, ContextKey, DiagnosticPayload, FactPayload, ProposedFact, Suggestor,
@@ -154,8 +155,8 @@ impl Suggestor for AssignmentSuggestor {
         }
     }
 
-    fn provenance(&self) -> &'static str {
-        super::CONVERGE_OPTIMIZATION_PROVENANCE.as_str()
+    fn provenance(&self) -> Provenance {
+        Provenance::from(super::CONVERGE_OPTIMIZATION_PROVENANCE.as_str())
     }
 }
 

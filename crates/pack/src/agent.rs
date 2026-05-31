@@ -27,6 +27,7 @@
 
 use crate::context::{Context, ContextKey};
 use crate::effect::AgentEffect;
+use crate::fact::Provenance;
 
 /// The core suggestor contract.
 ///
@@ -86,25 +87,30 @@ pub trait Suggestor: Send + Sync {
     ///   not directly to the target key.
     async fn execute(&self, ctx: &dyn Context) -> AgentEffect;
 
-    /// Optional provenance label for this suggestor's execution span.
+    /// Typed provenance for this suggestor's emitted facts and execution span.
     ///
-    /// The engine reads this when it wraps `execute` in the
-    /// `suggestor.execute` tracing span. The emitted proposal still
-    /// remains the authoritative audit boundary: every
+    /// Used by both the engine's tracing layer and by `ProposedFact::new`
+    /// callers that want to cite the suggestor as the proposal's origin. The
+    /// emitted proposal still remains the authoritative audit boundary: every
     /// [`ProposedFact`](crate::ProposedFact) must carry a non-empty
     /// [`Provenance`](crate::Provenance).
     ///
-    /// Fact-emitting suggestors may override this with their crate's
-    /// canonical `*_PROVENANCE` const (the value, not the marker ZST):
+    /// The default impl derives the provenance from [`name`](Self::name),
+    /// which is sufficient for span labels and for proposal provenance when
+    /// the suggestor's identity is exhausted by its name. Fact-emitting
+    /// suggestors that carry richer identity claims (versioned model,
+    /// capability scope, source URI) should override this with their
+    /// crate-canonical typed provenance constructor:
     ///
     /// ```ignore
-    /// fn provenance(&self) -> &'static str { ARBITER_PROVENANCE.as_str() }
+    /// fn provenance(&self) -> Provenance { ARBITER_PROVENANCE.clone() }
     /// ```
     ///
-    /// Empty `provenance()` is allowed for this optional span label.
-    /// Empty provenance on an emitted proposal is a kernel error.
-    fn provenance(&self) -> &'static str {
-        ""
+    /// Empty provenance on an emitted proposal is a kernel error; the
+    /// default impl above never produces empty provenance as long as
+    /// `name()` is non-empty.
+    fn provenance(&self) -> Provenance {
+        Provenance::new(self.name())
     }
 
     /// Algorithmic complexity of this suggestor's core computation.

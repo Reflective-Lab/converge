@@ -15,6 +15,7 @@ use converge_core::{
     AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor, TextPayload,
     suggestors::SeedSuggestor,
 };
+use converge_pack::Provenance;
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 
 // ─── Single-cycle: 1 seed suggestor, immediate convergence ───
@@ -70,8 +71,8 @@ fn bench_engine_multi_suggestor(c: &mut Criterion) {
             ))
         }
 
-        fn provenance(&self) -> &'static str {
-            "converge-core-benchmark"
+        fn provenance(&self) -> Provenance {
+            Provenance::from("converge-core-benchmark")
         }
     }
 
@@ -134,8 +135,8 @@ fn bench_engine_budget_pressure(c: &mut Criterion) {
             ))
         }
 
-        fn provenance(&self) -> &'static str {
-            "converge-core-benchmark"
+        fn provenance(&self) -> Provenance {
+            Provenance::from("converge-core-benchmark")
         }
     }
 

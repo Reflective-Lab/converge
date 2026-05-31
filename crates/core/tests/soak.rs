@@ -14,6 +14,7 @@ use converge_core::{
     AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor, TextPayload,
     suggestors::SeedSuggestor,
 };
+use converge_pack::Provenance;
 
 /// Proposer that creates a single proposal per execution.
 struct SimpleScaleProposer;
@@ -41,8 +42,8 @@ impl Suggestor for SimpleScaleProposer {
         ))
     }
 
-    fn provenance(&self) -> &'static str {
-        "test-suggestor"
+    fn provenance(&self) -> Provenance {
+        Provenance::from("test-suggestor")
     }
 }
 

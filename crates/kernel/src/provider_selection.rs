@@ -11,6 +11,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use converge_optimization::graph::matching::bipartite_matching;
+use converge_pack::Provenance;
 use converge_pack::ProvenanceSource;
 use converge_pack::{
     AgentEffect, Context, ContextKey, DiagnosticPayload, FactPayload, ProposedFact, Suggestor,
@@ -125,8 +126,8 @@ impl Suggestor for ProviderSelectionSuggestor {
         "ProviderSelectionSuggestor"
     }
 
-    fn provenance(&self) -> &'static str {
-        CONVERGE_KERNEL_PROVENANCE.as_str()
+    fn provenance(&self) -> Provenance {
+        Provenance::from(CONVERGE_KERNEL_PROVENANCE.as_str())
     }
 
     fn dependencies(&self) -> &[ContextKey] {

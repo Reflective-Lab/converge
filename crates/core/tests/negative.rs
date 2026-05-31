@@ -5,6 +5,7 @@
 use converge_core::{
     AgentEffect, Budget, ContextKey, ContextState, Engine, ProposedFact, Suggestor, TextPayload,
 };
+use converge_pack::Provenance;
 
 // ── Invalid proposals: rejected by promotion gate ──
 
@@ -35,8 +36,8 @@ impl Suggestor for BadContentAgent {
         ))
     }
 
-    fn provenance(&self) -> &'static str {
-        "test-suggestor"
+    fn provenance(&self) -> Provenance {
+        Provenance::from("test-suggestor")
     }
 }
 
@@ -117,8 +118,8 @@ async fn budget_exhaustion_terminates() {
             ))
         }
 
-        fn provenance(&self) -> &'static str {
-            "test-suggestor"
+        fn provenance(&self) -> Provenance {
+            Provenance::from("test-suggestor")
         }
     }
 
@@ -166,8 +167,8 @@ async fn max_facts_budget_terminates() {
             AgentEffect::with_proposals(proposals)
         }
 
-        fn provenance(&self) -> &'static str {
-            "test-suggestor"
+        fn provenance(&self) -> Provenance {
+            Provenance::from("test-suggestor")
         }
     }
 

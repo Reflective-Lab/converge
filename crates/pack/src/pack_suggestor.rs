@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use crate::Suggestor;
 use crate::context::{Context, ContextKey};
 use crate::effect::AgentEffect;
+use crate::fact::Provenance;
 use crate::fact::{FactFamilyId, FactPayload, PayloadError, PayloadVersion, ProposedFact};
 use crate::gate::{GateError, GateResult, KernelTraceLink, ObjectiveSpec, ProblemSpec};
 use crate::pack::Pack;
@@ -157,8 +158,8 @@ impl<P: Pack> Suggestor for PackSuggestor<P> {
     /// External packs that need a separate provenance (e.g., a crate-level
     /// `ProvenanceSource`) should wrap themselves in an outer Suggestor and
     /// override `provenance()` there instead of relying on this default.
-    fn provenance(&self) -> &'static str {
-        self.pack.name()
+    fn provenance(&self) -> Provenance {
+        Provenance::new(self.pack.name())
     }
 
     fn dependencies(&self) -> &[ContextKey] {

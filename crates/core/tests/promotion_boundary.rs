@@ -8,6 +8,7 @@
 use converge_core::{
     AgentEffect, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor, TextPayload,
 };
+use converge_pack::Provenance;
 use proptest::prelude::*;
 
 const SEED_DEPENDENCIES: &[ContextKey] = &[ContextKey::Seeds];
@@ -42,8 +43,8 @@ impl Suggestor for SeedObserver {
         ))
     }
 
-    fn provenance(&self) -> &'static str {
-        "test-suggestor"
+    fn provenance(&self) -> Provenance {
+        Provenance::from("test-suggestor")
     }
 }
 

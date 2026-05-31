@@ -412,7 +412,7 @@ mod tests {
         );
         assert_eq!(
             RecallError::RateLimited {
-                retry_after: Duration::from_secs(60)
+                retry_after: Duration::from_mins(1)
             }
             .category(),
             ErrorCategory::RateLimit
@@ -429,7 +429,7 @@ mod tests {
         );
         assert!(
             RecallError::RateLimited {
-                retry_after: Duration::from_secs(60)
+                retry_after: Duration::from_mins(1)
             }
             .is_transient()
         );
@@ -465,9 +465,9 @@ mod tests {
     #[test]
     fn recall_error_retry_after() {
         let err = RecallError::RateLimited {
-            retry_after: Duration::from_secs(60),
+            retry_after: Duration::from_mins(1),
         };
-        assert_eq!(err.retry_after(), Some(Duration::from_secs(60)));
+        assert_eq!(err.retry_after(), Some(Duration::from_mins(1)));
 
         let err2 = RecallError::IndexUnavailable {
             message: "test".to_string(),

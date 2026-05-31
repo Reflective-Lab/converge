@@ -38,7 +38,7 @@ impl GreedyRebalancingSolver {
             .map(|(key, level)| (key.clone(), level.deficit())) // deficit is negative
             .collect();
 
-        deficits.sort_by(|a, b| a.1.cmp(&b.1)); // Sort ascending (most negative first)
+        deficits.sort_by_key(|d| d.1); // Sort ascending (most negative first)
 
         // Greedy allocation
         let mut transfers = Vec::new();

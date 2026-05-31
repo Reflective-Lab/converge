@@ -245,8 +245,8 @@ mod tests {
     #[test]
     fn store_error_retry_after() {
         let err = StoreError::RateLimited {
-            retry_after: Duration::from_secs(60),
+            retry_after: Duration::from_mins(1),
         };
-        assert_eq!(err.retry_after(), Some(Duration::from_secs(60)));
+        assert_eq!(err.retry_after(), Some(Duration::from_mins(1)));
     }
 }

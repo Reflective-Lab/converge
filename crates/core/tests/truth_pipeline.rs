@@ -7,6 +7,7 @@ use converge_core::suggestors::{ReactOnceSuggestor, SeedSuggestor};
 use converge_core::{
     AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor, TextPayload,
 };
+use converge_pack::Provenance;
 
 // ── End-to-end: suggestor → proposal → engine promotion → fact ──
 
@@ -69,8 +70,8 @@ async fn three_stage_pipeline_converges() {
             ))
         }
 
-        fn provenance(&self) -> &'static str {
-            "test-suggestor"
+        fn provenance(&self) -> Provenance {
+            Provenance::from("test-suggestor")
         }
     }
 

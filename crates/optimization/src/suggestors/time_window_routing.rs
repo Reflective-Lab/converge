@@ -7,6 +7,7 @@
 //! the portable pure Rust baseline for Ferrox native CP-SAT VRPTW solving.
 
 use async_trait::async_trait;
+use converge_pack::Provenance;
 use converge_pack::ProvenanceSource;
 use converge_pack::{
     AgentEffect, Context, ContextKey, DiagnosticPayload, FactPayload, ProposedFact, Suggestor,
@@ -201,8 +202,8 @@ impl Suggestor for NearestNeighborTimeWindowRoutingSuggestor {
         }
     }
 
-    fn provenance(&self) -> &'static str {
-        super::CONVERGE_OPTIMIZATION_PROVENANCE.as_str()
+    fn provenance(&self) -> Provenance {
+        Provenance::from(super::CONVERGE_OPTIMIZATION_PROVENANCE.as_str())
     }
 }
 

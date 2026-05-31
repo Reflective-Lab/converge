@@ -567,7 +567,7 @@ mod tests {
     fn timeout_policy_default() {
         let policy = TimeoutPolicy::default();
         assert_eq!(policy.timeout_secs, 30 * 60);
-        assert_eq!(policy.duration(), Duration::from_secs(1800));
+        assert_eq!(policy.duration(), Duration::from_mins(30));
         assert_eq!(policy.action, TimeoutAction::Reject);
     }
 

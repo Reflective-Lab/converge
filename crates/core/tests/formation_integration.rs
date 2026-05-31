@@ -6,6 +6,7 @@
 use async_trait::async_trait;
 use converge_core::suggestors::{ReactOnceSuggestor, SeedSuggestor};
 use converge_core::{AgentEffect, Budget, ContextState, Engine, ProposedFact};
+use converge_pack::Provenance;
 use converge_pack::{Context, ContextKey, FactPayload, Suggestor, TextPayload};
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -60,8 +61,8 @@ impl Suggestor for ThresholdPolicyAgent {
         AgentEffect::with_proposals(proposals)
     }
 
-    fn provenance(&self) -> &'static str {
-        "test-suggestor"
+    fn provenance(&self) -> Provenance {
+        Provenance::from("test-suggestor")
     }
 }
 
@@ -100,8 +101,8 @@ impl Suggestor for StrategyAgent {
         ))
     }
 
-    fn provenance(&self) -> &'static str {
-        "test-suggestor"
+    fn provenance(&self) -> Provenance {
+        Provenance::from("test-suggestor")
     }
 }
 

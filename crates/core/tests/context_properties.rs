@@ -9,6 +9,7 @@
 use converge_core::{
     AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor, TextPayload,
 };
+use converge_pack::Provenance;
 
 // ─── Helper: Suggestor that proposes a single fact ───────────────────────────
 
@@ -43,8 +44,8 @@ impl Suggestor for SingleProposalSuggestor {
         ))
     }
 
-    fn provenance(&self) -> &'static str {
-        "test-suggestor"
+    fn provenance(&self) -> Provenance {
+        Provenance::from("test-suggestor")
     }
 }
 

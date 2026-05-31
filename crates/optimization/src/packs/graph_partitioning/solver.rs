@@ -26,7 +26,7 @@ impl GreedyKernighanLinSolver {
 
         // Phase 1: Greedy assignment by node degree (highest degree first)
         let mut degrees: Vec<(usize, usize)> = (0..n).map(|i| (i, adj[i].len())).collect();
-        degrees.sort_by(|a, b| b.1.cmp(&a.1));
+        degrees.sort_by_key(|d| std::cmp::Reverse(d.1));
 
         let mut partition = vec![0usize; n];
         let mut part_sizes = vec![0usize; k];

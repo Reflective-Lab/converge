@@ -821,7 +821,7 @@ impl Engine {
             let span = info_span!(
                 "suggestor.execute",
                 suggestor = agent.name(),
-                provenance = agent.provenance(),
+                provenance = %agent.provenance(),
                 dependencies = ?agent.dependencies(),
             );
             let effect = agent.execute(context).instrument(span).await;
@@ -1753,6 +1753,7 @@ mod tests {
     use crate::context::{ProposalId, ProposedFact, TextPayload};
     use crate::truth::{CriterionEvaluator, CriterionResult};
     use crate::{Criterion, TypesBudgets, TypesIntentId, TypesIntentKind, TypesRootIntent};
+    use converge_pack::Provenance;
     use std::sync::Mutex;
     use strum::IntoEnumIterator;
     use tracing_test::traced_test;
@@ -1882,8 +1883,8 @@ mod tests {
                 ))
             }
 
-            fn provenance(&self) -> &'static str {
-                "span-only"
+            fn provenance(&self) -> Provenance {
+                Provenance::from("span-only")
             }
         }
 
@@ -1920,8 +1921,8 @@ mod tests {
             ))
         }
 
-        fn provenance(&self) -> &'static str {
-            "test-suggestor"
+        fn provenance(&self) -> Provenance {
+            Provenance::from("test-suggestor")
         }
     }
 
@@ -1951,8 +1952,8 @@ mod tests {
             ))
         }
 
-        fn provenance(&self) -> &'static str {
-            "test-suggestor"
+        fn provenance(&self) -> Provenance {
+            Provenance::from("test-suggestor")
         }
     }
 
@@ -1984,8 +1985,8 @@ mod tests {
             )
         }
 
-        fn provenance(&self) -> &'static str {
-            "test-suggestor"
+        fn provenance(&self) -> Provenance {
+            Provenance::from("test-suggestor")
         }
     }
 
@@ -2264,8 +2265,8 @@ mod tests {
                 ))
             }
 
-            fn provenance(&self) -> &'static str {
-                "test-suggestor"
+            fn provenance(&self) -> Provenance {
+                Provenance::from("test-suggestor")
             }
         }
 
@@ -2319,8 +2320,8 @@ mod tests {
                 )
             }
 
-            fn provenance(&self) -> &'static str {
-                "test-suggestor"
+            fn provenance(&self) -> Provenance {
+                Provenance::from("test-suggestor")
             }
         }
 
@@ -2365,8 +2366,8 @@ mod tests {
                 ))
             }
 
-            fn provenance(&self) -> &'static str {
-                "test-suggestor"
+            fn provenance(&self) -> Provenance {
+                Provenance::from("test-suggestor")
             }
         }
 
@@ -2406,8 +2407,8 @@ mod tests {
             AgentEffect::empty()
         }
 
-        fn provenance(&self) -> &'static str {
-            "test-suggestor"
+        fn provenance(&self) -> Provenance {
+            Provenance::from("test-suggestor")
         }
     }
 
@@ -2432,8 +2433,8 @@ mod tests {
             AgentEffect::empty()
         }
 
-        fn provenance(&self) -> &'static str {
-            "test-suggestor"
+        fn provenance(&self) -> Provenance {
+            Provenance::from("test-suggestor")
         }
     }
 
@@ -2472,8 +2473,8 @@ mod tests {
             AgentEffect::empty()
         }
 
-        fn provenance(&self) -> &'static str {
-            "test-suggestor"
+        fn provenance(&self) -> Provenance {
+            Provenance::from("test-suggestor")
         }
     }
 
@@ -2528,8 +2529,8 @@ mod tests {
             ))
         }
 
-        fn provenance(&self) -> &'static str {
-            "test-suggestor"
+        fn provenance(&self) -> Provenance {
+            Provenance::from("test-suggestor")
         }
     }
 
@@ -2757,8 +2758,8 @@ mod tests {
                 )
             }
 
-            fn provenance(&self) -> &'static str {
-                "test-suggestor"
+            fn provenance(&self) -> Provenance {
+                Provenance::from("test-suggestor")
             }
         }
 
@@ -2852,8 +2853,8 @@ mod tests {
                 )
             }
 
-            fn provenance(&self) -> &'static str {
-                "test-suggestor"
+            fn provenance(&self) -> Provenance {
+                Provenance::from("test-suggestor")
             }
         }
 
@@ -2903,8 +2904,8 @@ mod tests {
                 )
             }
 
-            fn provenance(&self) -> &'static str {
-                "test-suggestor"
+            fn provenance(&self) -> Provenance {
+                Provenance::from("test-suggestor")
             }
         }
 
@@ -2954,8 +2955,8 @@ mod tests {
                 ])
             }
 
-            fn provenance(&self) -> &'static str {
-                "test-suggestor"
+            fn provenance(&self) -> Provenance {
+                Provenance::from("test-suggestor")
             }
         }
 
@@ -2985,8 +2986,8 @@ mod tests {
                 ))
             }
 
-            fn provenance(&self) -> &'static str {
-                "test-suggestor"
+            fn provenance(&self) -> Provenance {
+                Provenance::from("test-suggestor")
             }
         }
 
@@ -3060,8 +3061,8 @@ mod tests {
             )
         }
 
-        fn provenance(&self) -> &'static str {
-            "test-suggestor"
+        fn provenance(&self) -> Provenance {
+            Provenance::from("test-suggestor")
         }
     }
 
@@ -3106,8 +3107,8 @@ mod tests {
                 .build()
         }
 
-        fn provenance(&self) -> &'static str {
-            "test-suggestor"
+        fn provenance(&self) -> Provenance {
+            Provenance::from("test-suggestor")
         }
     }
 

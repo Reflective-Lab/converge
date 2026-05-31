@@ -3,6 +3,7 @@
 use converge_core::{
     AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor, TextPayload,
 };
+use converge_pack::Provenance;
 
 #[tokio::test]
 async fn confidence_exactly_zero_accepted() {
@@ -30,8 +31,8 @@ async fn confidence_exactly_zero_accepted() {
             )
         }
 
-        fn provenance(&self) -> &'static str {
-            "test-suggestor"
+        fn provenance(&self) -> Provenance {
+            Provenance::from("test-suggestor")
         }
     }
     let mut engine = Engine::new();
@@ -77,8 +78,8 @@ async fn confidence_slightly_above_one_clamped_and_accepted() {
             )
         }
 
-        fn provenance(&self) -> &'static str {
-            "test-suggestor"
+        fn provenance(&self) -> Provenance {
+            Provenance::from("test-suggestor")
         }
     }
     let mut engine = Engine::new();
@@ -105,8 +106,8 @@ async fn suggestor_that_never_accepts_produces_no_facts() {
             panic!("should never be called")
         }
 
-        fn provenance(&self) -> &'static str {
-            "test-suggestor"
+        fn provenance(&self) -> Provenance {
+            Provenance::from("test-suggestor")
         }
     }
     let mut engine = Engine::new();
@@ -141,8 +142,8 @@ async fn empty_proposal_id_still_works() {
             )
         }
 
-        fn provenance(&self) -> &'static str {
-            "test-suggestor"
+        fn provenance(&self) -> Provenance {
+            Provenance::from("test-suggestor")
         }
     }
     let mut engine = Engine::new();

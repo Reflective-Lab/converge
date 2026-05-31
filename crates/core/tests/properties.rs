@@ -6,6 +6,7 @@ use converge_core::suggestors::SeedSuggestor;
 use converge_core::{
     AgentEffect, Budget, ContextKey, ContextState, Engine, ProposedFact, Suggestor, TextPayload,
 };
+use converge_pack::Provenance;
 use proptest::prelude::*;
 
 fn rt() -> tokio::runtime::Runtime {
@@ -70,8 +71,8 @@ proptest! {
                 ))
             }
 
-            fn provenance(&self) -> &'static str {
-                "test-suggestor"
+            fn provenance(&self) -> Provenance {
+                Provenance::from("test-suggestor")
             }
         }
 
@@ -122,8 +123,8 @@ async fn fact_count_monotonically_increases() {
             ))
         }
 
-        fn provenance(&self) -> &'static str {
-            "test-suggestor"
+        fn provenance(&self) -> Provenance {
+            Provenance::from("test-suggestor")
         }
     }
 

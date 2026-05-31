@@ -8,6 +8,7 @@
 //! pure Rust baseline for the stronger native CP-SAT scheduler in Ferrox.
 
 use async_trait::async_trait;
+use converge_pack::Provenance;
 use converge_pack::ProvenanceSource;
 use converge_pack::{
     AgentEffect, Context, ContextKey, DiagnosticPayload, FactPayload, ProposedFact, Suggestor,
@@ -194,8 +195,8 @@ impl Suggestor for GreedySchedulerSuggestor {
         }
     }
 
-    fn provenance(&self) -> &'static str {
-        super::CONVERGE_OPTIMIZATION_PROVENANCE.as_str()
+    fn provenance(&self) -> Provenance {
+        Provenance::from(super::CONVERGE_OPTIMIZATION_PROVENANCE.as_str())
     }
 }
 

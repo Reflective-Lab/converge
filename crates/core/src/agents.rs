@@ -29,7 +29,7 @@
 use crate::agent::Suggestor;
 use crate::context::{ContextKey, ProposedFact, TextPayload};
 use crate::effect::AgentEffect;
-use converge_pack::ProvenanceSource;
+use converge_pack::{Provenance, ProvenanceSource};
 
 /// Canonical provenance marker for reference suggestors shipped by
 /// `converge-core` itself (e.g., [`SeedSuggestor`], [`ReactOnceSuggestor`]).
@@ -95,8 +95,8 @@ impl Suggestor for SeedSuggestor {
         ))
     }
 
-    fn provenance(&self) -> &'static str {
-        CONVERGE_CORE_PROVENANCE.as_str()
+    fn provenance(&self) -> Provenance {
+        Provenance::from(CONVERGE_CORE_PROVENANCE.as_str())
     }
 }
 
@@ -141,8 +141,8 @@ impl Suggestor for ReactOnceSuggestor {
                 .any(|f| f.id().as_str() == self.fact_id)
     }
 
-    fn provenance(&self) -> &'static str {
-        CONVERGE_CORE_PROVENANCE.as_str()
+    fn provenance(&self) -> Provenance {
+        Provenance::from(CONVERGE_CORE_PROVENANCE.as_str())
     }
 
     async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
@@ -226,8 +226,8 @@ mod tests {
                 ))
             }
 
-            fn provenance(&self) -> &'static str {
-                CONVERGE_CORE_PROVENANCE.as_str()
+            fn provenance(&self) -> Provenance {
+                Provenance::from(CONVERGE_CORE_PROVENANCE.as_str())
             }
         }
 

@@ -16,6 +16,7 @@ use converge_core::{
     AgentEffect, ContextKey, ContextState, Engine, ProposedFact, Suggestor, TextPayload,
     suggestors::SeedSuggestor,
 };
+use converge_pack::Provenance;
 use std::sync::{Arc, Mutex};
 
 // ─── Chaos Suggestors ───────────────────────────────────────────────────────
@@ -69,8 +70,8 @@ impl Suggestor for PanicSuggestor {
         ))
     }
 
-    fn provenance(&self) -> &'static str {
-        "test-suggestor"
+    fn provenance(&self) -> Provenance {
+        Provenance::from("test-suggestor")
     }
 }
 
@@ -125,8 +126,8 @@ impl Suggestor for HangingSuggestor {
         ))
     }
 
-    fn provenance(&self) -> &'static str {
-        "test-suggestor"
+    fn provenance(&self) -> Provenance {
+        Provenance::from("test-suggestor")
     }
 }
 
@@ -219,8 +220,8 @@ impl Suggestor for MalformedSuggestor {
         }
     }
 
-    fn provenance(&self) -> &'static str {
-        "test-suggestor"
+    fn provenance(&self) -> Provenance {
+        Provenance::from("test-suggestor")
     }
 }
 
@@ -260,8 +261,8 @@ impl Suggestor for LatencyVarianceSuggestor {
         ))
     }
 
-    fn provenance(&self) -> &'static str {
-        "test-suggestor"
+    fn provenance(&self) -> Provenance {
+        Provenance::from("test-suggestor")
     }
 }
 
