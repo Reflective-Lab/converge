@@ -78,7 +78,7 @@ hex = "0.4"
 hmac = "0.13"
 hostname = "0.4"
 http-body-util = "0.1.3"
-hyper = { version = "1.5", features = ["full"] }
+hyper = { version = "1.10", features = ["full"] }
 indexmap = "2"
 insta = "1.42"
 jsonwebtoken = { version = "9.3.1", default-features = false, features = ["use_pem"] }
@@ -148,7 +148,7 @@ url = "2"
 urlencoding = "2.1"
 utoipa = "5"
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
-uuid = { version = "1.11", features = ["v4", "serde"] }
+uuid = { version = "1.23", features = ["v4", "serde"] }
 varisat = "0.2"
 wiremock = "0.6"
 zeroize = "1"
