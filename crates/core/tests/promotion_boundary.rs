@@ -39,12 +39,12 @@ impl Suggestor for SeedObserver {
             ContextKey::Hypotheses,
             format!("observed-{}", seed.id()),
             TextPayload::new(format!("observed {}", seed.text().unwrap_or_default())),
-            self.name().to_string(),
+            self.provenance(),
         ))
     }
 
     fn provenance(&self) -> Provenance {
-        Provenance::from("test-suggestor")
+        Provenance::new("test-suggestor")
     }
 }
 
@@ -60,7 +60,7 @@ async fn staged_input_is_promoted_before_downstream_suggestors_run() {
                 ContextKey::Seeds,
                 "seed-1",
                 "seed content",
-                "external-request",
+                Provenance::new("external-request"),
             )
             .expect("staging should succeed")
     );
@@ -89,7 +89,12 @@ async fn rejected_staged_input_never_becomes_visible_to_downstream_suggestors() 
     let mut context = ContextState::new();
     assert!(
         context
-            .add_input_with_provenance(ContextKey::Seeds, "seed-1", "   \t\n  ", "external")
+            .add_input_with_provenance(
+                ContextKey::Seeds,
+                "seed-1",
+                "   \t\n  ",
+                Provenance::new("external")
+            )
             .expect("staging should succeed")
     );
 
@@ -117,7 +122,7 @@ proptest! {
                 ContextKey::Seeds,
                 id.clone(),
                 content.clone(),
-                provenance,
+                Provenance::new(provenance.clone()),
             )
             .expect("staging should succeed");
 
@@ -149,7 +154,7 @@ proptest! {
                 ContextKey::Seeds,
                 id,
                 content,
-                provenance,
+                Provenance::new(provenance.clone()),
             )
             .expect("staging should succeed");
 

@@ -92,7 +92,7 @@ converge-client = "3.9.1"
 
 ```rust
 use converge_kernel::{
-    AgentEffect, Context, ContextKey, ContextState, Engine, ProvenanceSource, Suggestor,
+    AgentEffect, Context, ContextKey, ContextState, Engine, Provenance, ProvenanceSource, Suggestor,
     TextPayload,
 };
 
@@ -123,8 +123,8 @@ impl Suggestor for SeedSuggestor {
         !ctx.has(ContextKey::Seeds)
     }
 
-    fn provenance(&self) -> &'static str {
-        SEED_PROVENANCE.as_str()
+    fn provenance(&self) -> Provenance {
+        SEED_PROVENANCE.provenance()
     }
 
     async fn execute(&self, _ctx: &dyn Context) -> AgentEffect {
@@ -448,7 +448,7 @@ lives outside the foundation.
 | native OR-Tools and HiGHS solver integrations | Ferrox | `converge-ferrox-solver = "0.7.0"` |
 | SMT-backed safety and assurance suggestors | Soter | `converge-soter-smt = "0.2.1"` |
 | domain packs and worked exemplars | Atelier | `atelier-domain = "1.0.0"` |
-| deployment assembly, secrets, processes, Docker, databases | Runway or product repos | — |
+| deployment assembly, secrets, processes, Docker, databases | Runtime Runway or product repos | — |
 
 The dependency direction is:
 

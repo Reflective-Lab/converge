@@ -31,7 +31,7 @@ Providers are the adapter implementations that plug into [[Architecture/Ports|po
 > **Storage split.** Storage is still a port. Runtime persistence stores are
 > wired by the host runtime; capability stores/search backends are selected
 > through provider routing. Reusable database adapters live in extensions.
-> Runway operates databases but does not own the reusable contract. See
+> Runtime Runway operates databases but does not own the reusable contract. See
 > [[Architecture/Storage Boundary]].
 
 ## Naming and Location
@@ -44,7 +44,7 @@ Generic provider/tool implementations live in Manifold. The former
 implementations carry adapter-qualified names. The clean provider name belongs
 to the contract.
 
-Products or Runway supply already-constructed backend handles through
+Products or Runtime Runway supply already-constructed backend handles through
 `ChatBackendRegistry`. The registry is a contract surface; adapter crates create
 the handles, Converge selects among them.
 
@@ -86,9 +86,9 @@ Search providers are intentionally separate from chat:
 
 `Brave` and `Tavily` are not `ChatBackend`s. They are search tools that can be composed with chat backends at the workflow layer.
 
-### Local Inference (runway `converge-llm`)
+### Local Inference (Runtime Runway `converge-llm`)
 
-Local inference lives in runway (`~/dev/reflective/stack/runway/crates/llm`) — it is
+Local inference lives in Runtime Runway (`~/dev/reflective/runtime-runway/crates/llm`) — it is
 the local-inference distribution component, not a foundation contract:
 
 | Engine | Framework | GPU Support | Use Case |

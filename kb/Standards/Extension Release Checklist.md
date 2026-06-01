@@ -7,7 +7,7 @@ date: 2026-05-06
 ---
 # Extension Release Checklist
 
-The seven extension repos under `~/dev/reflective/stack/mosaic-extensions/*` (atelier, mnemos, prism,
+The seven extension repos under `~/dev/reflective/mosaic-extensions/*` (atelier, mnemos, prism,
 arbiter, embassy, ferrox, manifold) live outside the foundation but
 participate in the same release. This page is the **single source of truth**
 for the engineering habits each one must demonstrate before it ships

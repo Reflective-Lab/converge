@@ -133,7 +133,7 @@ impl Suggestor for WorkScheduleSuggestor {
                             ContextKey::Strategies,
                             format!("{}{}", PLAN_PREFIX, plan.request_id),
                             plan.clone(),
-                            self.name().to_string(),
+                            self.provenance(),
                         )
                         .with_confidence(plan.efficiency.clamp(0.0, 1.0)),
                     );
@@ -155,7 +155,7 @@ impl Suggestor for WorkScheduleSuggestor {
                                     ScheduleRequest::VERSION
                                 ),
                             ),
-                            self.name().to_string(),
+                            self.provenance(),
                         )
                         .with_confidence(1.0),
                     );
@@ -171,7 +171,7 @@ impl Suggestor for WorkScheduleSuggestor {
     }
 
     fn provenance(&self) -> Provenance {
-        Provenance::from(super::CONVERGE_OPTIMIZATION_PROVENANCE.as_str())
+        crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE.provenance()
     }
 }
 
@@ -303,7 +303,9 @@ mod tests {
                 ],
                 None,
             ),
-            "test",
+            converge_pack::ProvenanceSource::provenance(
+                crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE,
+            ),
         ))
         .unwrap();
 
@@ -325,7 +327,9 @@ mod tests {
             ContextKey::Seeds,
             "schedule-request:r1",
             req("r1", vec![("a", 0, 20, 5), ("b", 0, 20, 3)], None),
-            "test",
+            converge_pack::ProvenanceSource::provenance(
+                crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE,
+            ),
         ))
         .unwrap();
 
@@ -349,7 +353,9 @@ mod tests {
             ContextKey::Seeds,
             "schedule-request:bad",
             TextPayload::new("not a schedule request"),
-            "test",
+            converge_pack::ProvenanceSource::provenance(
+                crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE,
+            ),
         ))
         .unwrap();
 

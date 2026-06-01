@@ -165,7 +165,7 @@ impl Suggestor for NearestNeighborTimeWindowRoutingSuggestor {
                             ContextKey::Strategies,
                             format!("{}{}", PLAN_PREFIX, plan.request_id),
                             plan.clone(),
-                            self.name().to_string(),
+                            self.provenance(),
                         )
                         .with_confidence(confidence),
                     );
@@ -187,7 +187,7 @@ impl Suggestor for NearestNeighborTimeWindowRoutingSuggestor {
                                     VrptwRequest::VERSION
                                 ),
                             ),
-                            self.name().to_string(),
+                            self.provenance(),
                         )
                         .with_confidence(1.0),
                     );
@@ -203,7 +203,7 @@ impl Suggestor for NearestNeighborTimeWindowRoutingSuggestor {
     }
 
     fn provenance(&self) -> Provenance {
-        Provenance::from(super::CONVERGE_OPTIMIZATION_PROVENANCE.as_str())
+        crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE.provenance()
     }
 }
 
@@ -368,7 +368,9 @@ mod tests {
             ContextKey::Seeds,
             "vrptw-request:route-1",
             request,
-            "test",
+            converge_pack::ProvenanceSource::provenance(
+                crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE,
+            ),
         ))
         .unwrap();
 
@@ -390,7 +392,9 @@ mod tests {
             ContextKey::Seeds,
             "vrptw-request:bad",
             TextPayload::new("not a vrptw request"),
-            "test",
+            converge_pack::ProvenanceSource::provenance(
+                crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE,
+            ),
         ))
         .unwrap();
 

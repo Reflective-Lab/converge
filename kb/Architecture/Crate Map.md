@@ -38,15 +38,15 @@ versions, dependency versions, lints, and build profiles.
 - `converge-kernel` owns the embedding surface above `converge-core`.
 - Domain packs and worked examples live in **atelier** (`~/dev/atelier`).
 - `converge-optimization` still joins the convergence loop by implementing `Suggestor`.
-- Knowledge suggestors live in **mnemos** (`~/dev/reflective/stack/mosaic-extensions/mnemos`).
-- Analytics suggestors live in **prism** (`~/dev/reflective/stack/mosaic-extensions/prism`).
-- Policy suggestors and Cedar engine live in **arbiter** (`~/dev/reflective/stack/mosaic-extensions/arbiter`).
-- Source-specific connector ports live in **embassy** (`~/dev/reflective/stack/mosaic-extensions/embassy`).
+- Knowledge suggestors live in **mnemos** (`~/dev/reflective/mosaic-extensions/mnemos`).
+- Analytics suggestors live in **prism** (`~/dev/reflective/mosaic-extensions/prism`).
+- Policy suggestors and Cedar engine live in **arbiter** (`~/dev/reflective/mosaic-extensions/arbiter`).
+- Source-specific connector ports live in **embassy** (`~/dev/reflective/mosaic-extensions/embassy`).
 - Provider vendor adapters live in **manifold**; the in-repo
   `converge-provider-adapters` staging crate was removed after the physical
   move completed (see [[Planning/Manifold Provider Tool Migration]]).
 - Storage contracts stay in the foundation; concrete database and object-store
-  adapters are extraction candidates. Runway assembles and operates them.
+  adapters are extraction candidates. Runtime Runway assembles and operates them.
 - See [[Architecture/Extension Topology]],
   [[Architecture/Storage Boundary]],
   [[ADRs/ADR-008-extension-crate-boundaries]], and

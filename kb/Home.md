@@ -59,7 +59,7 @@ Knowledge base for the Converge platform — a correctness-first, context-driven
 - [[Architecture/Extension Topology]] — canonical homes for extension ports, providers, and adapters
 - [[Architecture/Ports]] — trait definitions (the boundary)
 - [[Architecture/Providers]] — adapter implementations (the outside world)
-- [[Architecture/Storage Boundary]] — storage ports, database adapters, and Runway assembly
+- [[Architecture/Storage Boundary]] — storage ports, database adapters, and Runtime Runway assembly
 - [[Architecture/Suggestor Catalog]] — every Suggestor that ships today, grouped by pack
 - [[Architecture/Suggestor Contract]] — the trait every contributor implements
 - [[Architecture/Formation Pattern]] — composition rules for Suggestors and capabilities

@@ -37,14 +37,14 @@ async fn seed_with_high_confidence_promoted() {
                     ContextKey::Seeds,
                     "high-conf-1",
                     TextPayload::new("high confidence fact"),
-                    "high-conf-suggestor",
+                    Provenance::new("high-conf-suggestor"),
                 )
                 .with_confidence(1.0),
             )
         }
 
         fn provenance(&self) -> Provenance {
-            Provenance::from("test-suggestor")
+            Provenance::new("test-suggestor")
         }
     }
     let mut engine = Engine::new();
@@ -80,12 +80,12 @@ async fn multiple_context_keys_populated() {
                 ContextKey::Strategies,
                 "strat-1",
                 TextPayload::new("go forward"),
-                self.name().to_string(),
+                self.provenance(),
             ))
         }
 
         fn provenance(&self) -> Provenance {
-            Provenance::from("test-suggestor")
+            Provenance::new("test-suggestor")
         }
     }
 

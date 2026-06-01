@@ -5,7 +5,7 @@ source: mixed
 # Analytics Packs
 
 > **Moved to prism extension on 2026-05-05.** Analytics packs now live in the
-> **prism** extension repo (`~/dev/reflective/stack/mosaic-extensions/prism`, formerly
+> **prism** extension repo (`~/dev/reflective/mosaic-extensions/prism`, formerly
 > `converge-analytics`). The file paths below describe the prism workspace
 > layout. See [[Architecture/Extension Topology]].
 
@@ -197,7 +197,7 @@ Each pack defines invariants that the gate evaluates before promoting results:
 
 ## File Layout
 
-In the prism extension (`~/dev/reflective/stack/mosaic-extensions/prism`):
+In the prism extension (`~/dev/reflective/mosaic-extensions/prism`):
 
 ```
 crates/analytics/src/

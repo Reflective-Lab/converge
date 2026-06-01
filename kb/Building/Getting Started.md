@@ -31,8 +31,20 @@ but they are not part of the six canonical public API surfaces. See
 
 ```rust
 use converge_kernel::{
-    AgentEffect, Context, ContextKey, ContextState, Engine, ProposedFact, Suggestor,
+    AgentEffect, Context, ContextKey, ContextState, Engine, Provenance, ProvenanceSource,
+    Suggestor, TextPayload,
 };
+
+#[derive(Clone, Copy, Debug)]
+struct SeedProvenance;
+
+impl ProvenanceSource for SeedProvenance {
+    fn as_str(&self) -> &'static str {
+        "suggestor:seed"
+    }
+}
+
+const SEED_PROVENANCE: SeedProvenance = SeedProvenance;
 
 struct SeedSuggestor;
 
@@ -50,13 +62,16 @@ impl Suggestor for SeedSuggestor {
         !ctx.has(ContextKey::Seeds)
     }
 
+    fn provenance(&self) -> Provenance {
+        SEED_PROVENANCE.provenance()
+    }
+
     async fn execute(&self, _ctx: &dyn Context) -> AgentEffect {
         AgentEffect::with_proposal(
-            ProposedFact::new(
+            SEED_PROVENANCE.proposed_fact(
                 ContextKey::Seeds,
                 "observation-1",
-                "Monthly active users grew 15%",
-                "suggestor:seed",
+                TextPayload::new("Monthly active users grew 15%"),
             )
             .with_confidence(0.95),
         )

@@ -130,10 +130,24 @@ impl AgentEffect {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fact::TextPayload;
+    use crate::fact::{ProvenanceSource, TextPayload};
+
+    #[derive(Clone, Copy, Debug)]
+    struct TestProvenance;
+
+    impl ProvenanceSource for TestProvenance {
+        fn as_str(&self) -> &'static str {
+            "test-provenance"
+        }
+    }
 
     fn proposal(key: ContextKey, id: &str) -> ProposedFact {
-        ProposedFact::new(key, id, TextPayload::new("content"), "test")
+        ProposedFact::new(
+            key,
+            id,
+            TextPayload::new("content"),
+            TestProvenance.provenance(),
+        )
     }
 
     #[test]
@@ -259,7 +273,14 @@ mod tests {
                 let proposals: Vec<ProposedFact> = keys
                     .iter()
                     .enumerate()
-                    .map(|(i, &k)| ProposedFact::new(k, format!("p{i}"), TextPayload::new("c"), "prov"))
+                    .map(|(i, &k)| {
+                        ProposedFact::new(
+                            k,
+                            format!("p{i}"),
+                            TextPayload::new("c"),
+                            TestProvenance.provenance(),
+                        )
+                    })
                     .collect();
                 let effect = AgentEffect::with_proposals(proposals);
                 let result = effect.affected_keys();

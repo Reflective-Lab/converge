@@ -33,10 +33,10 @@ Not every Suggestor belongs in an atelier domain pack.
 
 | Crate | Role in the loop |
 |---|---|
-| `arbiter` (extension, formerly `converge-policy`) | Policy and flow gates as Suggestors. Lives in `~/dev/reflective/stack/mosaic-extensions/arbiter`. |
+| `arbiter` (extension, formerly `converge-policy`) | Policy and flow gates as Suggestors. Lives in `~/dev/reflective/mosaic-extensions/arbiter`. |
 | `converge-optimization` | Solver packs through `SolverSuggestor<P>` |
-| `prism` (extension, formerly `converge-analytics`) | Feature extraction, training, inference, monitoring suggestors. Lives in `~/dev/reflective/stack/mosaic-extensions/prism`. |
-| `mnemos` (extension, formerly `converge-knowledge`) | Retrieval and persistence suggestors for the knowledge base. Lives in `~/dev/reflective/stack/mosaic-extensions/mnemos`. |
+| `prism` (extension, formerly `converge-analytics`) | Feature extraction, training, inference, monitoring suggestors. Lives in `~/dev/reflective/mosaic-extensions/prism`. |
+| `mnemos` (extension, formerly `converge-knowledge`) | Retrieval and persistence suggestors for the knowledge base. Lives in `~/dev/reflective/mosaic-extensions/mnemos`. |
 
 These are still plain `Suggestor`s. They register through the same engine API
 and run in the same convergence loop.

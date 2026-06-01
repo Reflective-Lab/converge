@@ -68,12 +68,12 @@ proptest! {
             async fn execute(&self, ctx: &dyn converge_core::Context) -> AgentEffect {
                 let n = ctx.get(ContextKey::Seeds).len();
                 AgentEffect::with_proposal(ProposedFact::new(
-                    ContextKey::Seeds, format!("a{}-{n}", self.0), TextPayload::new("v"), "always",
+                    ContextKey::Seeds, format!("a{}-{n}", self.0), TextPayload::new("v"), Provenance::new("always"),
                 ))
             }
 
             fn provenance(&self) -> Provenance {
-                Provenance::from("test-suggestor")
+                Provenance::new("test-suggestor")
             }
         }
         let mut engine = Engine::with_budget(Budget { max_cycles, max_facts: 1000 });
@@ -96,12 +96,12 @@ proptest! {
             }
             async fn execute(&self, _: &dyn converge_core::Context) -> AgentEffect {
                 AgentEffect::with_proposal(ProposedFact::new(
-                    ContextKey::Seeds, "p1", TextPayload::new("content"), self.0.clone(),
+                    ContextKey::Seeds, "p1", TextPayload::new("content"), Provenance::new(self.0.clone()),
                 ))
             }
 
             fn provenance(&self) -> Provenance {
-                Provenance::from("test-suggestor")
+                Provenance::new("test-suggestor")
             }
         }
         let mut engine = Engine::new();

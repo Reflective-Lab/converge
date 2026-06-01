@@ -67,12 +67,12 @@ proptest! {
                     ContextKey::Seeds,
                     format!("c{}-{n}", self.0),
                     TextPayload::new(format!("value from suggestor {}", self.0)),
-                    "counting",
+                    Provenance::new("counting"),
                 ))
             }
 
             fn provenance(&self) -> Provenance {
-                Provenance::from("test-suggestor")
+                Provenance::new("test-suggestor")
             }
         }
 
@@ -119,12 +119,12 @@ async fn fact_count_monotonically_increases() {
                 ContextKey::Seeds,
                 format!("t{}-{n}", self.id),
                 TextPayload::new("tracked value"),
-                "tracked",
+                Provenance::new("tracked"),
             ))
         }
 
         fn provenance(&self) -> Provenance {
-            Provenance::from("test-suggestor")
+            Provenance::new("test-suggestor")
         }
     }
 

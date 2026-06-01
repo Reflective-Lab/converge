@@ -40,12 +40,12 @@ impl Suggestor for SingleProposalSuggestor {
             self.key,
             self.id.as_str(),
             TextPayload::new(self.content.clone()),
-            self.name().to_string(),
+            self.provenance(),
         ))
     }
 
     fn provenance(&self) -> Provenance {
-        Provenance::from("test-suggestor")
+        Provenance::new("test-suggestor")
     }
 }
 

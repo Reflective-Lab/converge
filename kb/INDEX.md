@@ -23,7 +23,7 @@ All major entities in the Converge knowledge base, organized by category.
 - [Providers](Architecture/Providers.md)
 - [Purity Rules](Architecture/Purity%20Rules.md)
 - [Security Review Plan](Architecture/Security%20Review%20Plan.md)
-- [Storage Boundary](Architecture/Storage%20Boundary.md) — storage ports, database adapters, and Runway assembly
+- [Storage Boundary](Architecture/Storage%20Boundary.md) — storage ports, database adapters, and Runtime Runway assembly
 - [Suggestor Catalog](Architecture/Suggestor%20Catalog.md) — every Suggestor that ships, by pack
 - [Suggestor Contract](Architecture/Suggestor%20Contract.md) — the trait every contributor implements
 - [Formation Pattern](Architecture/Formation%20Pattern.md) — composition rules for Suggestors and capabilities

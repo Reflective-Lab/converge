@@ -31,7 +31,9 @@ async fn run_with_input<P: converge_pack::Pack + 'static>(
         ContextKey::Seeds,
         "input-1",
         PackInputPayload::new(pack_name, input),
-        "test",
+        converge_pack::ProvenanceSource::provenance(
+            converge_optimization::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE,
+        ),
     ));
     engine.run(ctx).await.expect("should converge")
 }

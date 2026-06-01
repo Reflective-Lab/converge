@@ -1,8 +1,8 @@
-error[E0599]: no function or associated item named `with_fact` found for struct `AgentEffect` in the current scope
+error[E0599]: no associated function or constant named `with_fact` found for struct `AgentEffect` in the current scope
  --> tests/compile_fail/effect_with_fact_removed.rs:7:26
   |
 7 |     let _ = AgentEffect::with_fact("Seeds", "seed-1", "seed content");
-  |                          ^^^^^^^^^ function or associated item not found in `AgentEffect`
+  |                          ^^^^^^^^^ associated function or constant not found in `AgentEffect`
   |
 note: if you're trying to build a new `AgentEffect` consider using one of the following associated functions:
       AgentEffect::empty

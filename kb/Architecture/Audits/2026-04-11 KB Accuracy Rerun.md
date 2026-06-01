@@ -19,12 +19,12 @@ This rerun found four material live-page mismatches. All four were corrected in 
 
 ## Confirmed Accurate
 
-- [Architecture/API Surfaces](/Users/kpernyer/dev/reflective/stack/bedrock-platform/converge/kb/Architecture/API%20Surfaces.md) matches the six public crates
-- [Architecture/Known Drift](/Users/kpernyer/dev/reflective/stack/bedrock-platform/converge/kb/Architecture/Known%20Drift.md) matches the remaining open implementation issues
-- [Concepts/Context and Facts](/Users/kpernyer/dev/reflective/stack/bedrock-platform/converge/kb/Concepts/Context%20and%20Facts.md) matches the read-only fact surface
-- [Concepts/Proposals and Promotion](/Users/kpernyer/dev/reflective/stack/bedrock-platform/converge/kb/Concepts/Proposals%20and%20Promotion.md) matches the single truth pipeline
-- [Building/Writing Agents](/Users/kpernyer/dev/reflective/stack/bedrock-platform/converge/kb/Building/Writing%20Agents.md) correctly teaches the `Suggestor` contract despite the legacy filename
-- [Building/Crate Catalog](/Users/kpernyer/dev/reflective/stack/bedrock-platform/converge/kb/Building/Crate%20Catalog.md) matches the stable crate split
+- [Architecture/API Surfaces](/Users/kpernyer/dev/reflective/bedrock-platform/converge/kb/Architecture/API%20Surfaces.md) matches the six public crates
+- [Architecture/Known Drift](/Users/kpernyer/dev/reflective/bedrock-platform/converge/kb/Architecture/Known%20Drift.md) matches the remaining open implementation issues
+- [Concepts/Context and Facts](/Users/kpernyer/dev/reflective/bedrock-platform/converge/kb/Concepts/Context%20and%20Facts.md) matches the read-only fact surface
+- [Concepts/Proposals and Promotion](/Users/kpernyer/dev/reflective/bedrock-platform/converge/kb/Concepts/Proposals%20and%20Promotion.md) matches the single truth pipeline
+- [Building/Writing Agents](/Users/kpernyer/dev/reflective/bedrock-platform/converge/kb/Building/Writing%20Agents.md) correctly teaches the `Suggestor` contract despite the legacy filename
+- [Building/Crate Catalog](/Users/kpernyer/dev/reflective/bedrock-platform/converge/kb/Building/Crate%20Catalog.md) matches the stable crate split
 
 ## Material Mismatches Found In This Rerun
 
@@ -39,11 +39,11 @@ This rerun found four material live-page mismatches. All four were corrected in 
 
 ### Medium
 
-- [Hexagonal Architecture](/Users/kpernyer/dev/reflective/stack/bedrock-platform/converge/kb/Architecture/Hexagonal%20Architecture.md) still carries some old surface language (`Agent`, `ExperienceStore`, `ReadContext`-style wording) and should be updated to match `Suggestor` plus the newer store boundary split.
+- [Hexagonal Architecture](/Users/kpernyer/dev/reflective/bedrock-platform/converge/kb/Architecture/Hexagonal%20Architecture.md) still carries some old surface language (`Agent`, `ExperienceStore`, `ReadContext`-style wording) and should be updated to match `Suggestor` plus the newer store boundary split.
 
 ### Low
 
-- [Building/Context Keys](/Users/kpernyer/dev/reflective/stack/bedrock-platform/converge/kb/Building/Context%20Keys.md) still uses `Agent` vocabulary in examples and prose.
+- [Building/Context Keys](/Users/kpernyer/dev/reflective/bedrock-platform/converge/kb/Building/Context%20Keys.md) still uses `Agent` vocabulary in examples and prose.
 - Some philosophy/building pages still use “agent” generically in descriptive language. That is no longer a contract bug, but it is still vocabulary drift.
 
 ## Notes

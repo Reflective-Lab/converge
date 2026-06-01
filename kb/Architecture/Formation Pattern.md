@@ -159,7 +159,7 @@ The Engine's fixed-point detection handles the coordination.
 
 ## Analytics Pack Compositions
 
-Analytics packs (the **prism** extension, `~/dev/reflective/stack/mosaic-extensions/prism`, formerly
+Analytics packs (the **prism** extension, `~/dev/reflective/mosaic-extensions/prism`, formerly
 `converge-analytics`) are designed to compose with optimization and policy
 packs in formations. Common patterns:
 

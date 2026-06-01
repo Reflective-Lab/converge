@@ -19,8 +19,15 @@ fn seed<T>(ctx: &mut ContextState, id: &str, payload: T)
 where
     T: FactPayload + PartialEq,
 {
-    ctx.add_proposal(ProposedFact::new(ContextKey::Seeds, id, payload, "test"))
-        .unwrap();
+    ctx.add_proposal(ProposedFact::new(
+        ContextKey::Seeds,
+        id,
+        payload,
+        converge_pack::ProvenanceSource::provenance(
+            converge_optimization::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE,
+        ),
+    ))
+    .unwrap();
 }
 
 // ── AssignmentSuggestor ───────────────────────────────────────────────────────

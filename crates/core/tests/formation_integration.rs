@@ -53,7 +53,7 @@ impl Suggestor for ThresholdPolicyAgent {
                             "confidence {conf} exceeds max {}",
                             self.max_confidence
                         )),
-                        "threshold-policy",
+                        Provenance::new("threshold-policy"),
                     ));
                 }
             }
@@ -62,7 +62,7 @@ impl Suggestor for ThresholdPolicyAgent {
     }
 
     fn provenance(&self) -> Provenance {
-        Provenance::from("test-suggestor")
+        Provenance::new("test-suggestor")
     }
 }
 
@@ -97,12 +97,12 @@ impl Suggestor for StrategyAgent {
                 confidence: self.confidence,
                 plan: self.plan.to_string(),
             },
-            self.name,
+            self.provenance(),
         ))
     }
 
     fn provenance(&self) -> Provenance {
-        Provenance::from("test-suggestor")
+        Provenance::new("test-suggestor")
     }
 }
 

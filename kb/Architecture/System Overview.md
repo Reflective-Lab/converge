@@ -18,7 +18,7 @@ invariants, typed stop reasons, HITL pauses, and the run integrity proof. It
 does not own formation assembly, intent decomposition, outcome learning, app
 orchestration, or transport.
 
-For the full ecosystem picture see `~/dev/reflective/stack/bedrock-platform/kb/Architecture/Ecosystem Overview.md`.
+For the full ecosystem picture see `~/dev/reflective/bedrock-platform/kb/Architecture/Ecosystem Overview.md`.
 
 ## System View (Converge internals)
 
@@ -118,13 +118,13 @@ Internal crates that still participate in the convergence loop through
 - `converge-optimization`
 
 Knowledge suggestors live in the **mnemos** extension repo
-(`~/dev/reflective/stack/mosaic-extensions/mnemos`, formerly `converge-knowledge`). Analytics
+(`~/dev/reflective/mosaic-extensions/mnemos`, formerly `converge-knowledge`). Analytics
 suggestors live in the **prism** extension repo
-(`~/dev/reflective/stack/mosaic-extensions/prism`, formerly `converge-analytics`). Policy suggestors
+(`~/dev/reflective/mosaic-extensions/prism`, formerly `converge-analytics`). Policy suggestors
 and the Cedar engine live in the **arbiter** extension repo
-(`~/dev/reflective/stack/mosaic-extensions/arbiter`, formerly `converge-policy`). Source-specific
+(`~/dev/reflective/mosaic-extensions/arbiter`, formerly `converge-policy`). Source-specific
 connector ports such as LinkedIn live in **embassy**
-(`~/dev/reflective/stack/mosaic-extensions/embassy`); generic provider adapters belong in
+(`~/dev/reflective/mosaic-extensions/embassy`); generic provider adapters belong in
 **manifold**. All of them join the loop the same way through `Suggestor` when
 they contribute to convergence. Extension crates depend on Converge
 contracts; Converge does not depend on them. See

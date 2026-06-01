@@ -108,8 +108,8 @@ impl fmt::Display for Provenance {
     }
 }
 
-impl From<&'static str> for Provenance {
-    fn from(value: &'static str) -> Self {
+impl From<&str> for Provenance {
+    fn from(value: &str) -> Self {
         Self::new(value)
     }
 }
@@ -146,12 +146,13 @@ impl From<String> for Provenance {
 /// }
 /// pub const ARBITER_PROVENANCE: Arbiter = Arbiter;
 ///
+/// let provenance = ARBITER_PROVENANCE.provenance();
 /// let fact = ARBITER_PROVENANCE.proposed_fact(
 ///     ContextKey::Diagnostic,
 ///     "decision-001",
 ///     TextPayload::new("hello"),
 /// );
-/// assert_eq!(fact.provenance(), "arbiter");
+/// assert_eq!(fact.provenance_ref(), &provenance);
 /// ```
 ///
 /// Extensions no longer need to enumerate every sibling extension.
@@ -160,6 +161,12 @@ pub trait ProvenanceSource: Copy + Send + Sync + 'static {
     /// [`ProposedFact`]`.provenance`. Stable across the extension's
     /// public API.
     fn as_str(&self) -> &'static str;
+
+    /// Construct typed [`Provenance`] from this marker.
+    #[must_use]
+    fn provenance(self) -> Provenance {
+        Provenance::from(self.as_str())
+    }
 
     /// Construct a [`ProposedFact`] stamped with this provenance and
     /// a typed payload.
@@ -173,7 +180,7 @@ pub trait ProvenanceSource: Copy + Send + Sync + 'static {
     where
         T: FactPayload + PartialEq,
     {
-        ProposedFact::new(key, id, payload, self.as_str())
+        ProposedFact::new(key, id, payload, self.provenance())
     }
 }
 
@@ -1418,7 +1425,13 @@ impl ProposedFact {
         self.payload.validate()
     }
 
-    /// Returns the proposal provenance string.
+    /// Returns the proposal provenance value.
+    #[must_use]
+    pub fn provenance_ref(&self) -> &Provenance {
+        &self.provenance
+    }
+
+    /// Returns the proposal provenance string for wire/logging boundaries.
     #[must_use]
     pub fn provenance(&self) -> &str {
         self.provenance.as_str()
@@ -1500,6 +1513,15 @@ impl std::error::Error for ValidationError {}
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[derive(Clone, Copy, Debug)]
+    struct TestProvenance;
+
+    impl ProvenanceSource for TestProvenance {
+        fn as_str(&self) -> &'static str {
+            "test-provenance"
+        }
+    }
 
     fn projection_record() -> FactPromotionRecord {
         FactPromotionRecord::new_projection(
@@ -1655,72 +1677,112 @@ mod tests {
             ContextKey::Hypotheses,
             "p1",
             TextPayload::new("my content"),
-            "gpt-4",
+            TestProvenance.provenance(),
         );
         assert_eq!(pf.key, ContextKey::Hypotheses);
         assert_eq!(pf.id, "p1");
         assert_eq!(pf.text(), Some("my content"));
         assert_eq!(pf.confidence(), 1.0);
-        assert_eq!(pf.provenance(), "gpt-4");
+        assert_eq!(pf.provenance(), "test-provenance");
     }
 
     #[test]
     fn proposed_fact_with_confidence() {
-        let pf = ProposedFact::new(ContextKey::Signals, "p2", TextPayload::new("c"), "prov")
-            .with_confidence(0.42);
+        let pf = ProposedFact::new(
+            ContextKey::Signals,
+            "p2",
+            TextPayload::new("c"),
+            TestProvenance.provenance(),
+        )
+        .with_confidence(0.42);
         assert!((pf.confidence() - 0.42).abs() < f64::EPSILON);
     }
 
     #[test]
     fn adjust_confidence_accumulates() {
-        let pf = ProposedFact::new(ContextKey::Seeds, "p", TextPayload::new("c"), "x")
-            .with_confidence(0.5)
-            .adjust_confidence(CONFIDENCE_STEP_MINOR)
-            .adjust_confidence(CONFIDENCE_STEP_MAJOR);
+        let pf = ProposedFact::new(
+            ContextKey::Seeds,
+            "p",
+            TextPayload::new("c"),
+            TestProvenance.provenance(),
+        )
+        .with_confidence(0.5)
+        .adjust_confidence(CONFIDENCE_STEP_MINOR)
+        .adjust_confidence(CONFIDENCE_STEP_MAJOR);
         assert!((pf.confidence() - 0.8).abs() < f64::EPSILON);
     }
 
     #[test]
     fn adjust_confidence_clamps_at_one() {
-        let pf = ProposedFact::new(ContextKey::Seeds, "p", TextPayload::new("c"), "x")
-            .with_confidence(0.9)
-            .adjust_confidence(CONFIDENCE_STEP_MAJOR);
+        let pf = ProposedFact::new(
+            ContextKey::Seeds,
+            "p",
+            TextPayload::new("c"),
+            TestProvenance.provenance(),
+        )
+        .with_confidence(0.9)
+        .adjust_confidence(CONFIDENCE_STEP_MAJOR);
         assert_eq!(pf.confidence(), 1.0);
     }
 
     #[test]
     fn adjust_confidence_clamps_at_zero() {
-        let pf = ProposedFact::new(ContextKey::Seeds, "p", TextPayload::new("c"), "x")
-            .with_confidence(0.1)
-            .adjust_confidence(-0.5);
+        let pf = ProposedFact::new(
+            ContextKey::Seeds,
+            "p",
+            TextPayload::new("c"),
+            TestProvenance.provenance(),
+        )
+        .with_confidence(0.1)
+        .adjust_confidence(-0.5);
         assert_eq!(pf.confidence(), 0.0);
     }
 
     #[test]
     fn with_confidence_clamps_high() {
-        let pf = ProposedFact::new(ContextKey::Seeds, "p", TextPayload::new("c"), "x")
-            .with_confidence(1.5);
+        let pf = ProposedFact::new(
+            ContextKey::Seeds,
+            "p",
+            TextPayload::new("c"),
+            TestProvenance.provenance(),
+        )
+        .with_confidence(1.5);
         assert_eq!(pf.confidence(), 1.0);
     }
 
     #[test]
     fn with_confidence_clamps_negative() {
-        let pf = ProposedFact::new(ContextKey::Seeds, "p", TextPayload::new("c"), "x")
-            .with_confidence(-0.1);
+        let pf = ProposedFact::new(
+            ContextKey::Seeds,
+            "p",
+            TextPayload::new("c"),
+            TestProvenance.provenance(),
+        )
+        .with_confidence(-0.1);
         assert_eq!(pf.confidence(), 0.0);
     }
 
     #[test]
     fn with_confidence_normalizes_nan() {
-        let pf = ProposedFact::new(ContextKey::Seeds, "p", TextPayload::new("c"), "x")
-            .with_confidence(f64::NAN);
+        let pf = ProposedFact::new(
+            ContextKey::Seeds,
+            "p",
+            TextPayload::new("c"),
+            TestProvenance.provenance(),
+        )
+        .with_confidence(f64::NAN);
         assert_eq!(pf.confidence(), 0.0);
     }
 
     #[test]
     fn with_confidence_normalizes_infinity() {
-        let pf = ProposedFact::new(ContextKey::Seeds, "p", TextPayload::new("c"), "x")
-            .with_confidence(f64::INFINITY);
+        let pf = ProposedFact::new(
+            ContextKey::Seeds,
+            "p",
+            TextPayload::new("c"),
+            TestProvenance.provenance(),
+        )
+        .with_confidence(f64::INFINITY);
         assert_eq!(pf.confidence(), 0.0);
     }
 
@@ -1747,7 +1809,12 @@ mod tests {
             kind: "vote".into(),
             score: 0.7,
         };
-        let pf = ProposedFact::new(ContextKey::Hypotheses, "p", payload.clone(), "test");
+        let pf = ProposedFact::new(
+            ContextKey::Hypotheses,
+            "p",
+            payload.clone(),
+            TestProvenance.provenance(),
+        );
         let wire = pf.to_wire().unwrap();
         let mut registry = PayloadRegistry::new();
         registry.register::<TestPayload>();
@@ -1756,7 +1823,7 @@ mod tests {
 
         assert_eq!(decoded.key, ContextKey::Hypotheses);
         assert_eq!(decoded.id, "p");
-        assert_eq!(decoded.provenance(), "test");
+        assert_eq!(decoded.provenance(), "test-provenance");
         assert_eq!(decoded.require_payload::<TestPayload>().unwrap(), &payload);
     }
 
@@ -1771,7 +1838,7 @@ mod tests {
                 payload: serde_json::json!({"kind":"vote"}),
             },
             confidence: UnitInterval::ONE,
-            provenance: Provenance::new("test"),
+            provenance: TestProvenance.provenance(),
         };
 
         let registry = PayloadRegistry::new();
@@ -1813,7 +1880,12 @@ mod tests {
             kind: "proposal".into(),
             score: 0.8,
         };
-        let proposal = ProposedFact::new(ContextKey::Strategies, "p", payload.clone(), "test");
+        let proposal = ProposedFact::new(
+            ContextKey::Strategies,
+            "p",
+            payload.clone(),
+            TestProvenance.provenance(),
+        );
 
         let fact = proposal.to_context_fact("f", projection_record(), Timestamp::epoch());
 
@@ -1915,7 +1987,12 @@ mod tests {
                 content in ".*",
                 prov in "[a-z0-9-]{1,30}",
             ) {
-                let pf = ProposedFact::new(key, id.clone(), TextPayload::new(content.clone()), prov.clone());
+                let pf = ProposedFact::new(
+                    key,
+                    id.clone(),
+                    TextPayload::new(content.clone()),
+                    Provenance::new(prov.clone()),
+                );
                 prop_assert_eq!(pf.key, key);
                 prop_assert_eq!(&pf.id, &id);
                 prop_assert_eq!(pf.text(), Some(content.as_str()));

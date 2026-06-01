@@ -158,7 +158,7 @@ impl Suggestor for GreedySchedulerSuggestor {
                             ContextKey::Strategies,
                             format!("{}{}", PLAN_PREFIX, plan.request_id),
                             plan.clone(),
-                            self.name().to_string(),
+                            self.provenance(),
                         )
                         .with_confidence(confidence),
                     );
@@ -180,7 +180,7 @@ impl Suggestor for GreedySchedulerSuggestor {
                                     SchedulingRequest::VERSION
                                 ),
                             ),
-                            self.name().to_string(),
+                            self.provenance(),
                         )
                         .with_confidence(1.0),
                     );
@@ -196,7 +196,7 @@ impl Suggestor for GreedySchedulerSuggestor {
     }
 
     fn provenance(&self) -> Provenance {
-        Provenance::from(super::CONVERGE_OPTIMIZATION_PROVENANCE.as_str())
+        crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE.provenance()
     }
 }
 
@@ -339,7 +339,9 @@ mod tests {
             ContextKey::Seeds,
             "scheduling-request:sched-1",
             request,
-            "test",
+            converge_pack::ProvenanceSource::provenance(
+                crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE,
+            ),
         ))
         .unwrap();
 
@@ -362,7 +364,9 @@ mod tests {
             ContextKey::Seeds,
             "scheduling-request:bad",
             TextPayload::new("not a scheduling request"),
-            "test",
+            converge_pack::ProvenanceSource::provenance(
+                crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE,
+            ),
         ))
         .unwrap();
 

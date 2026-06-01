@@ -6,7 +6,7 @@ Read and follow `AGENTS.md` — it is the canonical project documentation.
 
 - **Milestones:** Read `kb/Planning/MILESTONES.md` at the start of every session. Scope work to the current milestone.
 - **Changelog:** Update `kb/History/CHANGELOG.md` when shipping notable changes.
-- **Strategic context:** `~/dev/reflective/stack/bedrock-platform/EPIC.md`
+- **Strategic context:** `~/dev/reflective/bedrock-platform/EPIC.md`
 
 ## Root Directory Rule
 
@@ -15,7 +15,7 @@ Read and follow `AGENTS.md` — it is the canonical project documentation.
 - **Keep at root:** `AGENTS.md`, `CLAUDE.md`, `CODEX.md`, `GEMINI.md` (agent entrypoints)
 - **Keep at root:** `Cargo.toml`, `Cargo.lock`, `Justfile`, `deny.toml`, `.envrc.example`, `.gitignore`
 - **Everything else goes into:** `kb/` (docs), `schema/` (protocols), `crates/` (source), `examples/` (examples)
-- **Moved to `runway/`:** `ops/` (deployment/infra), `dev/` (local tooling), `crates/application` (distribution binary), `crates/llm` (local inference)
+- **Moved to `runtime-runway/`:** `ops/` (deployment/infra), `dev/` (local tooling), `crates/application` (distribution binary), `crates/llm` (local inference)
 
 No new markdown files at root. No new directories. Update existing docs in `kb/` instead. Treat root as a carefully curated interface, not a dumping ground.
 

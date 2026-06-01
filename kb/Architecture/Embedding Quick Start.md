@@ -50,6 +50,17 @@ For formations, the grouped embedder entrypoint is `converge_kernel::formation`.
 ## Implementing a Suggestor
 
 ```rust
+#[derive(Clone, Copy, Debug)]
+struct MySuggestorProvenance;
+
+impl ProvenanceSource for MySuggestorProvenance {
+    fn as_str(&self) -> &'static str {
+        "my-suggestor"
+    }
+}
+
+const MY_SUGGESTOR_PROVENANCE: MySuggestorProvenance = MySuggestorProvenance;
+
 struct MySuggestor;
 
 #[async_trait::async_trait]
@@ -66,16 +77,19 @@ impl Suggestor for MySuggestor {
         ctx.has(ContextKey::Seeds) && !ctx.has(ContextKey::Hypotheses)
     }
 
+    fn provenance(&self) -> Provenance {
+        MY_SUGGESTOR_PROVENANCE.provenance()
+    }
+
     async fn execute(&self, ctx: &dyn Context) -> AgentEffect {
         let seeds = ctx.get(ContextKey::Seeds);
         let input = &seeds[0].content;
 
         AgentEffect::with_proposal(
-            ProposedFact::new(
+            MY_SUGGESTOR_PROVENANCE.proposed_fact(
                 ContextKey::Hypotheses,
                 "my-hypothesis-1",
-                format!("Analysis of: {input}"),
-                "my-suggestor",
+                TextPayload::new(format!("Analysis of: {input}")),
             )
             .with_confidence(0.9),
         )

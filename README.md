@@ -68,7 +68,7 @@ just lint
 
 ```rust
 use converge_kernel::{
-    AgentEffect, Context, ContextKey, ContextState, Engine, ProvenanceSource, Suggestor,
+    AgentEffect, Context, ContextKey, ContextState, Engine, Provenance, ProvenanceSource, Suggestor,
     TextPayload,
 };
 
@@ -99,8 +99,8 @@ impl Suggestor for SeedSuggestor {
         !ctx.has(ContextKey::Seeds)
     }
 
-    fn provenance(&self) -> &'static str {
-        SEED_PROVENANCE.as_str()
+    fn provenance(&self) -> Provenance {
+        SEED_PROVENANCE.provenance()
     }
 
     async fn execute(&self, _ctx: &dyn Context) -> AgentEffect {
@@ -188,7 +188,7 @@ Everything else in the workspace is internal implementation or internal batterie
 
 ## Foundation vs Extensions
 
-Foundation owns universal contracts and the convergence kernel. Implementation-heavy capabilities — vector stores, ML pipelines, policy engines, source-specific connectors, native solvers, vendor SDKs — live in extension repositories under `~/dev/reflective/stack/mosaic-extensions/*` and consume foundation contracts through `Suggestor` adapters.
+Foundation owns universal contracts and the convergence kernel. Implementation-heavy capabilities — vector stores, ML pipelines, policy engines, source-specific connectors, native solvers, vendor SDKs — live in extension repositories under `~/dev/reflective/mosaic-extensions/*` and consume foundation contracts through `Suggestor` adapters.
 
 The dependency arrow is one-way: **foundation contracts ← extensions ← products**. Foundation never imports an extension.
 

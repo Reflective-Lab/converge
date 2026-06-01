@@ -66,12 +66,12 @@ impl Suggestor for PanicSuggestor {
             ContextKey::Hypotheses,
             format!("safe-{}", current),
             TextPayload::new("safe proposal"),
-            self.name().to_string(),
+            self.provenance(),
         ))
     }
 
     fn provenance(&self) -> Provenance {
-        Provenance::from("test-suggestor")
+        Provenance::new("test-suggestor")
     }
 }
 
@@ -122,12 +122,12 @@ impl Suggestor for HangingSuggestor {
             ContextKey::Hypotheses,
             format!("hang-safe-{}", current),
             TextPayload::new("safe after hang"),
-            self.name().to_string(),
+            self.provenance(),
         ))
     }
 
     fn provenance(&self) -> Provenance {
-        Provenance::from("test-suggestor")
+        Provenance::new("test-suggestor")
     }
 }
 
@@ -168,7 +168,7 @@ impl Suggestor for MalformedSuggestor {
                     ContextKey::Hypotheses,
                     "overconfident-id",
                     TextPayload::new("overconfident data"),
-                    self.name().to_string(),
+                    self.provenance(),
                 ))
             }
             MalformedVariant::NullByteId => {
@@ -177,7 +177,7 @@ impl Suggestor for MalformedSuggestor {
                     ContextKey::Hypotheses,
                     "bad-id\0with-null",
                     TextPayload::new("content"),
-                    self.name().to_string(),
+                    self.provenance(),
                 ))
             }
             MalformedVariant::NullByteContent => {
@@ -186,7 +186,7 @@ impl Suggestor for MalformedSuggestor {
                     ContextKey::Hypotheses,
                     "valid-id",
                     TextPayload::new("bad-content\0with-null"),
-                    self.name().to_string(),
+                    self.provenance(),
                 ))
             }
             MalformedVariant::GiantContent => {
@@ -196,7 +196,7 @@ impl Suggestor for MalformedSuggestor {
                     ContextKey::Hypotheses,
                     "giant-id",
                     TextPayload::new(giant),
-                    self.name().to_string(),
+                    self.provenance(),
                 ))
             }
             MalformedVariant::EmptyId => {
@@ -205,7 +205,7 @@ impl Suggestor for MalformedSuggestor {
                     ContextKey::Hypotheses,
                     "",
                     TextPayload::new("content"),
-                    self.name().to_string(),
+                    self.provenance(),
                 ))
             }
             MalformedVariant::WhitespaceOnlyId => {
@@ -214,14 +214,14 @@ impl Suggestor for MalformedSuggestor {
                     ContextKey::Hypotheses,
                     "   ",
                     TextPayload::new("content"),
-                    self.name().to_string(),
+                    self.provenance(),
                 ))
             }
         }
     }
 
     fn provenance(&self) -> Provenance {
-        Provenance::from("test-suggestor")
+        Provenance::new("test-suggestor")
     }
 }
 
@@ -257,12 +257,12 @@ impl Suggestor for LatencyVarianceSuggestor {
             ContextKey::Hypotheses,
             "latency-proposal",
             TextPayload::new("proposal with injected latency"),
-            self.name().to_string(),
+            self.provenance(),
         ))
     }
 
     fn provenance(&self) -> Provenance {
-        Provenance::from("test-suggestor")
+        Provenance::new("test-suggestor")
     }
 }
 

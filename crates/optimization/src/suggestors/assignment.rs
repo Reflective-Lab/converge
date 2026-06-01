@@ -118,7 +118,7 @@ impl Suggestor for AssignmentSuggestor {
                             ContextKey::Strategies,
                             format!("{}{}", PLAN_PREFIX, plan.request_id),
                             plan.clone(),
-                            self.name().to_string(),
+                            self.provenance(),
                         )
                         .with_confidence(plan.utilization),
                     );
@@ -140,7 +140,7 @@ impl Suggestor for AssignmentSuggestor {
                                     AssignmentRequest::VERSION
                                 ),
                             ),
-                            self.name().to_string(),
+                            self.provenance(),
                         )
                         .with_confidence(1.0),
                     );
@@ -156,7 +156,7 @@ impl Suggestor for AssignmentSuggestor {
     }
 
     fn provenance(&self) -> Provenance {
-        Provenance::from(super::CONVERGE_OPTIMIZATION_PROVENANCE.as_str())
+        crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE.provenance()
     }
 }
 
@@ -261,7 +261,9 @@ mod tests {
             ContextKey::Seeds,
             "assignment-request:r1",
             req("r1", vec![vec![9, 2, 7], vec![6, 4, 3], vec![5, 8, 1]]),
-            "test",
+            converge_pack::ProvenanceSource::provenance(
+                crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE,
+            ),
         ))
         .unwrap();
 
@@ -284,7 +286,9 @@ mod tests {
             ContextKey::Seeds,
             "assignment-request:r1",
             req("r1", vec![vec![9, 2, 7], vec![6, 4, 3], vec![5, 8, 1]]),
-            "test",
+            converge_pack::ProvenanceSource::provenance(
+                crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE,
+            ),
         ))
         .unwrap();
 
@@ -308,7 +312,9 @@ mod tests {
             ContextKey::Seeds,
             "assignment-request:bad",
             TextPayload::new("not an assignment request"),
-            "test",
+            converge_pack::ProvenanceSource::provenance(
+                crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE,
+            ),
         ))
         .unwrap();
 

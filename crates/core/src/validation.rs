@@ -12,7 +12,8 @@
 use crate::agent::Suggestor;
 use crate::context::{ContextKey, ProposedFact, TextPayload};
 use crate::effect::AgentEffect;
-use converge_pack::UnitInterval;
+use crate::suggestors::CONVERGE_CORE_PROVENANCE;
+use converge_pack::{Provenance, ProvenanceSource, UnitInterval};
 use strum::IntoEnumIterator;
 
 /// Configuration for the validation agent.
@@ -141,6 +142,10 @@ impl Suggestor for ValidationAgent {
         ContextKey::iter().any(|key| !ctx.get_proposals(key).is_empty())
     }
 
+    fn provenance(&self) -> Provenance {
+        CONVERGE_CORE_PROVENANCE.provenance()
+    }
+
     async fn execute(&self, ctx: &dyn crate::Context) -> AgentEffect {
         let mut diagnostics = Vec::new();
 
@@ -158,7 +163,7 @@ impl Suggestor for ValidationAgent {
                             TextPayload::new(format!(
                                 "Proposal '{proposal_id}' rejected: {reason}"
                             )),
-                            self.name().to_string(),
+                            self.provenance(),
                         )
                         .with_confidence(1.0),
                     );
@@ -187,7 +192,7 @@ mod tests {
             ContextKey::Hypotheses,
             "hyp-1",
             TextPayload::new("Market is growing"),
-            "gpt-4:abc123",
+            CONVERGE_CORE_PROVENANCE.provenance(),
         )
         .with_confidence(0.8);
 
@@ -211,7 +216,7 @@ mod tests {
             ContextKey::Hypotheses,
             "hyp-1",
             TextPayload::new("Uncertain claim"),
-            "gpt-4",
+            CONVERGE_CORE_PROVENANCE.provenance(),
         )
         .with_confidence(0.3);
 

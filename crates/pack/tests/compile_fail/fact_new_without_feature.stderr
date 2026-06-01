@@ -1,8 +1,8 @@
-error[E0599]: no function or associated item named `construct` found for struct `ContextFact` in the current scope
+error[E0599]: no associated function or constant named `construct` found for struct `ContextFact` in the current scope
  --> tests/compile_fail/fact_new_without_feature.rs:9:30
   |
 9 |     let _fact = ContextFact::construct(ContextKey::Seeds, "test-id", "test-content");
-  |                              ^^^^^^^^^ function or associated item not found in `ContextFact`
+  |                              ^^^^^^^^^ associated function or constant not found in `ContextFact`
   |
 note: if you're trying to build a new `ContextFact` consider using one of the following associated functions:
       ContextFact::new_projection

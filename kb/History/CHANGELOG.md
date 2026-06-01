@@ -76,11 +76,11 @@ domain packs now live in dedicated extension repos.
 
 ### Removed
 - **BREAKING**: `converge-knowledge` extracted to the **mnemos** extension repo
-  (`~/dev/reflective/stack/mosaic-extensions/mnemos`). Foundation no longer ships vector storage,
+  (`~/dev/reflective/mosaic-extensions/mnemos`). Foundation no longer ships vector storage,
   agentic memory, or learning implementations. Downstream consumers must
   depend on `mnemos` directly. See ADR-008.
 - **BREAKING**: `converge-analytics` extracted to the **prism** extension repo
-  (`~/dev/reflective/stack/mosaic-extensions/prism`). Foundation no longer ships Polars/Burn ML
+  (`~/dev/reflective/mosaic-extensions/prism`). Foundation no longer ships Polars/Burn ML
   pipelines, training agents, or analytics packs. Downstream consumers must
   depend on `prism` directly.
 - **BREAKING**: `converge-domain` and `examples/*` extracted to the
@@ -88,7 +88,7 @@ domain packs now live in dedicated extension repos.
   (trust, money, delivery, data_metrics) and 13 worked examples now live in
   atelier. Downstream consumers depend on `atelier-domain`.
 - **BREAKING**: `converge-policy` extracted to the **arbiter** extension
-  repo (`~/dev/reflective/stack/mosaic-extensions/arbiter`). Cedar policy engine, policy suggestors,
+  repo (`~/dev/reflective/mosaic-extensions/arbiter`). Cedar policy engine, policy suggestors,
   and ed25519-signed delegation tokens now live in arbiter. Foundation
   `converge-pack` keeps the gate trait and authorization vocabulary.
 - **BREAKING**: `converge-provider-adapters` (LLM, search, tool, embedding,
@@ -325,7 +325,7 @@ domain packs now live in dedicated extension repos.
 - crates.io publishing enabled for 9 crates
 
 ### Changed
-- `ProposedFact` now carries `confidence: f64` and `provenance: String`
+- `ProposedFact` now carries `confidence: f64` and typed `provenance: Provenance`
 - `AgentEffect` changed from enum to struct `{ facts, proposals }`
 - `TryFrom<ProposedFact> for Fact` for type-safe promotion with validation
 - Agent trait signatures: `accepts(&self, ctx: &dyn ContextView)` instead of `&Context`

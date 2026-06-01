@@ -198,7 +198,7 @@ impl<P: Pack> Suggestor for PackSuggestor<P> {
                     self.output_key,
                     format!("{}-solution", self.pack.name()),
                     PackPlanPayload::from_plan(&result.plan),
-                    format!("solver:{}", self.pack.name()),
+                    self.provenance(),
                 )
                 .with_confidence(confidence);
                 AgentEffect::with_proposal(proposal)

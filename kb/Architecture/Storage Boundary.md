@@ -37,20 +37,20 @@ constraints.
 |---|---|---|
 | `ExperienceStore`, context snapshot, artifact/blob contracts | Converge foundation | Universal runtime persistence ports. |
 | In-memory store for tests and examples | Foundation or test support | Small, deterministic, no external service dependency. |
-| SurrealDB implementation | Extension adapter, assembled by Runway/products | Heavy runtime persistence implementation. |
+| SurrealDB implementation | Extension adapter, assembled by Runtime Runway/products | Heavy runtime persistence implementation. |
 | LanceDB knowledge/recall implementation | `mnemos` | Knowledge and vector recall are mnemos' domain. |
 | Generic vector search adapter | `manifold` unless it becomes mnemos-specific | Search capability hidden behind backend requirements. |
 | S3/GCS/local object store adapters | Extension adapter crates | SDK and credential churn should not define Converge release cadence. |
 | Docker compose, service startup, secrets, volumes, migrations | `runway` or product repos | Operational assembly, not reusable contract ownership. |
 
-## Runway Rule
+## Runtime Runway Rule
 
-Runway is the right place to **operate** heavy databases. It owns Docker,
+Runtime Runway is the right place to **operate** heavy databases. It owns Docker,
 processes, deployment topology, persistent volumes, secrets, environment
 selection, and runtime packaging.
 
-Runway is not the right upstream home for reusable Rust storage contracts or
-adapters. Runway consumes extension crates and assembles them into runnable
+Runtime Runway is not the right upstream home for reusable Rust storage contracts or
+adapters. Runtime Runway consumes extension crates and assembles them into runnable
 systems; it does not become a dependency of Converge, Organism, or Helm just so
 they can use a storage implementation.
 
@@ -71,10 +71,10 @@ Closed for v3.8. `converge-storage` now carries object-storage contract types
 only. `converge-experience` carries in-memory test support and observer
 plumbing only. Concrete local/S3/GCS object-store builders, SurrealDB and
 LanceDB experience stores, and the generic LanceDB vector adapter live in
-`~/dev/reflective/stack/mosaic-extensions/manifold-adapters`.
+`~/dev/reflective/mosaic-extensions/manifold-adapters`.
 
 Prism consumes only the `converge-storage` object-store contract; it no longer
-depends on foundation-owned local storage builders. Runway remains the place to
+depends on foundation-owned local storage builders. Runtime Runway remains the place to
 operate databases and wire credentials, not the reusable Rust adapter home.
 
 See also: [[Architecture/Extension Topology]], [[Architecture/Ports]],

@@ -6,7 +6,7 @@ source: mixed
 
 > **Extracted to extension on 2026-05-05.** The Cedar policy engine, policy
 > suggestors, and ed25519 delegation tokens now live in the **arbiter**
-> extension (`~/dev/reflective/stack/mosaic-extensions/arbiter`, formerly `converge-policy`).
+> extension (`~/dev/reflective/mosaic-extensions/arbiter`, formerly `converge-policy`).
 > Foundation `converge-pack` keeps the gate trait and authorization
 > vocabulary; concrete Cedar wiring lives in arbiter. See
 > [[Architecture/Extension Topology]].

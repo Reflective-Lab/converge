@@ -141,4 +141,4 @@ Agent-specific workflow details: `kb/Workflow/Working with Claude.md`, `kb/Workf
 
 ## Milestones
 
-Read `kb/Planning/MILESTONES.md` at the start of every session. Scope all work to the current milestone. See `~/dev/reflective/stack/bedrock-platform/EPIC.md` for the strategic context (Converge = E1) and `~/dev/reflective/stack/bedrock-platform/MILESTONES.md` for the cross-project rollup.
+Read `kb/Planning/MILESTONES.md` at the start of every session. Scope all work to the current milestone. See `~/dev/reflective/bedrock-platform/EPIC.md` for the strategic context (Converge = E1) and `~/dev/reflective/bedrock-platform/MILESTONES.md` for the cross-project rollup.

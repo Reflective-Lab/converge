@@ -57,7 +57,7 @@ ambiguous. See [[Architecture/ADRs/ADR-007-provider-tool-contracts]].
 
 Foundation owns universal contracts. Vector stores, ML pipelines, policy
 engines, source-specific connectors, native solvers, and vendor SDKs live in
-extension repositories under `~/dev/reflective/stack/mosaic-extensions/*` (mnemos, prism, arbiter,
+extension repositories under `~/dev/reflective/mosaic-extensions/*` (mnemos, prism, arbiter,
 ferrox, embassy, manifold). The dependency arrow is one-way: foundation
 contracts ← extensions ← products. Foundation never imports an extension.
 

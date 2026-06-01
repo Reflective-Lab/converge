@@ -58,10 +58,10 @@ The public crate split holds: `converge-pack` and `converge-provider` are leaf c
 Core still sources time internally.
 
 Representative locations:
-- [root_intent.rs](/Users/kpernyer/dev/reflective/stack/bedrock-platform/converge/crates/core/src/root_intent.rs#L68)
-- [id.rs](/Users/kpernyer/dev/reflective/stack/bedrock-platform/converge/crates/core/src/types/id.rs#L347)
-- [engine.rs](/Users/kpernyer/dev/reflective/stack/bedrock-platform/converge/crates/core/src/engine.rs#L1414)
-- [hitl.rs](/Users/kpernyer/dev/reflective/stack/bedrock-platform/converge/crates/core/src/gates/hitl.rs#L231)
+- [root_intent.rs](/Users/kpernyer/dev/reflective/bedrock-platform/converge/crates/core/src/root_intent.rs#L68)
+- [id.rs](/Users/kpernyer/dev/reflective/bedrock-platform/converge/crates/core/src/types/id.rs#L347)
+- [engine.rs](/Users/kpernyer/dev/reflective/bedrock-platform/converge/crates/core/src/engine.rs#L1414)
+- [hitl.rs](/Users/kpernyer/dev/reflective/bedrock-platform/converge/crates/core/src/gates/hitl.rs#L231)
 
 The issue is broader than direct `SystemTime::now()` calls. `Timestamp::now()` is also backed by wall-clock time, so replay determinism is still not fully honest.
 
@@ -71,7 +71,7 @@ The issue is broader than direct `SystemTime::now()` calls. `Timestamp::now()` i
 
 `RetryPolicy` still lives in core.
 
-See [backend.rs](/Users/kpernyer/dev/reflective/stack/bedrock-platform/converge/crates/core/src/backend.rs#L319).
+See [backend.rs](/Users/kpernyer/dev/reflective/bedrock-platform/converge/crates/core/src/backend.rs#L319).
 
 This is a data type, not active retry execution, but it still teaches runtime retry semantics at the kernel layer.
 
@@ -81,7 +81,7 @@ This is a data type, not active retry execution, but it still teaches runtime re
 
 `ortools-sys` still contains raw FFI `unsafe` blocks.
 
-See [lib.rs](/Users/kpernyer/dev/reflective/stack/bedrock-platform/converge/crates/optimization/src/lib.rs).
+See [lib.rs](/Users/kpernyer/dev/reflective/bedrock-platform/converge/crates/optimization/src/lib.rs).
 
 This is contained to the FFI adapter crate, but the exception should be documented explicitly rather than left implicit.
 

@@ -42,9 +42,9 @@ WebSocket (`surrealdb::engine::remote::ws::Ws`). Async, persistent connection.
 
 ## v3.8 Boundary
 
-SurrealDB is a runtime persistence adapter. Products or Runway wire it into a
+SurrealDB is a runtime persistence adapter. Products or Runtime Runway wire it into a
 running system. Reusable Rust adapter code belongs outside the Converge
-foundation; Docker, secrets, volumes, and deployment topology belong in Runway
+foundation; Docker, secrets, volumes, and deployment topology belong in Runtime Runway
 or product repositories.
 
 See also: [[Architecture/Storage Boundary]], [[Stack/LanceDB]], [[Concepts/Experience and Recall]], [[Architecture/Providers]]

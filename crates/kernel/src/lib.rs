@@ -88,7 +88,7 @@ pub use converge_core::{
 };
 pub use converge_pack::{
     AgentEffect, ArtifactId, Context, ContextFact, ContextKey, FactPayload, ProposedFact,
-    ProvenanceSource, Suggestor, TextPayload, ValidationError,
+    Provenance, ProvenanceSource, Suggestor, TextPayload, ValidationError,
 };
 
 // Experience-side surface (artifact lifecycle, replay traces).

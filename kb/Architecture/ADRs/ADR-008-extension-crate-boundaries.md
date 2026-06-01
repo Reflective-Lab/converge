@@ -66,7 +66,7 @@ Converge contracts do not depend on extensions.
   providers live in `manifold`.
 - **Storage:** storage contracts are ports. Runtime persistence stores are
   wired by the host runtime. Database and object-store implementations move out
-  to extension adapters or product/deployment assembly. Runway operates heavy
+  to extension adapters or product/deployment assembly. Runtime Runway operates heavy
   databases; it does not own the reusable Rust contract.
 - **Optimization:** generic solver and suggestor contracts may stay; heavy
   solver integrations live in `ferrox`.

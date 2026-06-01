@@ -127,7 +127,7 @@ impl Suggestor for ProviderSelectionSuggestor {
     }
 
     fn provenance(&self) -> Provenance {
-        Provenance::from(CONVERGE_KERNEL_PROVENANCE.as_str())
+        CONVERGE_KERNEL_PROVENANCE.provenance()
     }
 
     fn dependencies(&self) -> &[ContextKey] {
@@ -164,7 +164,7 @@ impl Suggestor for ProviderSelectionSuggestor {
                             ContextKey::Strategies,
                             format!("{}{}", ASSIGNMENT_PREFIX, assignment.request_id),
                             ProviderAssignmentPayload::new(assignment.clone()),
-                            self.name().to_string(),
+                            self.provenance(),
                         )
                         .with_confidence(assignment.coverage_ratio),
                     );
@@ -187,7 +187,7 @@ impl Suggestor for ProviderSelectionSuggestor {
                                     ProviderRequestPayload::VERSION
                                 ),
                             ),
-                            self.name().to_string(),
+                            self.provenance(),
                         )
                         .with_confidence(1.0),
                     );
@@ -555,7 +555,7 @@ mod tests {
             ContextKey::Seeds,
             "provider-request:broken",
             TextPayload::new("not a provider request"),
-            "test",
+            CONVERGE_KERNEL_PROVENANCE.provenance(),
         ))
         .expect("seed should stage");
 

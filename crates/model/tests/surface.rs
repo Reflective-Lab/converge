@@ -9,6 +9,15 @@ use converge_model::{
     TensionResolution, TensionSide, TypeError, TypesValidationError,
 };
 
+#[derive(Clone, Copy, Debug)]
+struct ModelTestProvenance;
+
+impl converge_pack::ProvenanceSource for ModelTestProvenance {
+    fn as_str(&self) -> &'static str {
+        "converge-model-test"
+    }
+}
+
 #[test]
 fn can_create_proposed_fact_from_model_crate() {
     use converge_model::{ContextKey, ProposedFact, TextPayload, ValidationError};
@@ -17,7 +26,7 @@ fn can_create_proposed_fact_from_model_crate() {
         ContextKey::Hypotheses,
         "fact-1",
         TextPayload::new("The market is growing"),
-        "observation-1",
+        converge_pack::ProvenanceSource::provenance(ModelTestProvenance),
     );
     assert_eq!(fact.id, "fact-1");
     assert_eq!(fact.confidence(), 1.0);
@@ -26,7 +35,7 @@ fn can_create_proposed_fact_from_model_crate() {
         ContextKey::Strategies,
         "f-2",
         TextPayload::new("content"),
-        "obs-2",
+        converge_pack::ProvenanceSource::provenance(ModelTestProvenance),
     )
     .with_confidence(0.8);
     assert!((with_conf.confidence() - 0.8).abs() < f64::EPSILON);

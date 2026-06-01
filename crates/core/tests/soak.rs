@@ -38,12 +38,12 @@ impl Suggestor for SimpleScaleProposer {
             ContextKey::Hypotheses,
             "h-0",
             TextPayload::new("hypothesis"),
-            self.name().to_string(),
+            self.provenance(),
         ))
     }
 
     fn provenance(&self) -> Provenance {
-        Provenance::from("test-suggestor")
+        Provenance::new("test-suggestor")
     }
 }
 

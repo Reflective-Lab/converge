@@ -32,7 +32,7 @@ manifold                   # long-term generic adapter home
 products / runway          # runtime assembly, credentials, environment wiring
 ```
 
-Converge runtime must not import Manifold. Products or Runway wire adapters
+Converge runtime must not import Manifold. Products or Runtime Runway wire adapters
 into a runtime.
 
 Current state: generic adapter implementations live in Manifold. The
@@ -79,7 +79,7 @@ The staging crate coupling is closed:
   compiles behind Manifold's `llm-all` feature against the local Converge
   3.8.1 patch.
 
-The direction is now explicit: Manifold constructs handles, products or Runway
+The direction is now explicit: Manifold constructs handles, products or Runtime Runway
 register them, and Converge selects only through `converge-provider`.
 
 ## Migration Slices

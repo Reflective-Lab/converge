@@ -25,14 +25,14 @@ async fn confidence_exactly_zero_accepted() {
                     ContextKey::Seeds,
                     "zero-1",
                     TextPayload::new("zero confidence"),
-                    "zero-conf",
+                    Provenance::new("zero-conf"),
                 )
                 .with_confidence(0.0),
             )
         }
 
         fn provenance(&self) -> Provenance {
-            Provenance::from("test-suggestor")
+            Provenance::new("test-suggestor")
         }
     }
     let mut engine = Engine::new();
@@ -72,14 +72,14 @@ async fn confidence_slightly_above_one_clamped_and_accepted() {
                     ContextKey::Seeds,
                     "over-1",
                     TextPayload::new("over confidence"),
-                    "over-conf",
+                    Provenance::new("over-conf"),
                 )
                 .with_confidence(1.0001),
             )
         }
 
         fn provenance(&self) -> Provenance {
-            Provenance::from("test-suggestor")
+            Provenance::new("test-suggestor")
         }
     }
     let mut engine = Engine::new();
@@ -107,7 +107,7 @@ async fn suggestor_that_never_accepts_produces_no_facts() {
         }
 
         fn provenance(&self) -> Provenance {
-            Provenance::from("test-suggestor")
+            Provenance::new("test-suggestor")
         }
     }
     let mut engine = Engine::new();
@@ -136,14 +136,14 @@ async fn empty_proposal_id_still_works() {
                     ContextKey::Seeds,
                     "",
                     TextPayload::new("has empty id"),
-                    "empty-id",
+                    Provenance::new("empty-id"),
                 )
                 .with_confidence(0.8),
             )
         }
 
         fn provenance(&self) -> Provenance {
-            Provenance::from("test-suggestor")
+            Provenance::new("test-suggestor")
         }
     }
     let mut engine = Engine::new();

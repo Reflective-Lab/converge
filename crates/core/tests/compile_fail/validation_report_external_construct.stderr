@@ -22,4 +22,3 @@ warning: unreachable expression
   |                                   any code following this expression is unreachable
   |
   = note: `#[warn(unreachable_code)]` (part of `#[warn(unused)]`) on by default
-  = note: this warning originates in the macro `vec` (in Nightly builds, run with -Z macro-backtrace for more info)

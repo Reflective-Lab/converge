@@ -93,7 +93,7 @@ You are conducting due diligence on Converge. Verify claims, identify risks, and
 | Revenue | | | |
 | Costs | | | |
 | Burn rate | | | |
-| Runway | | | |
+| Runtime Runway | | | |
 | Debt | | | |
 
 ### Financial Health

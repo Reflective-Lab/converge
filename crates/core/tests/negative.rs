@@ -32,12 +32,12 @@ impl Suggestor for BadContentAgent {
             self.key,
             self.id,
             TextPayload::new(self.content),
-            "test-agent",
+            Provenance::new("test-agent"),
         ))
     }
 
     fn provenance(&self) -> Provenance {
-        Provenance::from("test-suggestor")
+        Provenance::new("test-suggestor")
     }
 }
 
@@ -114,12 +114,12 @@ async fn budget_exhaustion_terminates() {
                 ContextKey::Seeds,
                 format!("infinite-{count}"),
                 TextPayload::new(format!("fact number {count}")),
-                self.name().to_string(),
+                self.provenance(),
             ))
         }
 
         fn provenance(&self) -> Provenance {
-            Provenance::from("test-suggestor")
+            Provenance::new("test-suggestor")
         }
     }
 
@@ -160,7 +160,7 @@ async fn max_facts_budget_terminates() {
                         ContextKey::Seeds,
                         format!("flood-{}-{i}", n),
                         TextPayload::new(format!("content {i}")),
-                        "flood-agent",
+                        Provenance::new("flood-agent"),
                     )
                 })
                 .collect();
@@ -168,7 +168,7 @@ async fn max_facts_budget_terminates() {
         }
 
         fn provenance(&self) -> Provenance {
-            Provenance::from("test-suggestor")
+            Provenance::new("test-suggestor")
         }
     }
 

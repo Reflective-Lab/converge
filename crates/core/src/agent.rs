@@ -62,7 +62,7 @@ mod tests {
                 ContextKey::Seeds,
                 self.fact_id.clone(),
                 crate::TextPayload::new("test content"),
-                self.name().to_string(),
+                self.provenance(),
             ))
         }
     }

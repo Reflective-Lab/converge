@@ -197,7 +197,7 @@ contracts:
 
 Domain packs and worked examples have moved to the **atelier** showcase repo
 (`~/dev/atelier`). Policy engines have moved to the **arbiter** extension
-(`~/dev/reflective/stack/mosaic-extensions/arbiter`). Knowledge moved to **mnemos**, analytics to
+(`~/dev/reflective/mosaic-extensions/arbiter`). Knowledge moved to **mnemos**, analytics to
 **prism**. See [[Architecture/Extension Topology]].
 
 Some of these crates are publishable. That does not make them part of the

@@ -131,7 +131,7 @@ fn bench_engine_budget_pressure(c: &mut Criterion) {
                 self.key,
                 "unlimited-1",
                 TextPayload::new("will exhaust budget"),
-                self.name().to_string(),
+                self.provenance(),
             ))
         }
 

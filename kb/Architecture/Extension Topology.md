@@ -55,7 +55,7 @@ families, promote the contract upstream. Keep the implementation downstream.
 | `ferrox` | `/Users/kpernyer/dev/extensions/ferrox` | Native optimization solver integrations and solver adapters. |
 
 Storage adapters follow the same rule. Reusable Rust adapters live under
-extensions; operational service wiring lives in Runway or product repositories.
+extensions; operational service wiring lives in Runtime Runway or product repositories.
 See [[Architecture/Storage Boundary]].
 
 ## Provider and Tool Naming

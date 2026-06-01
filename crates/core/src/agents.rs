@@ -91,12 +91,12 @@ impl Suggestor for SeedSuggestor {
             ContextKey::Seeds,
             self.fact_id.clone(),
             TextPayload::new(self.content.clone()),
-            self.name().to_string(),
+            self.provenance(),
         ))
     }
 
     fn provenance(&self) -> Provenance {
-        Provenance::from(CONVERGE_CORE_PROVENANCE.as_str())
+        CONVERGE_CORE_PROVENANCE.provenance()
     }
 }
 
@@ -142,7 +142,7 @@ impl Suggestor for ReactOnceSuggestor {
     }
 
     fn provenance(&self) -> Provenance {
-        Provenance::from(CONVERGE_CORE_PROVENANCE.as_str())
+        CONVERGE_CORE_PROVENANCE.provenance()
     }
 
     async fn execute(&self, _ctx: &dyn crate::Context) -> AgentEffect {
@@ -150,7 +150,7 @@ impl Suggestor for ReactOnceSuggestor {
             ContextKey::Hypotheses,
             self.fact_id.clone(),
             TextPayload::new(self.content.clone()),
-            self.name().to_string(),
+            self.provenance(),
         ))
     }
 }
@@ -222,12 +222,12 @@ mod tests {
                     ContextKey::Strategies,
                     "strat-1",
                     TextPayload::new("derived strategy"),
-                    self.name().to_string(),
+                    self.provenance(),
                 ))
             }
 
             fn provenance(&self) -> Provenance {
-                Provenance::from(CONVERGE_CORE_PROVENANCE.as_str())
+                CONVERGE_CORE_PROVENANCE.provenance()
             }
         }
 

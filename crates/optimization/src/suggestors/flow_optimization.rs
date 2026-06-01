@@ -135,7 +135,7 @@ impl Suggestor for FlowOptimizationSuggestor {
                             ContextKey::Strategies,
                             format!("{}{}", PLAN_PREFIX, plan.request_id),
                             plan.clone(),
-                            self.name().to_string(),
+                            self.provenance(),
                         )
                         .with_confidence(confidence),
                     );
@@ -157,7 +157,7 @@ impl Suggestor for FlowOptimizationSuggestor {
                                     FlowRequest::VERSION
                                 ),
                             ),
-                            self.name().to_string(),
+                            self.provenance(),
                         )
                         .with_confidence(1.0),
                     );
@@ -173,7 +173,7 @@ impl Suggestor for FlowOptimizationSuggestor {
     }
 
     fn provenance(&self) -> Provenance {
-        Provenance::from(super::CONVERGE_OPTIMIZATION_PROVENANCE.as_str())
+        crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE.provenance()
     }
 }
 
@@ -315,7 +315,9 @@ mod tests {
             ContextKey::Seeds,
             "flow-request:r1",
             two_path_request(3),
-            "test",
+            converge_pack::ProvenanceSource::provenance(
+                crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE,
+            ),
         ))
         .unwrap();
 
@@ -339,7 +341,9 @@ mod tests {
             ContextKey::Seeds,
             "flow-request:r1",
             two_path_request(4),
-            "test",
+            converge_pack::ProvenanceSource::provenance(
+                crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE,
+            ),
         ))
         .unwrap();
 
@@ -361,7 +365,9 @@ mod tests {
             ContextKey::Seeds,
             "flow-request:r1",
             two_path_request(3),
-            "test",
+            converge_pack::ProvenanceSource::provenance(
+                crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE,
+            ),
         ))
         .unwrap();
 
@@ -385,7 +391,9 @@ mod tests {
             ContextKey::Seeds,
             "flow-request:bad",
             TextPayload::new("not a flow request"),
-            "test",
+            converge_pack::ProvenanceSource::provenance(
+                crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE,
+            ),
         ))
         .unwrap();
 

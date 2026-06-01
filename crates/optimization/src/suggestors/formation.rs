@@ -85,7 +85,7 @@ impl Suggestor for FormationAssemblySuggestor {
                             ContextKey::Strategies,
                             format!("{}{}", PLAN_PREFIX, plan.request_id),
                             plan.clone(),
-                            self.name().to_string(),
+                            self.provenance(),
                         )
                         .with_confidence(plan.coverage_ratio),
                     );
@@ -108,7 +108,7 @@ impl Suggestor for FormationAssemblySuggestor {
                                     FormationRequest::VERSION
                                 ),
                             ),
-                            self.name().to_string(),
+                            self.provenance(),
                         )
                         .with_confidence(1.0),
                     );
@@ -124,7 +124,7 @@ impl Suggestor for FormationAssemblySuggestor {
     }
 
     fn provenance(&self) -> Provenance {
-        Provenance::from(super::CONVERGE_OPTIMIZATION_PROVENANCE.as_str())
+        crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE.provenance()
     }
 }
 
@@ -418,7 +418,9 @@ mod tests {
             ContextKey::Seeds,
             "formation-request:broken",
             TextPayload::new("not a formation request"),
-            "test",
+            converge_pack::ProvenanceSource::provenance(
+                crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE,
+            ),
         ))
         .expect("seed should stage");
 

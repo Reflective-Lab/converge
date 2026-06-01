@@ -5,8 +5,8 @@ source: mixed
 # Burn
 
 Burn is the neural network framework used for local LLM inference. The
-`converge-llm` crate was relocated from the foundation to **runway**
-(`~/dev/reflective/stack/runway/crates/llm`) as the local inference distribution
+`converge-llm` crate was relocated from the foundation to **Runtime Runway**
+(`~/dev/reflective/runtime-runway/crates/llm`) as the local inference distribution
 component.
 
 ## Role in Converge

@@ -66,12 +66,12 @@ async fn three_stage_pipeline_converges() {
                 ContextKey::Strategies,
                 "strategy-1",
                 TextPayload::new("recommended action"),
-                self.name().to_string(),
+                self.provenance(),
             ))
         }
 
         fn provenance(&self) -> Provenance {
-            Provenance::from("test-suggestor")
+            Provenance::new("test-suggestor")
         }
     }
 
@@ -102,7 +102,7 @@ async fn seed_input_promoted_through_gate() {
         ContextKey::Seeds,
         "external-1",
         "external observation",
-        "test-harness",
+        Provenance::new("test-harness"),
     )
     .expect("add_input should succeed");
 

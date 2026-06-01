@@ -128,7 +128,7 @@ impl Suggestor for PortfolioSuggestor {
                             ContextKey::Strategies,
                             format!("{}{}", SELECTION_PREFIX, selection.request_id),
                             selection.clone(),
-                            self.name().to_string(),
+                            self.provenance(),
                         )
                         .with_confidence(selection.utilization.min(1.0)),
                     );
@@ -150,7 +150,7 @@ impl Suggestor for PortfolioSuggestor {
                                     PortfolioRequest::VERSION
                                 ),
                             ),
-                            self.name().to_string(),
+                            self.provenance(),
                         )
                         .with_confidence(1.0),
                     );
@@ -166,7 +166,7 @@ impl Suggestor for PortfolioSuggestor {
     }
 
     fn provenance(&self) -> Provenance {
-        Provenance::from(super::CONVERGE_OPTIMIZATION_PROVENANCE.as_str())
+        crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE.provenance()
     }
 }
 
@@ -290,7 +290,9 @@ mod tests {
                 ],
                 20,
             ),
-            "test",
+            converge_pack::ProvenanceSource::provenance(
+                crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE,
+            ),
         ))
         .unwrap();
 
@@ -312,7 +314,9 @@ mod tests {
             ContextKey::Seeds,
             "portfolio-request:r1",
             req("r1", vec![("a", 2, 5), ("b", 3, 6), ("c", 4, 4)], 5),
-            "test",
+            converge_pack::ProvenanceSource::provenance(
+                crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE,
+            ),
         ))
         .unwrap();
 
@@ -336,7 +340,9 @@ mod tests {
             ContextKey::Seeds,
             "portfolio-request:bad",
             TextPayload::new("not a portfolio request"),
-            "test",
+            converge_pack::ProvenanceSource::provenance(
+                crate::suggestors::CONVERGE_OPTIMIZATION_PROVENANCE,
+            ),
         ))
         .unwrap();
 

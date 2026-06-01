@@ -14,8 +14,22 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 // Re-export canonical types from converge-pack
 pub use converge_pack::{
     ContextFact, ContextKey, FactId, FactPayload, PayloadError, PayloadRegistry, ProposalId,
-    ProposedFact, TextPayload, Timestamp, ValidationError, WireContextFact, WireProposedFact,
+    ProposedFact, Provenance, ProvenanceSource, TextPayload, Timestamp, ValidationError,
+    WireContextFact, WireProposedFact,
 };
+
+/// Canonical provenance marker for caller-supplied context input.
+#[derive(Copy, Clone, Debug)]
+pub struct ContextInput;
+
+impl ProvenanceSource for ContextInput {
+    fn as_str(&self) -> &'static str {
+        "context-input"
+    }
+}
+
+/// Canonical provenance constant for [`ContextState::add_input`].
+pub const CONTEXT_INPUT_PROVENANCE: ContextInput = ContextInput;
 
 /// Durable, verified context snapshot for storage adapters.
 ///
@@ -401,7 +415,7 @@ impl ContextState {
         id: impl Into<ProposalId>,
         content: impl Into<String>,
     ) -> Result<bool, ConvergeError> {
-        self.add_input_with_provenance(key, id, content, "context-input")
+        self.add_input_with_provenance(key, id, content, CONTEXT_INPUT_PROVENANCE.provenance())
     }
 
     /// Stages external input with explicit provenance.
@@ -410,13 +424,13 @@ impl ContextState {
         key: ContextKey,
         id: impl Into<ProposalId>,
         content: impl Into<String>,
-        provenance: impl Into<String>,
+        provenance: impl Into<Provenance>,
     ) -> Result<bool, ConvergeError> {
         self.add_proposal(ProposedFact::new(
             key,
             id,
             TextPayload::new(content),
-            converge_pack::Provenance::new(provenance.into()),
+            provenance.into(),
         ))
     }
 
@@ -562,7 +576,7 @@ mod tests {
             ContextKey::Hypotheses,
             "hyp-1",
             TextPayload::new("market is growing"),
-            "test",
+            CONTEXT_INPUT_PROVENANCE.provenance(),
         );
 
         assert!(ctx.add_proposal(proposal).unwrap());
@@ -575,12 +589,21 @@ mod tests {
         let mut ctx = ContextState::new();
 
         assert!(
-            ctx.add_input_with_provenance(ContextKey::Seeds, "seed-1", "version A", "user")
-                .unwrap()
+            ctx.add_input_with_provenance(
+                ContextKey::Seeds,
+                "seed-1",
+                "version A",
+                CONTEXT_INPUT_PROVENANCE.provenance(),
+            )
+            .unwrap()
         );
 
-        let result =
-            ctx.add_input_with_provenance(ContextKey::Seeds, "seed-1", "version B", "user");
+        let result = ctx.add_input_with_provenance(
+            ContextKey::Seeds,
+            "seed-1",
+            "version B",
+            CONTEXT_INPUT_PROVENANCE.provenance(),
+        );
 
         match result {
             Err(ConvergeError::Conflict {
@@ -610,7 +633,7 @@ mod tests {
             ContextKey::Hypotheses,
             "hyp-1",
             TextPayload::new("staged hypothesis"),
-            "test",
+            CONTEXT_INPUT_PROVENANCE.provenance(),
         ))
         .unwrap();
 
@@ -642,7 +665,7 @@ mod tests {
             ContextKey::Hypotheses,
             "hyp-1",
             TextPayload::new("staged hypothesis"),
-            "test",
+            CONTEXT_INPUT_PROVENANCE.provenance(),
         ))
         .unwrap();
 

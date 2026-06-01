@@ -129,7 +129,7 @@ let proposal = ProposedFact::new(
     ContextKey::Seeds,
     "invoice-policy-check",
     InvoicePolicyCheckV1 { /* fields */ },
-    "arbiter",
+    ARBITER_PROVENANCE.provenance(),
 );
 ```
 
