@@ -25,7 +25,7 @@ versions, dependency versions, lints, and build profiles.
 | `converge-core` | Engine implementation, promotion gate, integrity tracking |
 | `converge-optimization` | Solver packs and `SolverSuggestor` |
 | `converge-experience` | Experience event storage |
-| `converge-runtime` | HTTP and gRPC runtime |
+| `converge-runtime` | Compatibility-only HTTP/gRPC service shell; retired as canonical runtime |
 | `converge-storage` | Object storage abstraction |
 
 ## Ownership
@@ -36,6 +36,9 @@ versions, dependency versions, lints, and build profiles.
   to implementations.
 - `converge-core` owns the engine implementation and promotion path.
 - `converge-kernel` owns the embedding surface above `converge-core`.
+- Runtime Runway owns canonical stack runtime, app hosting, auth, storage,
+  secrets, telemetry, and deployment. `converge-runtime` must not accumulate
+  new stack authority.
 - Domain packs and worked examples live in **atelier** (`~/dev/atelier`).
 - `converge-optimization` still joins the convergence loop by implementing `Suggestor`.
 - Knowledge suggestors live in **mnemos** (`~/dev/reflective/mosaic-extensions/mnemos`).

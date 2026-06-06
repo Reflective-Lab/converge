@@ -27,12 +27,16 @@ surfaces.
 | `converge-core` | Engine implementation, context state, promotion gate, integrity tracking |
 | `converge-optimization` | Solver packs and `SolverSuggestor` |
 | `converge-experience` | Experience event storage |
-| `converge-runtime` | HTTP and gRPC runtime |
+| `converge-runtime` | Compatibility-only HTTP/gRPC service shell; retired as canonical runtime |
 | `converge-storage` | Object storage abstraction |
 
 Some internal crates are publishable for controlled reuse. That still does not
 make them part of the stable public contract. Generic adapter implementations
 live outside this workspace in Manifold.
+
+`converge-runtime` remains buildable while historical references drain, but it
+is not a stable API surface and not the Reflective stack control plane. See
+[[Architecture/Runtime Retirement]].
 
 ## Adding a Dependency
 

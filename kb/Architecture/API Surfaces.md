@@ -16,7 +16,7 @@ Depend on the smallest public contract that satisfies the job:
 - routing providers or chat backends: `converge-provider`
 - reading governed semantic outputs: `converge-model`
 - embedding the engine: `converge-kernel`
-- calling a remote runtime from Rust: `converge-client`
+- calling a deployment that explicitly exposes `converge.v1`: `converge-client`
 - integrating over the wire: `converge-protocol`
 
 `converge-core` is not the default downstream integration surface.
@@ -162,7 +162,8 @@ Status:
 ### `converge-client`
 
 Purpose:
-- typed Rust SDK for remote Converge runtimes
+- typed Rust SDK for deployments that explicitly expose the `converge.v1` wire
+  contract
 
 Key surface:
 - `ConvergeClient`
@@ -171,7 +172,8 @@ Key surface:
 - `protocol` / `v1` re-exports
 
 Status:
-- canonical remote Rust SDK
+- canonical Rust SDK for the wire contract
+- not evidence that `converge-runtime` is the stack control plane
 
 ## Who Uses What
 
@@ -180,7 +182,7 @@ Status:
 | Pack authors | `converge-pack`, optionally `converge-model` |
 | Embedded applications | `converge-kernel`, optionally `converge-model` |
 | Provider adapters | `converge-provider` |
-| Remote Rust consumers | `converge-client`, optionally `converge-protocol` |
+| Rust consumers of an explicit `converge.v1` deployment | `converge-client`, optionally `converge-protocol` |
 | Non-Rust consumers | protobuf/gRPC `converge.v1` |
 
 ## Internal Crates
@@ -192,7 +194,7 @@ contracts:
 - `converge-provider`
 - `converge-optimization`
 - `converge-experience`
-- `converge-runtime`
+- `converge-runtime` (compatibility-only service shell; retired as canonical runtime)
 - `converge-storage`
 
 Domain packs and worked examples have moved to the **atelier** showcase repo
@@ -202,6 +204,9 @@ Domain packs and worked examples have moved to the **atelier** showcase repo
 
 Some of these crates are publishable. That does not make them part of the
 stable API promise.
+
+The standalone runtime retirement is recorded in
+[[Architecture/Runtime Retirement]].
 
 ## Remote Protocol
 

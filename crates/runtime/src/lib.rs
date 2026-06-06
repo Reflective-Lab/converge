@@ -2,9 +2,14 @@
 // SPDX-License-Identifier: MIT
 // See LICENSE file in the project root for full license information.
 
-//! Converge Runtime - Execution Service
+//! Converge Runtime - Compatibility Service Shell
 //!
-//! This crate provides the execution layer for Converge:
+//! This crate is retained as an internal compatibility shell while historical
+//! deployments and scripts drain. It is not the canonical runtime/control plane
+//! for the Reflective stack. Runtime Runway owns app hosting, auth, storage,
+//! secrets, telemetry, process lifecycle, and deployment.
+//!
+//! The shell still contains older service wiring:
 //! - HTTP/gRPC interfaces
 //! - Job lifecycle management
 //! - Template registry
@@ -12,10 +17,12 @@
 //!
 //! # Architecture Role
 //!
-//! > `converge-runtime` owns **execution**, not **semantics**.
+//! > `converge-runtime` owns no new semantics and no new stack authority.
 //!
-//! Runtime is a thin execution boundary around domain + core.
-//! It wires jobs, it doesn't define meaning.
+//! Converge's stable execution contract is `converge-kernel`. Live stack
+//! execution is assembled by Runtime Runway, Lattice Mesh, Helm, and the
+//! application host. This crate must not accumulate product workflow,
+//! commercial policy, or stringly typed semantic conventions.
 //!
 //! # Usage
 //!

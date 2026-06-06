@@ -56,6 +56,7 @@ Knowledge base for the Converge platform — a correctness-first, context-driven
 - [[Architecture/Golden Path Matrix]] — the first dependency each next layer should reach for
 - [[Architecture/ADRs/README]] — binding architecture decisions
 - [[Architecture/Known Drift]] — where code diverges from axioms (and how we fix it)
+- [[Architecture/Runtime Retirement]] — why `converge-runtime` is compatibility-only, not the stack control plane
 - [[Architecture/Extension Topology]] — canonical homes for extension ports, providers, and adapters
 - [[Architecture/Ports]] — trait definitions (the boundary)
 - [[Architecture/Providers]] — adapter implementations (the outside world)

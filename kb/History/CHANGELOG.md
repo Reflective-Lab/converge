@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Retired `converge-runtime` as the canonical deployed service. It remains an
+  internal, `publish = false`, compatibility-only HTTP/gRPC shell while
+  historical scripts and downstream references drain. Runtime Runway now owns
+  live app hosting, auth, storage, secrets, telemetry, process lifecycle, and
+  deployment; Lattice Mesh owns distributed work; Commerce Rails owns
+  commercial authority.
+
 ## [3.9.1] - 2026-05-17
 
 ### Added

@@ -6,7 +6,7 @@ rust-version.workspace = true
 repository.workspace = true
 license = "LicenseRef-Proprietary"
 publish = false
-description = "Converge Agent OS runtime - HTTP/gRPC server, consensus, crypto, identity"
+description = "Compatibility-only Converge HTTP/gRPC service shell; canonical runtime lives in Runtime Runway"
 keywords = ["converge", "runtime", "grpc", "server", "agent"]
 categories = ["web-programming", "network-programming"]
 

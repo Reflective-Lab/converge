@@ -718,6 +718,9 @@ impl PayloadRegistry {
         registry.register::<TextPayload>();
         registry.register::<DiagnosticPayload>();
         registry.register::<ExecutionIdentityEvidence>();
+        registry.register::<crate::governance::Vote>();
+        registry.register::<crate::governance::Disagreement>();
+        registry.register::<crate::governance::ConsensusOutcome>();
         registry
     }
 

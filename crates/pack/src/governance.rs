@@ -12,6 +12,7 @@ use serde::de;
 use serde::{Deserialize, Serialize};
 use std::num::NonZeroUsize;
 
+use crate::fact::FactPayload;
 use crate::types::{ActorId, VoteTopicId};
 
 /// Error returned when governance payloads violate their typed invariants.
@@ -217,6 +218,11 @@ pub struct Vote {
     pub reason: Option<String>,
 }
 
+impl FactPayload for Vote {
+    const FAMILY: &'static str = "converge.governance.vote";
+    const VERSION: u16 = 1;
+}
+
 /// A substantive concern recorded by an actor against a topic.
 ///
 /// Independent of vote direction — an actor can vote `Yes` on proceeding
@@ -227,6 +233,11 @@ pub struct Disagreement {
     pub topic: VoteTopicId,
     pub dissenter: ActorId,
     pub reason: String,
+}
+
+impl FactPayload for Disagreement {
+    const FAMILY: &'static str = "converge.governance.disagreement";
+    const VERSION: u16 = 1;
 }
 
 /// Deterministic result of evaluating votes against a rule.
@@ -390,6 +401,11 @@ impl<'de> Deserialize<'de> for ConsensusOutcome {
         }
         Ok(outcome)
     }
+}
+
+impl FactPayload for ConsensusOutcome {
+    const FAMILY: &'static str = "converge.governance.consensus_outcome";
+    const VERSION: u16 = 1;
 }
 
 #[cfg(test)]

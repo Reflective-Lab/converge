@@ -6,7 +6,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "The idiomatic Rust client SDK for remote Converge runtimes"
+description = "Rust client SDK for deployments that explicitly expose the converge.v1 wire contract"
 keywords = ["converge", "client", "grpc", "sdk"]
 categories = ["network-programming"]
 

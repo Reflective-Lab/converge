@@ -40,9 +40,13 @@ Mantra for public surfaces:
 | `converge-model` | Curated semantic types |
 | `converge-kernel` | In-process embedding API |
 | `converge-protocol` | Generated `converge.v1` wire types |
-| `converge-client` | Remote Rust SDK |
+| `converge-client` | Rust SDK for explicit `converge.v1` deployments |
 
 Everything else is internal. See `kb/Architecture/API Surfaces.md` for who should use what.
+
+`converge-runtime` is compatibility-only and retired as the stack control
+plane. Runtime Runway owns live hosting, auth, storage, secrets, telemetry, and
+deployment. See `kb/Architecture/Runtime Retirement.md`.
 
 ## Build
 
@@ -60,14 +64,14 @@ just sec-deny       # audit dependencies (cargo-deny)
 just lint           # cargo fmt --check && cargo clippy -- -D warnings
 just fix-lint       # auto-fix lint issues
 just doc            # cargo doc --no-deps --workspace
-just dev-up         # start local runtime
-just dev-down       # stop local runtime
-just test-smoke     # smoke-test local runtime
+just dev-up         # start legacy local runtime compatibility shell
+just dev-down       # stop legacy local runtime compatibility shell
+just test-smoke     # smoke-test legacy local runtime compatibility shell
 just git-hygiene    # worktrees, branch state, latest release tag, cleanup candidates
 just status         # build health + recent commits
 just sync           # repo state + recent commits
 just focus          # session opener — repo + build health
-just size-audit     # converge-runtime / converge-kernel packaging baseline
+just size-audit     # legacy runtime / converge-kernel packaging baseline
 ```
 
 ## Rules

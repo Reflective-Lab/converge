@@ -6,12 +6,12 @@ source: mixed
 
 Converge is a correctness-first, context-driven, multi-suggestor foundation.
 Its center is a pure kernel and a small set of public contracts. The workspace
-also contains an HTTP/gRPC runtime crate, but runtime machinery is an adapter
-around the kernel, not part of the kernel contract.
+also contains a compatibility-only HTTP/gRPC runtime crate, but runtime
+machinery is an adapter around the kernel, not part of the kernel contract.
 
 The kernel does not own sockets, message buses, process lifecycle, deployment,
-provider SDKs, or tool integrations. Those live in runtime, provider, tool, or
-ecosystem layers outside the core convergence loop.
+provider SDKs, or tool integrations. Those live in Runtime Runway, Lattice
+Mesh, provider, tool, or ecosystem layers outside the core convergence loop.
 
 The kernel is pure. It owns the convergence loop, the promotion gate, runtime
 invariants, typed stop reasons, HITL pauses, and the run integrity proof. It
@@ -59,7 +59,7 @@ crates/
   core/           engine implementation and promotion path
   optimization/   solver packs and Suggestor adapter
   experience/     experience event storage
-  runtime/        HTTP and gRPC runtime
+  runtime/        compatibility-only HTTP/gRPC service shell
   storage/        object storage abstraction
 ```
 

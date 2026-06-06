@@ -28,6 +28,16 @@ Everything that participates in the loop does so through one trait: `Suggestor`.
 └─────────────────────────────────────────────┘
 ```
 
+## Runtime Ownership
+
+The standalone `converge-runtime` crate is retired as the canonical deployed
+service. It remains in the workspace as an internal compatibility shell while
+historical scripts and downstream references drain. Runtime Runway owns the
+live stack runtime: app hosting, transport, auth, storage, secrets, telemetry,
+process lifecycle, and deployment. Use `converge-kernel` for in-process
+embedding and `converge-client` only when a deployment explicitly exposes the
+`converge.v1` wire contract.
+
 ## A New World
 
 For decades software ran on a hard constraint: machines need explicit, unambiguous instructions. Every layer above the metal — languages, frameworks, runtimes — existed to remove ambiguity from human intent *before* execution.
@@ -250,7 +260,7 @@ just focus             # session opener — repo state + workspace health
 just sync              # status + recent commits
 just status            # recent test tail + commit summary
 just git-hygiene       # worktrees, branches, release tag, cleanup candidates
-just size-audit        # converge-runtime / converge-kernel packaging baseline
+just size-audit        # legacy runtime / converge-kernel packaging baseline
 ```
 
 ## Workspace Layout
@@ -266,7 +276,7 @@ crates/
   core/             Engine implementation and promotion gate
   optimization/     Solver packs and Suggestor adapter
   experience/       Experience event storage
-  runtime/          HTTP and gRPC runtime
+  runtime/          Compatibility-only HTTP and gRPC service shell
   storage/          Object storage abstraction
 ```
 
