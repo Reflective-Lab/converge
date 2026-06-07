@@ -96,7 +96,7 @@ These are not suggestions.
 - No feature flags. No backwards-compat shims. Change the code.
 - No unnecessary abstractions. Three similar lines beat a premature helper.
 - All deps use `workspace = true` — never inline versions in crate Cargo.tomls.
-- Edition 2024, rust-version 1.94.
+- Edition 2024, rust-version 1.96.0.
 
 Type-strengthening contract: `kb/Architecture/Type Protocol.md`.
 

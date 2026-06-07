@@ -24,7 +24,7 @@ If applicable, add screenshots to help explain your problem.
 
 ## Environment
 - OS: [e.g., macOS, Linux, Windows]
-- Rust version: [e.g., 1.94.0]
+- Rust version: [e.g., 1.96.0]
 - Crate version: [e.g., 1.1.0]
 - Features enabled: [e.g., "llama3,ndarray,cuda"]
 

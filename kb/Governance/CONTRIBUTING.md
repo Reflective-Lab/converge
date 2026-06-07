@@ -27,7 +27,7 @@ git remote add upstream https://github.com/Reflective-Lab/converge.git
 
 # Install Rust 1.94+
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-rustup override set 1.94.0
+rustup override set 1.96.0
 
 # Install dependencies
 # For CUDA support: install CUDA toolkit

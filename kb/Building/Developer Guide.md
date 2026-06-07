@@ -21,7 +21,7 @@ Converge 3.9.1 uses:
 | Item | Value |
 |---|---|
 | Rust edition | 2024 |
-| MSRV | 1.94.0 |
+| MSRV | 1.96.0 |
 | License | MIT |
 | Public API promise | six canonical public crates |
 | Core rule | suggestors propose, the engine promotes |
