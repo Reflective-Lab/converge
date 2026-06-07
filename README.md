@@ -28,6 +28,12 @@ Everything that participates in the loop does so through one trait: `Suggestor`.
 └─────────────────────────────────────────────┘
 ```
 
+## Boundary
+
+> Owns: admission, promotion, facts, criteria evaluation, protocol, runtime contracts, storage contracts. Does NOT own: formation selection (→ Organism); truth compilation (→ Axiom); product consequence (→ Helms).
+
+— Canonical claim: [Converge](https://github.com/Reflective-Lab/reflective/blob/main/KB/04-architecture/current-system-map.md#converge) in the boundary registry. Update there first; this README quotes that source.
+
 ## Runtime Ownership
 
 The standalone `converge-runtime` crate is retired as the canonical deployed
