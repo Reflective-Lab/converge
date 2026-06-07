@@ -2,9 +2,28 @@
 // SPDX-License-Identifier: MIT
 // See LICENSE file in the project root for full license information.
 
-//! Converge Runtime Server
+//! Converge Runtime Server (COMPATIBILITY SHELL — RETIRED 2026-06-02)
 //!
-//! Provides HTTP and gRPC interfaces for the Converge engine.
+//! This binary is no longer the canonical deployed runtime. It is preserved
+//! only as a compatibility shell for legacy smoke tests and scripts.
+//!
+//! Production runtime responsibilities have moved to sibling repos:
+//!
+//! - Auth, app host, storage, secrets, telemetry, LLM/GPU paths, managed-service
+//!   wrappers → `runtime-runway` (`runway-{auth,middleware,storage,secrets,telemetry,app-host}`,
+//!   `api-server`, `application`, `llm`).
+//! - In-process distributed consensus (Organism HITL quorum), orchestration → `lattice-mesh`
+//!   (declared boundary; planning stage).
+//! - Commercial state, billing, entitlement → `commerce-rails`.
+//! - Operator surfaces and governed-jobs runtime → `bedrock-platform/helms`.
+//! - App-specific runtime composition → individual app repos under
+//!   `marquee-apps/`, `studio-apps/`, `mobile-apps/`.
+//!
+//! Do not deploy this binary as production runtime. Do not add new features here.
+//! Retire entirely once the last legacy consumer has migrated.
+//!
+//! See: `KB/04-architecture/decisions/2026-06-02-converge-runtime-retirement.md`
+//! (in the coordination-layer KB at ~/dev/reflective/KB/).
 
 // Scaffolding code - allow pedantic lints during development
 #![allow(unreachable_code)]
