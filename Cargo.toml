@@ -236,6 +236,17 @@ manual_clamp = "allow"
 neg_multiply = "allow"
 len_zero = "allow"
 missing_fields_in_debug = "allow"
+# RP-HERMETIC-UNIT (Reflective QUALITY_BACKLOG.md → QF-2026-06-02-05):
+# denies `reqwest::Client::new` / `reqwest::blocking::Client::new` /
+# `::builder` so unit tests can't accidentally hit the network. The
+# disallowed-methods list lives in `clippy.toml` at the workspace root.
+# Production callsites use a `with_http_client(...)` DI constructor
+# (see Reflective KB standard `hermetic-unit-tests.md`) or annotate
+# the construction with `#[allow(clippy::disallowed_methods)]` + a
+# justification comment. Set to `deny` 2026-06-07 after
+# converge-runtime's only callsite (FirebaseValidator in
+# crates/runtime/src/auth/firebase.rs) was migrated to the DI pattern.
+disallowed_methods = "deny"
 
 # Release optimized but without as many dependencies, suitable for incremental development
 [profile.quick-release]

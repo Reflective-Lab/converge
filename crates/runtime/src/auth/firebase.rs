@@ -122,11 +122,30 @@ pub struct FirebaseValidator {
 }
 
 impl FirebaseValidator {
-    /// Create a new Firebase validator.
+    /// Create a new Firebase validator with a default HTTP client.
+    ///
+    /// For hermetic tests (`RP-HERMETIC-UNIT` in Reflective's
+    /// `QUALITY_BACKLOG.md` → `QF-2026-06-02-05`), use
+    /// [`with_http_client`](Self::with_http_client) and inject a stub
+    /// client (e.g. wired to a `wiremock` server) instead — never the
+    /// default, which would call live Google key-rotation endpoints.
+    #[allow(clippy::disallowed_methods)]
+    // Convenience default for production callers. Tests use
+    // `with_http_client`. See
+    // KB/05-engineering/standards/hermetic-unit-tests.md in the
+    // Reflective coordination repo.
     pub fn new(config: FirebaseConfig) -> Self {
+        Self::with_http_client(reqwest::Client::new(), config)
+    }
+
+    /// Create a new Firebase validator with an explicit HTTP client.
+    ///
+    /// Dependency-injection constructor for hermetic tests
+    /// (`RP-HERMETIC-UNIT`).
+    pub fn with_http_client(http_client: reqwest::Client, config: FirebaseConfig) -> Self {
         Self {
             config,
-            http_client: reqwest::Client::new(),
+            http_client,
             key_cache: RwLock::new(None),
         }
     }

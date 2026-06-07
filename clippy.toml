@@ -1,0 +1,20 @@
+# Workspace-level clippy configuration for Converge.
+#
+# RP-HERMETIC-UNIT enforcement (Reflective QUALITY_BACKLOG.md →
+# QF-2026-06-02-05): the methods listed below construct HTTP clients with
+# implicit defaults, making it impossible for a test to substitute a stub
+# without the test author noticing.
+#
+# converge-runtime's `FirebaseValidator` is the only callsite as of
+# 2026-06-07; it uses the `with_http_client(client, config)` DI
+# constructor with `new(config)` routing through it.
+#
+# Pattern reference:
+# Reflective KB/05-engineering/standards/hermetic-unit-tests.md
+
+disallowed-methods = [
+    { path = "reqwest::Client::new", allow-invalid = true, reason = "use with_http_client(...) per RP-HERMETIC-UNIT / QF-2026-06-02-05" },
+    { path = "reqwest::blocking::Client::new", allow-invalid = true, reason = "use with_http_client(...) per RP-HERMETIC-UNIT / QF-2026-06-02-05" },
+    { path = "reqwest::Client::builder", allow-invalid = true, reason = "use with_http_client(...) per RP-HERMETIC-UNIT / QF-2026-06-02-05" },
+    { path = "reqwest::blocking::Client::builder", allow-invalid = true, reason = "use with_http_client(...) per RP-HERMETIC-UNIT / QF-2026-06-02-05" },
+]
