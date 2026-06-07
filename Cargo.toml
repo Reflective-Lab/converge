@@ -103,7 +103,7 @@ ordered-float = "5"
 parking_lot = "0.12"
 petgraph = "0.7"
 calamine = "0.34"
-polars = { version = "0.53.0", features = ["csv", "lazy", "log", "ndarray", "parquet", "rows"] }
+polars = { version = "0.54.4", features = ["csv", "lazy", "log", "ndarray", "parquet", "rows"] }
 proptest = "1.5"
 prost = "0.13"
 prost-types = "0.13"
