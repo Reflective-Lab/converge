@@ -45,7 +45,8 @@ Key surface:
 - `ProposedFact`
 - `ContextFact` (read-only context projection for normal pack authors and downstream consumers)
 - `WireProposedFact`, `WireContextFact`, and `PayloadRegistry` for border materialization
-- semantic contract values such as `FactId`, `ProposalId`, `GateId`, `Timestamp`, and `ContentHash`
+- semantic contract values such as `FactId`, `ProposalId`, `SubjectRef`,
+  `GateId`, `Timestamp`, and `ContentHash`
 - `Invariant`
 
 Status:

@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::fmt;
 use std::ops::Deref;
+use std::str::FromStr;
+use thiserror::Error;
 
 macro_rules! string_newtype {
     ($(#[$meta:meta])* $name:ident) => {
@@ -457,6 +459,181 @@ string_newtype!(
     ResourceKind
 );
 
+/// Error returned when constructing or parsing a [`SubjectRef`].
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum SubjectRefError {
+    /// Subject scheme is empty.
+    #[error("subject scheme is empty")]
+    EmptyScheme,
+    /// Subject kind is empty.
+    #[error("subject kind is empty")]
+    EmptyKind,
+    /// Subject id is empty.
+    #[error("subject id is empty")]
+    EmptyId,
+    /// Subject scheme contains an invalid character.
+    #[error("subject scheme contains invalid character {0:?}; allow [a-z][a-z0-9-]*")]
+    InvalidSchemeChar(char),
+    /// Subject kind contains an invalid character.
+    #[error("subject kind contains invalid character {0:?}; allow [a-z][a-z0-9-]*")]
+    InvalidKindChar(char),
+    /// Subject id contains an invalid character.
+    #[error("subject id contains invalid character {0:?}; disallow '/' and whitespace")]
+    InvalidIdChar(char),
+    /// Subject ref string is not in canonical `scheme://kind/id` form.
+    #[error("could not parse subject ref from {0:?}; expected scheme://kind/id")]
+    Malformed(String),
+}
+
+/// Typed reference to the subject a fact, proposal, intent, or citation is
+/// about.
+///
+/// `ActorId` answers "who"; `ContextKey` answers "where in the convergence
+/// state"; `SubjectRef` answers "what object is being reasoned about." The
+/// canonical wire form is `scheme://kind/id`, where `scheme` is the owning app
+/// or domain, `kind` is an app-owned noun, and `id` is opaque to Converge.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct SubjectRef {
+    scheme: String,
+    kind: String,
+    id: String,
+}
+
+impl SubjectRef {
+    /// Creates a typed subject reference after validating and normalizing its
+    /// structural parts.
+    ///
+    /// `scheme` and `kind` are normalized to ASCII lowercase. `id` is
+    /// preserved exactly after validation because apps own its semantics.
+    pub fn new(
+        scheme: impl Into<String>,
+        kind: impl Into<String>,
+        id: impl Into<String>,
+    ) -> Result<Self, SubjectRefError> {
+        let scheme = scheme.into().to_ascii_lowercase();
+        let kind = kind.into().to_ascii_lowercase();
+        let id = id.into();
+
+        validate_subject_label(&scheme, SubjectPart::Scheme)?;
+        validate_subject_label(&kind, SubjectPart::Kind)?;
+        validate_subject_id(&id)?;
+
+        Ok(Self { scheme, kind, id })
+    }
+
+    /// Parses the canonical `scheme://kind/id` wire form.
+    pub fn parse(value: &str) -> Result<Self, SubjectRefError> {
+        value.parse()
+    }
+
+    /// Returns the subject scheme, usually the owning app or domain id.
+    #[must_use]
+    pub fn scheme(&self) -> &str {
+        &self.scheme
+    }
+
+    /// Returns the app-owned subject kind.
+    #[must_use]
+    pub fn kind(&self) -> &str {
+        &self.kind
+    }
+
+    /// Returns the app-owned subject id.
+    #[must_use]
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    /// Renders the canonical `scheme://kind/id` wire form.
+    #[must_use]
+    pub fn to_uri(&self) -> String {
+        format!("{}://{}/{}", self.scheme, self.kind, self.id)
+    }
+}
+
+impl fmt::Display for SubjectRef {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.to_uri())
+    }
+}
+
+impl FromStr for SubjectRef {
+    type Err = SubjectRefError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let Some((scheme, rest)) = value.split_once("://") else {
+            return Err(SubjectRefError::Malformed(value.to_string()));
+        };
+        let Some((kind, id)) = rest.split_once('/') else {
+            return Err(SubjectRefError::Malformed(value.to_string()));
+        };
+        Self::new(scheme, kind, id)
+    }
+}
+
+impl Serialize for SubjectRef {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_uri())
+    }
+}
+
+impl<'de> Deserialize<'de> for SubjectRef {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        Self::parse(&value).map_err(de::Error::custom)
+    }
+}
+
+enum SubjectPart {
+    Scheme,
+    Kind,
+}
+
+fn validate_subject_label(value: &str, part: SubjectPart) -> Result<(), SubjectRefError> {
+    if value.is_empty() {
+        return match part {
+            SubjectPart::Scheme => Err(SubjectRefError::EmptyScheme),
+            SubjectPart::Kind => Err(SubjectRefError::EmptyKind),
+        };
+    }
+
+    for (index, ch) in value.chars().enumerate() {
+        let valid = if index == 0 {
+            ch.is_ascii_lowercase()
+        } else {
+            ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-'
+        };
+        if !valid {
+            return match part {
+                SubjectPart::Scheme => Err(SubjectRefError::InvalidSchemeChar(ch)),
+                SubjectPart::Kind => Err(SubjectRefError::InvalidKindChar(ch)),
+            };
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_subject_id(value: &str) -> Result<(), SubjectRefError> {
+    if value.is_empty() {
+        return Err(SubjectRefError::EmptyId);
+    }
+
+    for ch in value.chars() {
+        if ch == '/' || ch.is_whitespace() {
+            return Err(SubjectRefError::InvalidIdChar(ch));
+        }
+    }
+
+    Ok(())
+}
+
 /// Content-addressable hash encoded as 32 raw bytes and serialized as hex.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -715,6 +892,74 @@ mod tests {
         assert_eq!(BasisPoints::new(10_000).unwrap().get(), 10_000);
         assert!(BasisPoints::new(10_001).is_err());
         assert_eq!(BasisPoints::clamped(20_000).get(), 10_000);
+    }
+
+    #[test]
+    fn subject_ref_normalizes_scheme_and_kind_but_preserves_id() {
+        let subject = SubjectRef::new("Atlas", "Acquisition-Assets", "SharedIdentityCore")
+            .expect("valid subject");
+
+        assert_eq!(subject.scheme(), "atlas");
+        assert_eq!(subject.kind(), "acquisition-assets");
+        assert_eq!(subject.id(), "SharedIdentityCore");
+        assert_eq!(
+            subject.to_uri(),
+            "atlas://acquisition-assets/SharedIdentityCore"
+        );
+    }
+
+    #[test]
+    fn subject_ref_parses_canonical_uri() {
+        let subject = SubjectRef::parse("quorum://unresolved-questions/identity-owner-coverage")
+            .expect("valid subject");
+
+        assert_eq!(subject.scheme(), "quorum");
+        assert_eq!(subject.kind(), "unresolved-questions");
+        assert_eq!(subject.id(), "identity-owner-coverage");
+        assert_eq!(
+            subject.to_string(),
+            "quorum://unresolved-questions/identity-owner-coverage"
+        );
+    }
+
+    #[test]
+    fn subject_ref_rejects_malformed_or_ambiguous_parts() {
+        assert!(matches!(
+            SubjectRef::parse("atlas/acquisition-assets/shared"),
+            Err(SubjectRefError::Malformed(_))
+        ));
+        assert!(matches!(
+            SubjectRef::new("1atlas", "asset", "id"),
+            Err(SubjectRefError::InvalidSchemeChar('1'))
+        ));
+        assert!(matches!(
+            SubjectRef::new("atlas", "asset_kind", "id"),
+            Err(SubjectRefError::InvalidKindChar('_'))
+        ));
+        assert!(matches!(
+            SubjectRef::new("atlas", "asset", "id with space"),
+            Err(SubjectRefError::InvalidIdChar(' '))
+        ));
+        assert!(matches!(
+            SubjectRef::parse("atlas://asset/id/extra"),
+            Err(SubjectRefError::InvalidIdChar('/'))
+        ));
+    }
+
+    #[test]
+    fn subject_ref_serializes_as_canonical_string() {
+        let subject = SubjectRef::parse("warden://dd-gates/dd-evidence.identity-data-residency")
+            .expect("valid subject");
+        let json = serde_json::to_string(&subject).expect("subject should serialize");
+
+        assert_eq!(
+            json,
+            r#""warden://dd-gates/dd-evidence.identity-data-residency""#
+        );
+        assert_eq!(
+            serde_json::from_str::<SubjectRef>(&json).expect("subject should deserialize"),
+            subject
+        );
     }
 
     #[test]

@@ -31,7 +31,8 @@ A `ContextFact` is the read-only public projection of a promoted fact in the con
 impl ContextFact {
     pub fn key(&self) -> ContextKey;
     pub fn id(&self) -> &FactId;
-    pub fn content(&self) -> &str;
+    pub fn subject(&self) -> Option<&SubjectRef>;
+    pub fn payload<T: FactPayload>(&self) -> Option<&T>;
     pub fn promotion_record(&self) -> &FactPromotionRecord;
     pub fn created_at(&self) -> &Timestamp;
 }
@@ -39,8 +40,13 @@ impl ContextFact {
 
 Context facts are authoritative and read-only to consumers. Suggestors emit
 `ProposedFact`; the engine validates through the promotion gate, and only then
-does a projected `ContextFact` enter context. Durable storage uses
-`ContextSnapshot` for rehydration; it does not call fact constructors.
+does a projected `ContextFact` enter context. Facts and proposals may be
+tagged with an app-owned `SubjectRef`, so embedders can query
+`ContextState::facts_for_subject` and `proposals_for_subject` without parsing
+app URI strings or payload internals. Durable storage uses `ContextSnapshot`
+for rehydration; it does not call fact constructors. Generic pack execution
+follows the same rule: `PackSuggestor` preserves a subject from the input
+`PackInputPayload` fact on the emitted `PackPlanPayload` proposal.
 
 ## Context Keys
 

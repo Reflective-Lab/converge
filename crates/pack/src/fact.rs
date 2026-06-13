@@ -15,7 +15,8 @@ use thiserror::Error;
 use crate::context::ContextKey;
 use crate::types::{
     ActorId, ApprovalId, ArtifactId, ContentHash, FactId, GateId, ObservationId, ProposalId,
-    SpanId, Timestamp, TraceId, TraceReference, TraceSystemId, UnitInterval, ValidationCheckId,
+    SpanId, SubjectRef, Timestamp, TraceId, TraceReference, TraceSystemId, UnitInterval,
+    ValidationCheckId,
 };
 
 /// Stable payload-family identifier used by typed facts and wire adapters.
@@ -181,6 +182,24 @@ pub trait ProvenanceSource: Copy + Send + Sync + 'static {
         T: FactPayload + PartialEq,
     {
         ProposedFact::new(key, id, payload, self.provenance())
+    }
+
+    /// Construct a [`ProposedFact`] derived from an existing
+    /// [`ContextFact`], preserving the source fact's app-owned subject when
+    /// one is present.
+    #[must_use]
+    fn proposed_fact_for<T>(
+        self,
+        source: &ContextFact,
+        key: ContextKey,
+        id: impl Into<ProposalId>,
+        payload: T,
+    ) -> ProposedFact
+    where
+        T: FactPayload + PartialEq,
+    {
+        self.proposed_fact(key, id, payload)
+            .with_subject_from(source)
     }
 }
 
@@ -669,6 +688,9 @@ pub struct WireProposedFact {
     pub key: ContextKey,
     /// Proposal identifier.
     pub id: ProposalId,
+    /// Optional app-owned subject this proposal is about.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subject: Option<SubjectRef>,
     /// Proposed payload.
     pub payload: WireFactPayload,
     /// Confidence hint.
@@ -685,6 +707,9 @@ pub struct WireContextFact {
     pub key: ContextKey,
     /// Fact identifier.
     pub id: FactId,
+    /// Optional app-owned subject this fact is about.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subject: Option<SubjectRef>,
     /// Fact payload.
     pub payload: WireFactPayload,
     /// Promotion record.
@@ -1070,6 +1095,8 @@ pub struct ContextFact {
     key: ContextKey,
     /// Unique identifier within the context key namespace.
     id: FactId,
+    /// App-owned subject this fact is about.
+    subject: Option<SubjectRef>,
     /// Typed fact payload.
     payload: Arc<dyn ErasedFactPayload>,
     /// The immutable promotion record that made this fact authoritative.
@@ -1083,6 +1110,7 @@ impl fmt::Debug for ContextFact {
         f.debug_struct("ContextFact")
             .field("key", &self.key)
             .field("id", &self.id)
+            .field("subject", &self.subject)
             .field("payload_family", &self.payload_family())
             .field("payload_version", &self.payload_version())
             .field("promotion_record", &self.promotion_record)
@@ -1095,6 +1123,7 @@ impl PartialEq for ContextFact {
     fn eq(&self, other: &Self) -> bool {
         self.key == other.key
             && self.id == other.id
+            && self.subject == other.subject
             && self.payload_family() == other.payload_family()
             && self.payload_version() == other.payload_version()
             && self.payload.equivalent(other.payload.as_ref())
@@ -1136,6 +1165,7 @@ impl ContextFact {
         Self {
             key,
             id: id.into(),
+            subject: None,
             payload: Arc::new(payload),
             promotion_record,
             created_at: created_at.into(),
@@ -1156,6 +1186,7 @@ impl ContextFact {
         Ok(Self {
             key: wire.key,
             id: wire.id,
+            subject: wire.subject,
             payload,
             promotion_record: wire.promotion_record,
             created_at: wire.created_at,
@@ -1167,10 +1198,18 @@ impl ContextFact {
         Ok(WireContextFact {
             key: self.key,
             id: self.id.clone(),
+            subject: self.subject.clone(),
             payload: WireFactPayload::from_erased(self.payload.as_ref())?,
             promotion_record: self.promotion_record.clone(),
             created_at: self.created_at.clone(),
         })
+    }
+
+    /// Attaches the app-owned subject this fact is about.
+    #[must_use]
+    pub fn with_subject(mut self, subject: SubjectRef) -> Self {
+        self.subject = Some(subject);
+        self
     }
 
     /// Returns the context key this fact belongs to.
@@ -1183,6 +1222,12 @@ impl ContextFact {
     #[must_use]
     pub fn id(&self) -> &FactId {
         &self.id
+    }
+
+    /// Returns the app-owned subject this fact is about, when tagged.
+    #[must_use]
+    pub fn subject(&self) -> Option<&SubjectRef> {
+        self.subject.as_ref()
     }
 
     /// Returns the typed payload when the requested type matches the stored
@@ -1255,6 +1300,8 @@ pub struct ProposedFact {
     pub key: ContextKey,
     /// Unique identifier encoding origin and target.
     pub id: ProposalId,
+    /// App-owned subject this proposal is about.
+    subject: Option<SubjectRef>,
     /// Typed proposed payload.
     payload: Arc<dyn ErasedFactPayload>,
     /// Confidence hint from the source. Always in [0.0, 1.0].
@@ -1268,6 +1315,7 @@ impl fmt::Debug for ProposedFact {
         f.debug_struct("ProposedFact")
             .field("key", &self.key)
             .field("id", &self.id)
+            .field("subject", &self.subject)
             .field("payload_family", &self.payload_family())
             .field("payload_version", &self.payload_version())
             .field("confidence", &self.confidence)
@@ -1280,6 +1328,7 @@ impl PartialEq for ProposedFact {
     fn eq(&self, other: &Self) -> bool {
         self.key == other.key
             && self.id == other.id
+            && self.subject == other.subject
             && self.payload_family() == other.payload_family()
             && self.payload_version() == other.payload_version()
             && self.payload.equivalent(other.payload.as_ref())
@@ -1316,6 +1365,7 @@ impl ProposedFact {
         Self {
             key,
             id: id.into(),
+            subject: None,
             payload: Arc::new(payload),
             confidence: UnitInterval::ONE,
             provenance: provenance.into(),
@@ -1336,6 +1386,7 @@ impl ProposedFact {
         Ok(Self {
             key: wire.key,
             id: wire.id,
+            subject: wire.subject,
             payload,
             confidence: wire.confidence,
             provenance: wire.provenance,
@@ -1347,6 +1398,7 @@ impl ProposedFact {
         Ok(WireProposedFact {
             key: self.key,
             id: self.id.clone(),
+            subject: self.subject.clone(),
             payload: WireFactPayload::from_erased(self.payload.as_ref())?,
             confidence: self.confidence,
             provenance: self.provenance.clone(),
@@ -1369,10 +1421,28 @@ impl ProposedFact {
         ContextFact {
             key: self.key,
             id: id.into(),
+            subject: self.subject.clone(),
             payload: Arc::clone(&self.payload),
             promotion_record,
             created_at: created_at.into(),
         }
+    }
+
+    /// Attaches the app-owned subject this proposal is about.
+    #[must_use]
+    pub fn with_subject(mut self, subject: SubjectRef) -> Self {
+        self.subject = Some(subject);
+        self
+    }
+
+    /// Copies the app-owned subject from a promoted source fact when present.
+    ///
+    /// This is the common Suggestor pattern: a specialist derives a proposal
+    /// from an input fact without interpreting the subject vocabulary itself.
+    #[must_use]
+    pub fn with_subject_from(mut self, source: &ContextFact) -> Self {
+        self.subject = source.subject().cloned();
+        self
     }
 
     /// Returns the context key this proposal targets.
@@ -1385,6 +1455,12 @@ impl ProposedFact {
     #[must_use]
     pub fn id(&self) -> &ProposalId {
         &self.id
+    }
+
+    /// Returns the app-owned subject this proposal is about, when tagged.
+    #[must_use]
+    pub fn subject(&self) -> Option<&SubjectRef> {
+        self.subject.as_ref()
     }
 
     /// Returns the typed payload when the requested type matches the stored
@@ -1812,12 +1888,15 @@ mod tests {
             kind: "vote".into(),
             score: 0.7,
         };
+        let subject = SubjectRef::parse("atlas://acquisition-assets/shared-identity-core")
+            .expect("valid subject");
         let pf = ProposedFact::new(
             ContextKey::Hypotheses,
             "p",
             payload.clone(),
             TestProvenance.provenance(),
-        );
+        )
+        .with_subject(subject.clone());
         let wire = pf.to_wire().unwrap();
         let mut registry = PayloadRegistry::new();
         registry.register::<TestPayload>();
@@ -1826,6 +1905,7 @@ mod tests {
 
         assert_eq!(decoded.key, ContextKey::Hypotheses);
         assert_eq!(decoded.id, "p");
+        assert_eq!(decoded.subject(), Some(&subject));
         assert_eq!(decoded.provenance(), "test-provenance");
         assert_eq!(decoded.require_payload::<TestPayload>().unwrap(), &payload);
     }
@@ -1835,6 +1915,7 @@ mod tests {
         let wire = WireProposedFact {
             key: ContextKey::Hypotheses,
             id: "p".into(),
+            subject: None,
             payload: WireFactPayload {
                 family: FactFamilyId::new("unknown.payload"),
                 version: PayloadVersion::new(1),
@@ -1859,13 +1940,16 @@ mod tests {
             kind: "fact".into(),
             score: 0.9,
         };
+        let subject = SubjectRef::parse("quorum://unresolved-questions/identity-owner-coverage")
+            .expect("valid subject");
         let fact = ContextFact::new_projection(
             ContextKey::Seeds,
             "f",
             payload.clone(),
             projection_record(),
             Timestamp::epoch(),
-        );
+        )
+        .with_subject(subject.clone());
         let wire = fact.to_wire().unwrap();
         let mut registry = PayloadRegistry::new();
         registry.register::<TestPayload>();
@@ -1874,6 +1958,7 @@ mod tests {
 
         assert_eq!(decoded.key(), ContextKey::Seeds);
         assert_eq!(decoded.id(), "f");
+        assert_eq!(decoded.subject(), Some(&subject));
         assert_eq!(decoded.require_payload::<TestPayload>().unwrap(), &payload);
     }
 
@@ -1888,12 +1973,51 @@ mod tests {
             "p",
             payload.clone(),
             TestProvenance.provenance(),
+        )
+        .with_subject(
+            SubjectRef::parse("warden://dd-gates/dd-evidence.identity-data-residency")
+                .expect("valid subject"),
         );
 
         let fact = proposal.to_context_fact("f", projection_record(), Timestamp::epoch());
 
         assert_eq!(fact.key(), ContextKey::Strategies);
+        assert_eq!(fact.subject(), proposal.subject());
         assert_eq!(fact.require_payload::<TestPayload>().unwrap(), &payload);
+    }
+
+    #[test]
+    fn proposed_fact_with_subject_from_copies_source_subject() {
+        let subject = SubjectRef::parse("atlas://acquisition-assets/shared-identity-core")
+            .expect("valid subject");
+        let source = projection_fact(ContextKey::Seeds, "seed-1", "source").with_subject(subject);
+
+        let pf = ProposedFact::new(
+            ContextKey::Hypotheses,
+            "p1",
+            TextPayload::new("derived"),
+            TestProvenance.provenance(),
+        )
+        .with_subject_from(&source);
+
+        assert_eq!(pf.subject(), source.subject());
+    }
+
+    #[test]
+    fn provenance_source_proposed_fact_for_copies_source_subject() {
+        let subject = SubjectRef::parse("atlas://acquisition-assets/shared-identity-core")
+            .expect("valid subject");
+        let source = projection_fact(ContextKey::Seeds, "seed-1", "source").with_subject(subject);
+
+        let pf = TestProvenance.proposed_fact_for(
+            &source,
+            ContextKey::Hypotheses,
+            "p1",
+            TextPayload::new("derived"),
+        );
+
+        assert_eq!(pf.subject(), source.subject());
+        assert_eq!(pf.provenance(), "test-provenance");
     }
 
     #[test]

@@ -233,7 +233,7 @@ pub use formation::{
 };
 
 /// Re-export canonical pack value types used by core public structs.
-pub use converge_pack::{Context, UnitInterval};
+pub use converge_pack::{Context, SubjectRef, SubjectRefError, UnitInterval};
 pub use engine::{
     Budget, ConvergeResult, Engine, EngineHitlPolicy, ExperienceEventObserver, HitlPause,
     RunResult, StreamingCallback, TypesRunHooks,

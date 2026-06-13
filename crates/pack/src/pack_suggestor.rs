@@ -200,6 +200,7 @@ impl<P: Pack> Suggestor for PackSuggestor<P> {
                     PackPlanPayload::from_plan(&result.plan),
                     self.provenance(),
                 )
+                .with_subject_from(seed_fact)
                 .with_confidence(confidence);
                 AgentEffect::with_proposal(proposal)
             }
@@ -220,7 +221,7 @@ mod tests {
         SolverReport,
     };
     use crate::pack::{InvariantDef, InvariantResult, PackSolveResult};
-    use crate::types::{ContentHash, Timestamp};
+    use crate::types::{ContentHash, SubjectRef, Timestamp};
     use std::collections::HashMap;
 
     /// Pack double whose behaviour is configured per test.
@@ -292,6 +293,13 @@ mod tests {
             }
         }
         fn with_pack_input(pack: &str, value: serde_json::Value) -> Self {
+            Self::with_pack_input_and_subject(pack, value, None)
+        }
+        fn with_pack_input_and_subject(
+            pack: &str,
+            value: serde_json::Value,
+            subject: Option<SubjectRef>,
+        ) -> Self {
             let mut ctx = Self::empty();
             let record = FactPromotionRecord::new_projection(
                 "projection-test",
@@ -309,6 +317,10 @@ mod tests {
                 record,
                 Timestamp::epoch(),
             );
+            let fact = match subject {
+                Some(subject) => fact.with_subject(subject),
+                None => fact,
+            };
             ctx.facts.insert(ContextKey::Seeds, vec![fact]);
             ctx
         }
@@ -459,5 +471,22 @@ mod tests {
             "confidence must propagate from plan, got {}",
             proposal.confidence()
         );
+    }
+
+    #[tokio::test]
+    async fn execute_with_successful_solve_preserves_subject_ref() {
+        let subject = SubjectRef::parse("atlas://acquisition-assets/shared-identity-core")
+            .expect("valid subject");
+        let s = solver(PackOutcome::Solved(0.42));
+        let ctx = MockContext::with_pack_input_and_subject(
+            "test-pack",
+            serde_json::json!({"x": 1}),
+            Some(subject.clone()),
+        );
+
+        let effect = s.execute(&ctx).await;
+
+        assert_eq!(effect.proposals().len(), 1);
+        assert_eq!(effect.proposals()[0].subject(), Some(&subject));
     }
 }

@@ -1,16 +1,23 @@
-error[E0451]: fields `payload` and `confidence` of struct `ProposedFact` are private
-  --> tests/compile_fail/proposed_fact_struct_literal.rs:12:9
+error: cannot construct `ProposedFact` with struct literal syntax due to private fields
+  --> tests/compile_fail/proposed_fact_struct_literal.rs:9:15
    |
  9 |     let _pf = ProposedFact {
-   |               ------------ in this type
+   |               ^^^^^^^^^^^^
 ...
 12 |         payload: unreachable!(),
-   |         ^^^^^^^ private field
+   |         ----------------------- private field
 13 |         confidence: UnitInterval::ONE,
-   |         ^^^^^^^^^^ private field
-
-error: trait `fact::ErasedFactPayload` is private
-  --> tests/compile_fail/proposed_fact_struct_literal.rs:12:18
+   |         ----------------------------- private field
    |
-12 |         payload: unreachable!(),
-   |                  ^^^^^^^^^^^^^^ private trait
+   = note: ...and other private field `subject` that was not provided
+help: you might have meant to use the `new` associated function
+   |
+ 9 -     let _pf = ProposedFact {
+10 -         key: ContextKey::Seeds,
+11 -         id: "test-id".into(),
+12 -         payload: unreachable!(),
+13 -         confidence: UnitInterval::ONE,
+14 -         provenance: "attacker".into(),
+15 -     };
+ 9 +     let _pf = ProposedFact::new(_, _, _, _);
+   |

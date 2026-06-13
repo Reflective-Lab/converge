@@ -66,7 +66,7 @@ pub use types::{
     ActorId, ApprovalId, ApprovalPointId, ArtifactId, BackendId, BasisPoints, ChainId,
     ConstraintName, ConstraintValue, ContentHash, CorrelationId, CriterionId, DisagreementId,
     DomainId, EventId, FactId, GateId, ObservationId, PackId, PolicyId, PolicyVersionId,
-    PrincipalId, ProposalId, ResourceId, ResourceKind, SpanId, TenantId, Timestamp, TraceId,
-    TraceLinkId, TraceReference, TraceSystemId, TruthId, UnitInterval, ValidationCheckId, VoteId,
-    VoteTopicId,
+    PrincipalId, ProposalId, ResourceId, ResourceKind, SpanId, SubjectRef, SubjectRefError,
+    TenantId, Timestamp, TraceId, TraceLinkId, TraceReference, TraceSystemId, TruthId,
+    UnitInterval, ValidationCheckId, VoteId, VoteTopicId,
 };

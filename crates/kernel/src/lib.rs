@@ -82,9 +82,9 @@ pub use converge_core::{
     ExperienceEventKind, ExperienceEventObserver, ExperienceRecord, ExperienceStore,
     ExperienceStoreError, ExperienceStoreResult, FactContent, FactContentKind, HitlPause,
     IntegrityProof, Invariant, InvariantClass, InvariantResult, LamportClock, MerkleRoot,
-    OverrideTarget, PackId, RunResult, StreamingCallback, SuggestorId, TenantId, TraceLinkId,
-    TruthId, TypesBudgets, TypesIntentId, TypesIntentKind, TypesRootIntent, TypesRunHooks,
-    UnitInterval, UserExperienceEvent, UserExperienceEventEnvelope,
+    OverrideTarget, PackId, RunResult, StreamingCallback, SubjectRef, SubjectRefError, SuggestorId,
+    TenantId, TraceLinkId, TruthId, TypesBudgets, TypesIntentId, TypesIntentKind, TypesRootIntent,
+    TypesRunHooks, UnitInterval, UserExperienceEvent, UserExperienceEventEnvelope,
 };
 pub use converge_pack::{
     AgentEffect, ArtifactId, Context, ContextFact, ContextKey, FactPayload, ProposedFact,

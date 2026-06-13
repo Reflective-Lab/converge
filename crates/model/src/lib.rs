@@ -15,12 +15,12 @@ pub use converge_core::{
     ConstraintValue, Criterion, CriterionId, EventId, EvidenceRef, FactContent, FactContentKind,
     FactId, Frame, FrameConstraint, FrameId, GateId, Hypothesis, LocalTrace, Observation,
     ObservationError, ObservationId, ObservationKind, ObservationProvenance, PackId, PolicyId,
-    PromotionError, PromotionRecord, Proposal, ProposalId, RiskPosture, StopReason, TenantId,
-    Tension, TensionId, TensionResolution, TensionSide, Timestamp, TraceLinkId, TruthCatalog,
-    TruthDefinition, TruthId, TruthKind, TypeError, TypesBudgets, TypesConstraintSeverity,
-    TypesContextKey, TypesContextSnapshot, TypesFact, TypesIntentConstraint, TypesIntentId,
-    TypesIntentKind, TypesObjective, TypesProposedContent, TypesRootIntent, TypesTraceLink,
-    TypesValidationError, Validated, ValidationSummary,
+    PromotionError, PromotionRecord, Proposal, ProposalId, RiskPosture, StopReason, SubjectRef,
+    SubjectRefError, TenantId, Tension, TensionId, TensionResolution, TensionSide, Timestamp,
+    TraceLinkId, TruthCatalog, TruthDefinition, TruthId, TruthKind, TypeError, TypesBudgets,
+    TypesConstraintSeverity, TypesContextKey, TypesContextSnapshot, TypesFact,
+    TypesIntentConstraint, TypesIntentId, TypesIntentKind, TypesObjective, TypesProposedContent,
+    TypesRootIntent, TypesTraceLink, TypesValidationError, Validated, ValidationSummary,
 };
 pub use converge_pack::{ContextKey, FactPayload, ProposedFact, TextPayload, ValidationError};
 pub use formation::{

@@ -1,13 +1,33 @@
-# SubjectRef Proposal
+# SubjectRef
 
-Status: **proposal**, not implemented. Seeking maintainer alignment before code.
+Status: **implemented in Converge for phases 1-2** (2026-06-13).
 Originating context: Atlas integration app + Quorum / Warden / Movement cross-app citation work in `marquee-apps/atlas-integration/kb/Architecture/Upstream Types Audit.md`.
+
+Implemented surface:
+- `converge-pack::SubjectRef` and `SubjectRefError`
+- `ProposedFact::with_subject` / `subject`
+- `ContextFact::with_subject` / `subject`
+- `WireProposedFact` / `WireContextFact` optional `subject`
+- `AdmissionRequest::with_subject` and `AdmissionReceipt::subject`
+- `ContextState::facts_for_subject` and `proposals_for_subject`
+- `ProvenanceSource::proposed_fact_for`, `ProposedFact::with_subject_from`, and
+  `PackSuggestor` subject preservation for single-source derived proposals
+- re-exports through `converge-core`, `converge-kernel`, and `converge-model`
+
+Still open: cross-app citation resolver registration and Helm readiness
+federation live above this Converge foundation.
 
 ## TL;DR
 
-Converge has typed references for **who** acts (`Actor`, `Provenance`) but no typed reference for **what** is being reasoned about. Apps cite "the candidate," "the question," "the gate," "the asset" today as opaque URI strings in `IntentPacket.context` and in fact payloads — `"atlas://acquisition-assets/shared-identity-core"`, `"quorum://unresolved-questions/identity-owner-coverage"`, `"warden://dd-gates/dd-evidence.identity-data-residency"`.
+Converge has typed references for **who** acts (`Actor`, `Provenance`) and now
+has `SubjectRef` for **what** is being reasoned about. Apps that still cite
+"the candidate," "the question," "the gate," or "the asset" as opaque URI
+strings in `IntentPacket.context` and fact payloads can migrate those strings
+through the canonical parser: `"atlas://acquisition-assets/shared-identity-core"`,
+`"quorum://unresolved-questions/identity-owner-coverage"`,
+`"warden://dd-gates/dd-evidence.identity-data-residency"`.
 
-This proposal adds a typed `SubjectRef` to Converge so that:
+`SubjectRef` exists so that:
 
 - Fact promotion can tag facts by subject without strings-in-disguise
 - Cross-app citation resolution becomes a typed boundary
@@ -34,9 +54,10 @@ The downstream pain shows up at three boundaries:
 
 Atlas's intent helper (`crates/atlas-app/src/intent.rs`) shipped using URI strings as a stepping stone. Quorum, Warden, and Movement will need to cite the same subjects. The "stepping stone" becomes load-bearing the moment a second app does cross-app citation. Catching this before it's the only path is cheaper than retrofitting later.
 
-## Proposed type
+## Type
 
-New module at `crates/core/src/types/subject.rs`:
+Defined in `crates/pack/src/types.rs` because `ProposedFact` and
+`ContextFact` live in `converge-pack`:
 
 ```rust
 //! Typed reference to a subject being reasoned about.
@@ -45,69 +66,53 @@ New module at `crates/core/src/types/subject.rs`:
 //! engagement state a fact lives) with a typed answer to "what is this
 //! fact / intent / citation about."
 
-use serde::{Deserialize, Serialize};
-use std::fmt;
-
 /// A typed reference to a subject being reasoned about.
 ///
 /// Three-part structure: `scheme` (the owning app), `kind` (the kind of
 /// thing in that app's domain), `id` (the concrete instance).
 ///
 /// Wire form: `scheme://kind/id`.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct SubjectRef {
-    pub scheme: String,
-    pub kind: String,
-    pub id: String,
+    scheme: String,
+    kind: String,
+    id: String,
 }
 
 impl SubjectRef {
-    /// Construct after validating each part is non-empty and follows
-    /// scheme/kind/id syntax rules.
     pub fn new(
         scheme: impl Into<String>,
         kind: impl Into<String>,
         id: impl Into<String>,
     ) -> Result<Self, SubjectRefError> { /* ... */ }
 
-    /// Parse the canonical wire form `scheme://kind/id`.
     pub fn parse(uri: &str) -> Result<Self, SubjectRefError> { /* ... */ }
 
-    /// Render as the canonical wire form.
-    pub fn to_uri(&self) -> String {
-        format!("{}://{}/{}", self.scheme, self.kind, self.id)
-    }
+    pub fn scheme(&self) -> &str;
+    pub fn kind(&self) -> &str;
+    pub fn id(&self) -> &str;
+    pub fn to_uri(&self) -> String;
 }
 
-impl fmt::Display for SubjectRef {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.to_uri())
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
 pub enum SubjectRefError {
-    #[error("scheme is empty")]
     EmptyScheme,
-    #[error("kind is empty")]
     EmptyKind,
-    #[error("id is empty")]
     EmptyId,
-    #[error("scheme contains invalid character {0:?}; allow [a-z0-9-]")]
     InvalidSchemeChar(char),
-    #[error("kind contains invalid character {0:?}; allow [a-z0-9-]")]
     InvalidKindChar(char),
-    #[error("could not parse subject ref from {0:?}")]
+    InvalidIdChar(char),
     Malformed(String),
 }
 ```
 
-### Validation rules (proposed)
+`SubjectRef` serializes and deserializes as the canonical string
+`scheme://kind/id`, not as a JSON object.
+
+### Validation Rules
 
 - `scheme` matches `[a-z][a-z0-9-]*` — the owning app id (e.g., `atlas`, `quorum`, `warden`, `movement`)
 - `kind` matches `[a-z][a-z0-9-]*` — the domain noun (e.g., `acquisition-assets`, `unresolved-questions`, `dd-gates`)
 - `id` is non-empty and contains no `/` or whitespace; otherwise opaque to Converge
-- All three parts are case-sensitive on the wire but normalized to lowercase on construction
+- `scheme` and `kind` normalize to lowercase on construction; `id` preserves app-owned casing
 
 ### Why three parts, not one
 
@@ -117,32 +122,37 @@ A full RFC-3986 URI is overkill — we don't need fragments, query parameters, u
 
 ## Where it appears
 
-Integration surface, in proposed order of adoption:
+Integration surface:
 
 | Surface | Today | After SubjectRef |
 |---|---|---|
-| Fact tagging | `ProposedFact` has no subject field | Add optional `subject: Option<SubjectRef>` to `ProposedFact` and `ContextFact` |
-| Engagement state queries | Apps reconstruct subjects from payloads | `ContextState::facts_for_subject(subject)` returns all facts tagged with that subject |
+| Fact tagging | `ProposedFact` had no subject field | Optional subject on `ProposedFact`, `ContextFact`, `WireProposedFact`, and `WireContextFact` |
+| Admission | External observations had truth target only | `AdmissionRequest::with_subject` tags staged proposals and receipts |
+| Engagement state queries | Apps reconstructed subjects from payloads | `ContextState::facts_for_subject(subject)` and `proposals_for_subject(subject)` |
 | Cross-app citation resolver | Resolver takes `&str` if it exists | `trait CitationResolver { fn resolve(subject: &SubjectRef) -> Result<ResolvedCitation> }` |
 | Helms readiness | Subjects are URI strings in JSON | Typed query: `helms::readiness_for(&subject)` |
 | `IntentPacket.context` | Apps stuff URI strings as JSON | Apps may pass `SubjectRef` (serializes to the canonical wire form) |
 | Replay traces | Subjects appear only in payload text | `ReplayTrace` may include `subject: Option<SubjectRef>` for index-on-replay |
 
-Adoption is **strictly additive**. The wire forms apps use today (the literal strings `"atlas://acquisition-assets/shared-identity-core"`) round-trip through `SubjectRef::parse` and `SubjectRef::to_uri` byte-identically. Existing JSON payloads stay valid. Apps migrate at their own pace.
+Adoption is **strictly additive**. Existing wire facts omit `subject` and still
+deserialize. The literal strings apps use today round-trip through
+`SubjectRef::parse` and `SubjectRef::to_uri` byte-identically when scheme/kind
+are already lowercase. Existing JSON payloads stay valid. Apps migrate at
+their own pace.
 
 ## Migration path
 
 Five phases, each shippable independently:
 
-1. **Land the type.** New module, public exports, parse/format round-trip tests, basic property tests on validation rules. No callers yet. (Single PR, ~150 lines + tests.)
-2. **Optional field on `ProposedFact` and `ContextFact`.** Default `None` — backward compatible. Add a builder. (Single PR.)
+1. **Land the type.** Complete in `converge-pack`.
+2. **Optional field on `ProposedFact` and `ContextFact`.** Complete, including wire shapes, admission, context queries, snapshots, and facade re-exports.
 3. **Citation resolver trait.** Define `CitationResolver` in Converge with no built-in implementations. Application kernels register their own. (Single PR, paired with an `application-kernel` PR registering Atlas's `atlas://` resolver.)
 4. **Helms readiness federation.** Helms accepts `SubjectRef` in its readiness queries. (Helms PR.)
 5. **Encourage app migration.** Apps that build URI strings today gradually swap to `SubjectRef`. The wire form is unchanged, so no breaking change is needed — this is purely an internal type-safety improvement.
 
 ## Open questions
 
-These need maintainer input before code lands:
+Remaining design questions:
 
 1. **Scheme registration.** Do we maintain a registry of valid schemes (`atlas`, `quorum`, `warden`, `movement`, etc.) or accept any scheme matching the regex? Open scheme is simpler; registered scheme catches squatting and typos. Recommendation: **accept any matching regex for now; registration becomes meaningful when there's a single platform-wide list of deployed apps**.
 2. **Cross-app resolver location.** Does `CitationResolver` live in Converge, in `application-kernel`, or as a new `cross-app-citations` crate? Recommendation: trait in Converge, registration mechanism in `application-kernel`, app-specific resolvers in each app.
@@ -163,15 +173,14 @@ These need maintainer input before code lands:
 
 ## Sequencing
 
-This proposal first lands as a KB doc for maintainer review. Once approved:
-
-1. PR 1 — define the type (read-only, no integration).
-2. PR 2 — add optional `subject` field to `ProposedFact` / `ContextFact`.
+1. PR 1 — define the type (read-only, no integration). **Done in Converge.**
+2. PR 2 — add optional `subject` field to `ProposedFact` / `ContextFact`. **Done in Converge.**
 3. PR 3 — `CitationResolver` trait + `application-kernel` registration mechanism.
 4. PR 4 — Helms readiness federation accepts `SubjectRef`.
 5. App migrations as desired (Atlas first, then Quorum/Warden/Movement as their integration depth grows).
 
-PRs 1–2 are uncontroversial mechanical work. PRs 3–4 need their own design alignment because they touch the cross-app boundary. Splitting the sequence lets PR 1 land quickly while the more contentious pieces get their own review.
+PRs 3–4 need their own design alignment because they touch the cross-app and
+Helm boundaries.
 
 ## What this proposal does not do
 

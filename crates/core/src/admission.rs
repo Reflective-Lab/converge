@@ -10,7 +10,7 @@
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
-use crate::context::{ContextKey, ProposalId, ProposedFact, Provenance, TextPayload};
+use crate::context::{ContextKey, ProposalId, ProposedFact, Provenance, SubjectRef, TextPayload};
 use crate::types::{ActorId, ContentHash, TruthId};
 
 /// Error raised while constructing an admission request.
@@ -137,6 +137,7 @@ pub struct AdmissionRequest {
     source: AdmissionSource,
     key: ContextKey,
     id: ProposalId,
+    subject: Option<SubjectRef>,
     content: AdmissionContent,
     target_truth_id: Option<TruthId>,
 }
@@ -160,9 +161,17 @@ impl AdmissionRequest {
             source,
             key,
             id,
+            subject: None,
             content,
             target_truth_id: None,
         })
+    }
+
+    /// Attaches the app-owned subject this observation is about.
+    #[must_use]
+    pub fn with_subject(mut self, subject: SubjectRef) -> Self {
+        self.subject = Some(subject);
+        self
     }
 
     /// Attaches the semantic truth target this observation is intended to inform.
@@ -190,6 +199,12 @@ impl AdmissionRequest {
         &self.content
     }
 
+    /// Returns the app-owned subject this observation is about, when tagged.
+    #[must_use]
+    pub fn subject(&self) -> Option<&SubjectRef> {
+        self.subject.as_ref()
+    }
+
     /// Returns the actor.
     #[must_use]
     pub fn actor(&self) -> &AdmissionActor {
@@ -210,12 +225,16 @@ impl AdmissionRequest {
 
     pub(crate) fn into_proposal(self) -> ProposedFact {
         let provenance = self.provenance();
-        ProposedFact::new(
+        let proposal = ProposedFact::new(
             self.key,
             self.id,
             TextPayload::new(self.content.into_string()),
             provenance,
-        )
+        );
+        match self.subject {
+            Some(subject) => proposal.with_subject(subject),
+            None => proposal,
+        }
     }
 
     fn provenance(&self) -> Provenance {
@@ -243,6 +262,7 @@ impl AdmissionRequest {
 pub struct AdmissionReceipt {
     key: ContextKey,
     proposal_id: ProposalId,
+    subject: Option<SubjectRef>,
     content_hash: ContentHash,
     target_truth_id: Option<TruthId>,
     staged: bool,
@@ -253,6 +273,7 @@ impl AdmissionReceipt {
         Self {
             key: request.key,
             proposal_id: request.id.clone(),
+            subject: request.subject.clone(),
             content_hash: content_hash(request.content.as_str()),
             target_truth_id: request.target_truth_id.clone(),
             staged,
@@ -269,6 +290,12 @@ impl AdmissionReceipt {
     #[must_use]
     pub fn proposal_id(&self) -> &ProposalId {
         &self.proposal_id
+    }
+
+    /// Returns the app-owned subject attached to the staged observation.
+    #[must_use]
+    pub fn subject(&self) -> Option<&SubjectRef> {
+        self.subject.as_ref()
     }
 
     /// Returns the content hash for audit/idempotency checks.
@@ -340,6 +367,7 @@ mod tests {
     #[test]
     fn admission_stages_proposal_not_fact() {
         let mut context = ContextState::new();
+        let subject = SubjectRef::parse("atlas://acquisition-assets/shared-identity-core").unwrap();
         let request = AdmissionRequest::new(
             actor(),
             source(),
@@ -348,6 +376,7 @@ mod tests {
             content(r#"{"claim":"approved source"}"#),
         )
         .unwrap()
+        .with_subject(subject.clone())
         .with_target_truth("truth-1");
 
         let receipt = context.submit_observation(request).unwrap();
@@ -355,12 +384,18 @@ mod tests {
         assert!(receipt.staged());
         assert_eq!(receipt.key(), ContextKey::Seeds);
         assert_eq!(receipt.proposal_id().as_str(), "truth-doc-1");
+        assert_eq!(receipt.subject(), Some(&subject));
         assert_eq!(
             receipt.target_truth_id().map(TruthId::as_str),
             Some("truth-1")
         );
         assert!(!context.has(ContextKey::Seeds));
         assert_eq!(context.get_proposals(ContextKey::Seeds).len(), 1);
+        assert_eq!(
+            context.get_proposals(ContextKey::Seeds)[0].subject(),
+            Some(&subject)
+        );
+        assert_eq!(context.proposals_for_subject(&subject).len(), 1);
     }
 
     #[test]

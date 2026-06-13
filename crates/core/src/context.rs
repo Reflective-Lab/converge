@@ -14,8 +14,8 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 // Re-export canonical types from converge-pack
 pub use converge_pack::{
     ContextFact, ContextKey, FactId, FactPayload, PayloadError, PayloadRegistry, ProposalId,
-    ProposedFact, Provenance, ProvenanceSource, TextPayload, Timestamp, ValidationError,
-    WireContextFact, WireProposedFact,
+    ProposedFact, Provenance, ProvenanceSource, SubjectRef, TextPayload, Timestamp,
+    ValidationError, WireContextFact, WireProposedFact,
 };
 
 /// Canonical provenance marker for caller-supplied context input.
@@ -373,6 +373,26 @@ impl ContextState {
         self.facts.keys().copied().collect()
     }
 
+    /// Returns promoted facts tagged with a given app-owned subject.
+    #[must_use]
+    pub fn facts_for_subject(&self, subject: &SubjectRef) -> Vec<&ContextFact> {
+        self.facts
+            .values()
+            .flat_map(|facts| facts.iter())
+            .filter(|fact| fact.subject() == Some(subject))
+            .collect()
+    }
+
+    /// Returns staged proposals tagged with a given app-owned subject.
+    #[must_use]
+    pub fn proposals_for_subject(&self, subject: &SubjectRef) -> Vec<&ProposedFact> {
+        self.proposals
+            .values()
+            .flat_map(|proposals| proposals.iter())
+            .filter(|proposal| proposal.subject() == Some(subject))
+            .collect()
+    }
+
     /// Returns true if any staged proposals are pending promotion.
     #[must_use]
     pub fn has_pending_proposals(&self) -> bool {
@@ -623,11 +643,11 @@ mod tests {
     #[test]
     fn snapshot_round_trips_facts_and_proposals() {
         let mut ctx = ContextState::new();
-        ctx.add_fact(crate::context::new_fact(
-            ContextKey::Seeds,
-            "seed-1",
-            "persisted seed",
-        ))
+        let subject = SubjectRef::parse("atlas://acquisition-assets/shared-identity-core").unwrap();
+        ctx.add_fact(
+            crate::context::new_fact(ContextKey::Seeds, "seed-1", "persisted seed")
+                .with_subject(subject.clone()),
+        )
         .unwrap();
         ctx.add_proposal(ProposedFact::new(
             ContextKey::Hypotheses,
@@ -642,6 +662,7 @@ mod tests {
         assert_eq!(restored.version(), 1);
         assert!(restored.dirty_keys().is_empty());
         assert_eq!(restored.get(ContextKey::Seeds)[0].id(), "seed-1");
+        assert_eq!(restored.get(ContextKey::Seeds)[0].subject(), Some(&subject));
         assert_eq!(
             restored.get(ContextKey::Seeds)[0].text(),
             Some("persisted seed")
@@ -655,18 +676,22 @@ mod tests {
     #[test]
     fn wire_snapshot_round_trips_through_payload_registry() {
         let mut ctx = ContextState::new();
-        ctx.add_fact(crate::context::new_fact(
-            ContextKey::Seeds,
-            "seed-1",
-            "persisted seed",
-        ))
+        let subject =
+            SubjectRef::parse("quorum://unresolved-questions/identity-owner-coverage").unwrap();
+        ctx.add_fact(
+            crate::context::new_fact(ContextKey::Seeds, "seed-1", "persisted seed")
+                .with_subject(subject.clone()),
+        )
         .unwrap();
-        ctx.add_proposal(ProposedFact::new(
-            ContextKey::Hypotheses,
-            "hyp-1",
-            TextPayload::new("staged hypothesis"),
-            CONTEXT_INPUT_PROVENANCE.provenance(),
-        ))
+        ctx.add_proposal(
+            ProposedFact::new(
+                ContextKey::Hypotheses,
+                "hyp-1",
+                TextPayload::new("staged hypothesis"),
+                CONTEXT_INPUT_PROVENANCE.provenance(),
+            )
+            .with_subject(subject.clone()),
+        )
         .unwrap();
 
         let registry = PayloadRegistry::with_pack_payloads();
@@ -678,9 +703,54 @@ mod tests {
             restored.get(ContextKey::Seeds)[0].text(),
             Some("persisted seed")
         );
+        assert_eq!(restored.facts_for_subject(&subject).len(), 1);
         assert_eq!(
             restored.get_proposals(ContextKey::Hypotheses)[0].text(),
             Some("staged hypothesis")
+        );
+        assert_eq!(restored.proposals_for_subject(&subject).len(), 1);
+    }
+
+    #[test]
+    fn context_indexes_facts_and_proposals_by_subject() {
+        let mut ctx = ContextState::new();
+        let target = SubjectRef::parse("warden://dd-gates/dd-evidence.identity-data-residency")
+            .expect("valid subject");
+        let other = SubjectRef::parse("atlas://acquisition-assets/shared-identity-core")
+            .expect("valid subject");
+
+        ctx.add_fact(
+            crate::context::new_fact(ContextKey::Seeds, "seed-1", "target fact")
+                .with_subject(target.clone()),
+        )
+        .unwrap();
+        ctx.add_fact(
+            crate::context::new_fact(ContextKey::Signals, "signal-1", "other fact")
+                .with_subject(other.clone()),
+        )
+        .unwrap();
+        ctx.add_proposal(
+            ProposedFact::new(
+                ContextKey::Hypotheses,
+                "hyp-1",
+                TextPayload::new("target proposal"),
+                CONTEXT_INPUT_PROVENANCE.provenance(),
+            )
+            .with_subject(target.clone()),
+        )
+        .unwrap();
+
+        let facts = ctx.facts_for_subject(&target);
+        let proposals = ctx.proposals_for_subject(&target);
+
+        assert_eq!(facts.len(), 1);
+        assert_eq!(facts[0].id(), "seed-1");
+        assert_eq!(proposals.len(), 1);
+        assert_eq!(proposals[0].id(), "hyp-1");
+        assert!(
+            ctx.facts_for_subject(&other)
+                .iter()
+                .all(|f| f.id() != "seed-1")
         );
     }
 

@@ -25,6 +25,8 @@ This means:
 
 - Semantic IDs are newtypes, not raw strings.
   Examples: `FactId`, `ProposalId`, `ObservationId`, `GateId`, `PackName`, `AgentName`.
+- Subjects being reasoned about use `SubjectRef`, not app URI strings in
+  Converge-facing fact or proposal metadata.
 - Fact and proposal payloads are typed `FactPayload` values in process. Raw
   strings are valid only for explicit text payloads or border DTOs.
 - Closed vocabularies are enums, not string conventions.
