@@ -231,12 +231,7 @@ impl JwtValidator {
     /// Extract claims without full validation (for debugging).
     /// WARNING: Do not use for authorization decisions.
     pub fn decode_without_validation(&self, token: &str) -> Result<Claims, JwtError> {
-        let mut validation = Validation::default();
-        validation.insecure_disable_signature_validation();
-        validation.validate_exp = false;
-        validation.validate_aud = false;
-
-        let token_data: TokenData<Claims> = decode(token, &self.decoding_key, &validation)
+        let token_data: TokenData<Claims> = jsonwebtoken::dangerous::insecure_decode(token)
             .map_err(|e| JwtError::Malformed(e.to_string()))?;
 
         Ok(token_data.claims)
