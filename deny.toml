@@ -11,7 +11,7 @@ yanked = "warn"
 # - dotenv 0.15.0 unmaintained (surrealdb client used in tests)
 ignore = [
     "RUSTSEC-2025-0134",
-    "RUSTSEC-2021-0141",
+    "RUSTSEC-2025-0141",
 ]
 
 [licenses]
