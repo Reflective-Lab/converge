@@ -95,7 +95,7 @@ once_cell = "1.19"
 # workspace `polars` Parquet feature codec, so a single Parquet version
 # threads through every consumer (crucible training pipeline, future KB
 # persistence, app dataset ingest) without per-extension drift.
-parquet = "58"
+parquet = "59"
 opentelemetry = "0.32"
 opentelemetry-otlp = { version = "0.32", default-features = false, features = ["http-proto", "trace", "grpc-tonic"] }
 opentelemetry_sdk = { version = "0.32", features = ["rt-tokio"] }
