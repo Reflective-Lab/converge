@@ -138,7 +138,7 @@ toml = "1.1"
 tonic = { version = "0.12", features = ["tls"] }
 tonic-build = "0.12"
 tower = "0.5"
-tower-http = { version = "0.6", features = ["compression-full", "cors", "limit", "trace"] }
+tower-http = { version = "0.7", features = ["compression-full", "cors", "limit", "trace"] }
 tracing = "0.1"
 tracing-opentelemetry = "0.33"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
