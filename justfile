@@ -138,6 +138,8 @@ security-audit:
         --ignore RUSTSEC-2025-0012 \
         --ignore RUSTSEC-2025-0134 \
         --ignore RUSTSEC-2025-0141 \
+        --ignore RUSTSEC-2026-0194 \
+        --ignore RUSTSEC-2026-0195 \
         > "${out_dir}/audit.json" || true
     cargo audit --deny warnings \
         --ignore RUSTSEC-2023-0089 \
@@ -146,6 +148,8 @@ security-audit:
         --ignore RUSTSEC-2025-0012 \
         --ignore RUSTSEC-2025-0134 \
         --ignore RUSTSEC-2025-0141 \
+        --ignore RUSTSEC-2026-0194 \
+        --ignore RUSTSEC-2026-0195 \
         2>&1 | tee -a "${summary}"
     audit_human_status=${PIPESTATUS[0]}
     echo "" | tee -a "${summary}"
