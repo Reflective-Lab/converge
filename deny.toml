@@ -12,6 +12,13 @@ yanked = "warn"
 ignore = [
     "RUSTSEC-2025-0134",
     "RUSTSEC-2025-0141",
+    # quick-xml 0.39.4 — duplicate-attribute quadratic run time (0194) and
+    # NsReader namespace-allocation DoS (0195), fixed in >=0.41. Transitive
+    # via object_store 0.13.2 (latest); no fix path until object_store
+    # releases against 0.41. XML surface is the storage provider's own API
+    # responses, both advisories DoS-class. Added 2026-07-02.
+    "RUSTSEC-2026-0194",
+    "RUSTSEC-2026-0195",
 ]
 
 [licenses]
