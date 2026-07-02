@@ -93,7 +93,7 @@ that Converge can consume without a C++ toolchain dependency.
 - Rust features solve this cleanly; leverage them for clean builds
 
 ## Planned: v3.5 — Capability Contract Realignment
-**Target:** 2026-07-15 | **Epic:** E1, E2, E3
+**Target:** 2026-07-15 | **Epic:** E1 | **Spans:** E2, E3
 
 **Theme:** Make `converge-provider` the live provider and capability contract so sibling repos can consume stable capability types without importing `converge-core` internals.
 
@@ -129,7 +129,7 @@ that Converge can consume without a C++ toolchain dependency.
 - a smaller supported surface improves long-term maintenance and security review quality
 
 ## Planned: v3.7 — Curated Facades & Downstream Proof
-**Target:** 2026-09-15 | **Epic:** E1, E2, E3
+**Target:** 2026-09-15 | **Epic:** E1 | **Spans:** E2, E3
 
 **Theme:** Make `converge-kernel`, `converge-model`, and `converge-provider` the obvious consumer entry points and prove them against real sibling repos.
 
