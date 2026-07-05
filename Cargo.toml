@@ -61,7 +61,7 @@ blake3 = "1.5"
 burn = { version = "0.20.0", features = ["ndarray", "train"] }
 burn-store = { version = "0.20.0" }
 cedar-policy = "2.4"
-chacha20poly1305 = "0.10"
+chacha20poly1305 = "0.11"
 chrono = { version = "0.4", features = ["serde"] }
 ciborium = "0.2"
 colored = "2"
